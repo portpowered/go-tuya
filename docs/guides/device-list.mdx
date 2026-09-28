@@ -5,16 +5,17 @@ description: List devices using the documented Tuya GET /v1.0/devices route.
 
 # Query devices
 
+See the [generated route reference](../../openapi/device-management/getDeviceList)
+for query fields and the response shape.
+
 Tuya documents [`GET /v1.0/devices`](https://developer.tuya.com/en/docs/cloud/7ccd629a6c?id=Kconjb15xpvd3)
-for listing devices and status by application, product, or device ID. Its
-reference requires `page_no` and `page_size`, and describes optional filters
-for `device_ids`, `product_id`, `schema`, `last_id`, `start_time`, and
-`end_time`. It describes `result.total`, `result.devices`, and `result.last_id`.
+for listing devices and status. Set `page_no` and `page_size`; optional filters
+include device IDs, product ID, schema, cursor, and time range.
 
 The library method with this matching path is `DevicesService.QueryDevices`:
 
 ```go
-devices, err := client.DevicesService.QueryDevices(ctx, tuya.QueryDevicesRequest{
+devices, err := session.DevicesService.QueryDevices(ctx, tuya.QueryDevicesRequest{
     PageNo:   1,
     PageSize: 20,
     Schema:   appSchema,
@@ -26,21 +27,11 @@ if err != nil {
 fmt.Printf("Received %d of %d devices\n", len(devices.Devices), devices.Total)
 ```
 
-Use `QueryDevicesRequest` to provide the required pagination values and any
-optional filters. The response exposes `Devices`, `Total`, and `LastID`; device
-properties can include sensitive fields such as `LocalKey`, so avoid logging
-whole response values. The Tuya reference types `start_time` and `end_time` as
-`Long` timestamps, while this library's public request currently exposes those
-two fields as strings. Pass decimal timestamp strings when using them. The
-request goes through the library's custom encrypted parameter path. The
-maintainer reports successful real-account testing, but no sanitized exchange
-or route-level provenance records the exact wire representation.
+The result exposes `Devices`, `Total`, and `LastID`. Device fields can include
+`LocalKey`, so select fields rather than logging the full response. Pass decimal
+timestamp strings for `StartTime` and `EndTime`; Tuya's reference types these as
+integers, while the public Go request uses strings.
 
-Consult the generated API reference for the documented logical query and
-result fields.
-
-This route match and the maintainer's account-test report do not provide a
-reviewable record of the library's Device Sharing request signing, encryption,
-or response behavior. The OpenAPI document intentionally omits those details.
-Other client operations using `/v1.0/m/...` are not covered by the route
-reference; see the [provider evidence review](../provider-evidence.md).
+This client sends the route through Device Sharing encryption. The maintainer
+reports successful account testing, but no sanitized exchange records the
+transport behavior. See the [provider evidence review](../provider-evidence).

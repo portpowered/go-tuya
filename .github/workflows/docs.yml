@@ -8,6 +8,8 @@ on:
       - 'api/**'
       - 'docs/**'
       - 'pkg/tuya/internal/wire/**'
+      - 'tools/wireroutes/**'
+      - 'tools/check_site_links.py'
       - '.github/workflows/docs.yml'
       - 'README.md'
   workflow_dispatch:
@@ -35,10 +37,13 @@ jobs:
           cache: true
       - name: Generate Tuya API wire models
         run: go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
+      - name: Generate Tuya wire routes
+        run: go run ./tools/wireroutes
       - name: Check generated models are current
         run: |
           git ls-files --error-unmatch pkg/tuya/internal/wire/models.gen.go
-          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go
+          git ls-files --error-unmatch pkg/tuya/internal/wire/routes.gen.go
+          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go
       - name: Test with coverage
         if: github.event_name != 'pull_request'
         run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...
@@ -47,9 +52,12 @@ jobs:
         with:
           title: go-tuya API Reference
           openapi: api/openapi.yaml
+          asyncapi: api/mqtt.asyncapi.yaml
           discover: false
           guides-directory: docs/guides
           output: site
+      - name: Check rendered guide links
+        run: python3 tools/check_site_links.py site
       - name: Generate coverage report and badge data
         if: github.event_name != 'pull_request'
         shell: bash

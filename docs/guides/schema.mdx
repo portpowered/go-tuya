@@ -1,0 +1,36 @@
+---
+title: API schema
+description: Read the route inventory and generated wire models.
+---
+
+# API schema
+
+[`api/openapi.yaml`](https://github.com/portpowered/go-tuya/blob/main/api/openapi.yaml)
+inventories the HTTP routes used by the library. The
+[`api/mqtt.asyncapi.yaml`](https://github.com/portpowered/go-tuya/blob/main/api/mqtt.asyncapi.yaml)
+records its MQTT subscription channels. Each inventory identifies whether
+behavior is provider-documented or implementation-derived. An
+implementation-derived entry describes the current client behavior; it does
+not claim Tuya has verified that contract.
+
+AsyncAPI reuses `RawSharingMessage` from the OpenAPI file. It describes the
+message envelope parsed by this client, not a provider-verified event payload.
+
+The documented `GET /v1.0/devices` route has selected query and result fields.
+Tuya's reference does not define every field's requiredness or the full device
+shape, so the schema leaves those details optional. The generated internal Go
+models adapt the response for `DevicesService.QueryDevices`.
+
+See [provider evidence](../provider-evidence) for the supporting references and
+limits. The device-list documentation does not specify the Device Sharing
+signing or encryption transport.
+
+To regenerate the wire models and route helpers with Go 1.25 or later, run:
+
+```sh
+go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 \
+  -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
+go run ./tools/wireroutes
+```
+
+Check generated routes with `go run ./tools/wireroutes -check`.

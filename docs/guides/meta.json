@@ -1,4 +1,14 @@
 {
   "title": "Guides",
-  "pages": ["index", "device-list"]
+  "pages": [
+    "index",
+    "authentication",
+    "device-list",
+    "device-control",
+    "events",
+    "testing",
+    "provider-evidence",
+    "schema",
+    "tuya"
+  ]
 }

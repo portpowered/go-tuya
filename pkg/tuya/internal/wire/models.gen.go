@@ -8,14 +8,115 @@ import (
 	"fmt"
 )
 
-// DeviceListEnvelope The reference identifies the result member as BaseDeviceInfoRes. The sample omits envelope metadata; unspecified fields are left open.
-type DeviceListEnvelope struct {
-	// Result Tuya documents total, devices, and last_id as the result fields. The reference does not state which are required in every response.
-	Result               *DeviceListResult      `json:"result,omitempty"`
+// Defines values for RTCOfferBodyType.
+const (
+	Offer RTCOfferBodyType = "offer"
+)
+
+// Valid indicates whether the value is a known member of the RTCOfferBodyType enum.
+func (e RTCOfferBodyType) Valid() bool {
+	switch e {
+	case Offer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RawSharingMessageProtocol.
+const (
+	N20 RawSharingMessageProtocol = 20
+	N4  RawSharingMessageProtocol = 4
+)
+
+// Valid indicates whether the value is a known member of the RawSharingMessageProtocol enum.
+func (e RawSharingMessageProtocol) Valid() bool {
+	switch e {
+	case N20:
+		return true
+	case N4:
+		return true
+	default:
+		return false
+	}
+}
+
+// BooleanResultEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type BooleanResultEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string `json:"msg,omitempty"`
+	Result *bool   `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// DeviceListResult Tuya documents total, devices, and last_id as the result fields. The reference does not state which are required in every response.
+// DeviceDetailsEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceDetailsEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Fields below appear in Tuya's official example response for this operation. The reference does not define requiredness or an exhaustive field set. Additional properties are retained for forward compatibility.
+	Result *DeviceRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceListByUserEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceListByUserEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string         `json:"msg,omitempty"`
+	Result *[]DeviceRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceListEnvelope Official Tuya device-list response envelope. Unknown provider metadata is retained.
+type DeviceListEnvelope struct {
+	Code *int    `json:"code,omitempty"`
+	Msg  *string `json:"msg,omitempty"`
+
+	// Result Official Tuya device-list result. The reference documents total, devices, and last_id but does not define requiredness for every response.
+	Result               *DeviceListResult      `json:"result,omitempty"`
+	Success              *bool                  `json:"success,omitempty"`
+	T                    *int64                 `json:"t,omitempty"`
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceListResult Official Tuya device-list result. The reference documents total, devices, and last_id but does not define requiredness for every response.
 type DeviceListResult struct {
 	Devices *[]DeviceRecord `json:"devices,omitempty"`
 
@@ -24,6 +125,51 @@ type DeviceListResult struct {
 
 	// Total Total number of entries.
 	Total                *int64                 `json:"total,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceLogRecord Log record fields consumed or exposed by the library.
+type DeviceLogRecord struct {
+	Code                 *string                `json:"code,omitempty"`
+	EventFrom            *string                `json:"event_from,omitempty"`
+	EventId              *int                   `json:"event_id,omitempty"`
+	EventTime            *int64                 `json:"event_time,omitempty"`
+	Row                  *string                `json:"row,omitempty"`
+	Status               *string                `json:"status,omitempty"`
+	Value                interface{}            `json:"value,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceLogsEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceLogsEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+	Result *DeviceLogsResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceLogsResult Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+type DeviceLogsResult struct {
+	Count                *int64                 `json:"count,omitempty"`
+	CurrentRowKey        *string                `json:"current_row_key,omitempty"`
+	DeviceId             *string                `json:"device_id,omitempty"`
+	HasNext              *bool                  `json:"has_next,omitempty"`
+	Logs                 *[]DeviceLogRecord     `json:"logs,omitempty"`
+	NextRowKey           *string                `json:"next_row_key,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -89,11 +235,571 @@ type DeviceRecord struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// DeviceSpecification Specification result consumed by the library; category-specific fields are open.
+type DeviceSpecification struct {
+	Category             *string                  `json:"category,omitempty"`
+	Functions            *[]SpecificationFunction `json:"functions,omitempty"`
+	Status               *[]SpecificationStatus   `json:"status,omitempty"`
+	AdditionalProperties map[string]interface{}   `json:"-"`
+}
+
+// DeviceSpecificationEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceSpecificationEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Specification result consumed by the library; category-specific fields are open.
+	Result *DeviceSpecification `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // DeviceStatus A status entry in Tuya's example response. The example uses a string value; the reference does not constrain the value type, so it remains an unconstrained JSON value.
 type DeviceStatus struct {
 	// Code Status code in the example response.
-	Code                 *string                `json:"code,omitempty"`
+	Code *string `json:"code,omitempty"`
+
+	// Type Status data-point type where returned.
+	Type                 *string                `json:"type,omitempty"`
 	Value                interface{}            `json:"value,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceStatusEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceStatusEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Device-status result consumed by the library.
+	Result *DeviceStatusResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceStatusMapping Device status mapping fields consumed by the library.
+type DeviceStatusMapping struct {
+	DpCode               *string                `json:"dpCode,omitempty"`
+	DpId                 *int                   `json:"dpId,omitempty"`
+	StatusCode           *string                `json:"statusCode,omitempty"`
+	SupportLocal         *bool                  `json:"supportLocal,omitempty"`
+	ValueConvert         *string                `json:"valueConvert,omitempty"`
+	ValueType            *string                `json:"valueType,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceStatusResult Device-status result consumed by the library.
+type DeviceStatusResult struct {
+	Category             *string                `json:"category,omitempty"`
+	DpStatusRelationDTOS *[]DeviceStatusMapping `json:"dpStatusRelationDTOS,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceUserBody Fields sent by AddDeviceUser and UpdateDeviceUser.
+type DeviceUserBody struct {
+	Birthday             *int64                 `json:"birthday,omitempty"`
+	Contact              *string                `json:"contact,omitempty"`
+	Height               *int                   `json:"height,omitempty"`
+	NickName             string                 `json:"nick_name"`
+	Sex                  int                    `json:"sex"`
+	Weight               *int                   `json:"weight,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceUserEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceUserEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Device-user fields represented by the library.
+	Result *DeviceUserRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceUserRecord Device-user fields represented by the library.
+type DeviceUserRecord struct {
+	Birthday             *int64                 `json:"birthday,omitempty"`
+	Contact              *string                `json:"contact,omitempty"`
+	DeviceId             *string                `json:"device_id,omitempty"`
+	Height               *int                   `json:"height,omitempty"`
+	NickName             *string                `json:"nick_name,omitempty"`
+	Sex                  *int                   `json:"sex,omitempty"`
+	UserId               *string                `json:"user_id,omitempty"`
+	Weight               *int                   `json:"weight,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DeviceUsersEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type DeviceUsersEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string             `json:"msg,omitempty"`
+	Result *[]DeviceUserRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// FactoryInfoRecord Factory information fields represented by the library.
+type FactoryInfoRecord struct {
+	Id                   *string                `json:"id,omitempty"`
+	Mac                  *string                `json:"mac,omitempty"`
+	Sn                   *string                `json:"sn,omitempty"`
+	Uuid                 *string                `json:"uuid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// FactoryInfosEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type FactoryInfosEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string              `json:"msg,omitempty"`
+	Result *[]FactoryInfoRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// HomeDevicesEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type HomeDevicesEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string         `json:"msg,omitempty"`
+	Result *[]DeviceRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// HomeListEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type HomeListEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string       `json:"msg,omitempty"`
+	Result *[]HomeRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// HomeRecord Home fields observed in the current implementation and example.
+type HomeRecord struct {
+	Background           *string                `json:"background,omitempty"`
+	GeoName              *string                `json:"geoName,omitempty"`
+	GroupId              *int                   `json:"groupId,omitempty"`
+	Id                   *int64                 `json:"id,omitempty"`
+	Lat                  *float64               `json:"lat,omitempty"`
+	Lon                  *float64               `json:"lon,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	OwnerId              *string                `json:"ownerId,omitempty"`
+	Status               *bool                  `json:"status,omitempty"`
+	Uid                  *string                `json:"uid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// LoginCodeEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type LoginCodeEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Login token payload observed by the library.
+	Result *LoginCodeResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// LoginCodeResult Login token payload observed by the library.
+type LoginCodeResult struct {
+	AccessToken          *string                `json:"access_token,omitempty"`
+	Endpoint             *string                `json:"endpoint,omitempty"`
+	ExpireTime           *int64                 `json:"expire_time,omitempty"`
+	RefreshToken         *string                `json:"refresh_token,omitempty"`
+	TerminalId           *string                `json:"terminal_id,omitempty"`
+	Uid                  *string                `json:"uid,omitempty"`
+	Username             *string                `json:"username,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MessageQueueConfigBody Link identifier payload used to request MQTT connection credentials.
+type MessageQueueConfigBody struct {
+	LinkId               string                 `json:"linkId"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MessageQueueConfigEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type MessageQueueConfigEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result MQTT connection fields consumed by the library. Treat credentials as secrets.
+	Result *MessageQueueConfiguration `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MessageQueueConfiguration MQTT connection fields consumed by the library. Treat credentials as secrets.
+type MessageQueueConfiguration struct {
+	ClientId   *string `json:"clientId,omitempty"`
+	ExpireTime *int64  `json:"expireTime,omitempty"`
+	Password   *string `json:"password,omitempty"`
+
+	// Topic MQTT topic groups returned by the private config route.
+	Topic                *MessageQueueTopic     `json:"topic,omitempty"`
+	Url                  *string                `json:"url,omitempty"`
+	Username             *string                `json:"username,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MessageQueueSubscription MQTT topic subscription data returned by the private config route.
+type MessageQueueSubscription struct {
+	Sub                  *string                `json:"sub,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MessageQueueTopic MQTT topic groups returned by the private config route.
+type MessageQueueTopic struct {
+	// DevId MQTT topic subscription data returned by the private config route.
+	DevId *MessageQueueSubscription `json:"devId,omitempty"`
+
+	// OwnerId MQTT topic subscription data returned by the private config route.
+	OwnerId              *MessageQueueSubscription `json:"ownerId,omitempty"`
+	AdditionalProperties map[string]interface{}    `json:"-"`
+}
+
+// MultiOutletNameRecord Multi-outlet identifier and display name represented by the library.
+type MultiOutletNameRecord struct {
+	Identifier           *string                `json:"identifier,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// MultiOutletNamesEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type MultiOutletNamesEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string                  `json:"msg,omitempty"`
+	Result *[]MultiOutletNameRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// QRCodeEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type QRCodeEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result QR login payload observed by the library.
+	Result *QRCodeResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// QRCodeResult QR login payload observed by the library.
+type QRCodeResult struct {
+	Qrcode               *string                `json:"qrcode,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RTCOfferBody WebRTC offer payload sent to Tuya signaling.
+type RTCOfferBody struct {
+	Sdp                  string                 `json:"sdp"`
+	Type                 RTCOfferBodyType       `json:"type"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RTCOfferBodyType defines model for RTCOfferBody.Type.
+type RTCOfferBodyType string
+
+// RTCSessionEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type RTCSessionEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result WebRTC signaling response fields consumed by the library.
+	Result *RTCSessionResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RTCSessionResult WebRTC signaling response fields consumed by the library.
+type RTCSessionResult struct {
+	Sdp                  *string                `json:"sdp,omitempty"`
+	SessionId            *string                `json:"session_id,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RawSharingMessage Implementation-derived MQTT message envelope consumed by pkg/tuya. It is aligned with api/mqtt.asyncapi.yaml and is not a provider-verified payload schema.
+type RawSharingMessage struct {
+	Data map[string]interface{} `json:"data"`
+
+	// Protocol Legacy device report (4) or management event (20) handled by this client.
+	Protocol             RawSharingMessageProtocol `json:"protocol"`
+	T                    *int64                    `json:"t,omitempty"`
+	AdditionalProperties map[string]interface{}    `json:"-"`
+}
+
+// RawSharingMessageProtocol Legacy device report (4) or management event (20) handled by this client.
+type RawSharingMessageProtocol int
+
+// RefreshTokenEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type RefreshTokenEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg *string `json:"msg,omitempty"`
+
+	// Result Refresh-token payload observed by the library.
+	Result *RefreshedTokenResult `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RefreshedTokenResult Refresh-token payload observed by the library.
+type RefreshedTokenResult struct {
+	AccessToken          *string                `json:"accessToken,omitempty"`
+	ExpireTime           *int64                 `json:"expireTime,omitempty"`
+	RefreshToken         *string                `json:"refreshToken,omitempty"`
+	Uid                  *string                `json:"uid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SendCommandsBody Command payload sent by SendCommands.
+type SendCommandsBody struct {
+	Commands             []SendCommandsBody_Commands_Item `json:"commands"`
+	AdditionalProperties map[string]interface{}           `json:"-"`
+}
+
+// SendCommandsBody_Commands_Item A device command. The value is device-specific.
+type SendCommandsBody_Commands_Item struct {
+	Code                 string                 `json:"code"`
+	Value                interface{}            `json:"value"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SpecificationFunction Function fields represented by the library; values are provider-defined.
+type SpecificationFunction struct {
+	Code                 *string                `json:"code,omitempty"`
+	Desc                 *string                `json:"desc,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	Type                 *string                `json:"type,omitempty"`
+	Values               interface{}            `json:"values,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SpecificationStatus Status fields represented by the library; values are provider-defined.
+type SpecificationStatus struct {
+	Code                 *string                `json:"code,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	Type                 *string                `json:"type,omitempty"`
+	Values               interface{}            `json:"values,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// StringResultEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type StringResultEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string `json:"msg,omitempty"`
+	Result *string `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SubDeviceRecord Sub-device fields represented by the library.
+type SubDeviceRecord struct {
+	ActiveTime           *int64                 `json:"active_time,omitempty"`
+	Category             *string                `json:"category,omitempty"`
+	Id                   *string                `json:"id,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	Online               *bool                  `json:"online,omitempty"`
+	OwnerId              *string                `json:"owner_id,omitempty"`
+	ProductId            *string                `json:"product_id,omitempty"`
+	UpdateTime           *int64                 `json:"update_time,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SubDevicesEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+type SubDevicesEnvelope struct {
+	// Code Provider response code when present.
+	Code *int `json:"code,omitempty"`
+
+	// Msg Provider response message when present.
+	Msg    *string            `json:"msg,omitempty"`
+	Result *[]SubDeviceRecord `json:"result,omitempty"`
+
+	// Success Whether the operation succeeded, when present.
+	Success *bool `json:"success,omitempty"`
+
+	// T Provider response timestamp when present.
+	T *int64 `json:"t,omitempty"`
+
+	// Tid Provider trace identifier when present.
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// TuyaErrorEnvelope Extensible Tuya error response. Error fields vary by endpoint.
+type TuyaErrorEnvelope struct {
+	Code                 *int                   `json:"code,omitempty"`
+	Msg                  *string                `json:"msg,omitempty"`
+	Success              *bool                  `json:"success,omitempty"`
+	T                    *int64                 `json:"t,omitempty"`
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// UpdateMultiOutletNameBody Payload sent to rename one outlet.
+type UpdateMultiOutletNameBody struct {
+	Identifier           string                 `json:"identifier"`
+	Name                 string                 `json:"name"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// UpdateNameBody Name payload sent by device and data-point rename operations.
+type UpdateNameBody struct {
+	Name                 string                 `json:"name"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -105,10 +811,10 @@ type GetDeviceListParams struct {
 	// ProductId Product ID filter.
 	ProductId *string `form:"product_id,omitempty" json:"product_id,omitempty"`
 
-	// Schema Unique application identifier.
+	// Schema Application schema filter.
 	Schema *string `form:"schema,omitempty" json:"schema,omitempty"`
 
-	// LastId Last query ID for device pagination.
+	// LastId Continuation cursor shown in Tuya examples and used by the client.
 	LastId *string `form:"last_id,omitempty" json:"last_id,omitempty"`
 
 	// PageSize Number of entries returned per page.
@@ -117,11 +823,542 @@ type GetDeviceListParams struct {
 	// PageNo Current page number.
 	PageNo int `form:"page_no" json:"page_no"`
 
-	// StartTime Start time for the query, as a 10-digit timestamp.
-	StartTime *int64 `form:"start_time,omitempty" json:"start_time,omitempty"`
+	// StartTime 10-digit start timestamp as documented by Tuya.
+	StartTime *string `form:"start_time,omitempty" json:"start_time,omitempty"`
 
-	// EndTime End time for the query, as a 10-digit timestamp.
-	EndTime *int64 `form:"end_time,omitempty" json:"end_time,omitempty"`
+	// EndTime 10-digit end timestamp as documented by Tuya.
+	EndTime *string `form:"end_time,omitempty" json:"end_time,omitempty"`
+}
+
+// GetFactoryInfosParams defines parameters for GetFactoryInfos.
+type GetFactoryInfosParams struct {
+	// DeviceIds Comma-separated device IDs.
+	DeviceIds string `form:"device_ids" json:"device_ids"`
+}
+
+// GetDeviceLogsParams defines parameters for GetDeviceLogs.
+type GetDeviceLogsParams struct {
+	// Type Comma-separated event types.
+	Type string `form:"type" json:"type"`
+
+	// StartTime 13-digit start timestamp.
+	StartTime int `form:"start_time" json:"start_time"`
+
+	// EndTime 13-digit end timestamp.
+	EndTime int `form:"end_time" json:"end_time"`
+
+	// Codes Comma-separated data-point codes.
+	Codes *string `form:"codes,omitempty" json:"codes,omitempty"`
+
+	// StartRowKey Starting row key when supported.
+	StartRowKey *string `form:"start_row_key,omitempty" json:"start_row_key,omitempty"`
+
+	// LastRowKey Last row key for pagination when supported.
+	LastRowKey *string `form:"last_row_key,omitempty" json:"last_row_key,omitempty"`
+
+	// LastEventTime Last event time for pagination when supported.
+	LastEventTime *int `form:"last_event_time,omitempty" json:"last_event_time,omitempty"`
+
+	// Size Maximum number of returned log rows.
+	Size *int `form:"size,omitempty" json:"size,omitempty"`
+
+	// QueryType Tuya query type.
+	QueryType *int `form:"query_type,omitempty" json:"query_type,omitempty"`
+}
+
+// QueryHomeDevicesParams defines parameters for QueryHomeDevices.
+type QueryHomeDevicesParams struct {
+	// HomeId Home identifier used by home-device queries.
+	HomeId *string `form:"homeId,omitempty" json:"homeId,omitempty"`
+
+	// DeviceIds Comma-separated device IDs used by device-ID queries.
+	DeviceIds *string `form:"deviceIds,omitempty" json:"deviceIds,omitempty"`
+}
+
+// GenerateLoginQRCodeParams defines parameters for GenerateLoginQRCode.
+type GenerateLoginQRCodeParams struct {
+	// Clientid Configured Tuya client identifier.
+	Clientid string `form:"clientid" json:"clientid"`
+
+	// Usercode Home Assistant authorization access code.
+	Usercode string `form:"usercode" json:"usercode"`
+
+	// Schema Authentication schema; defaults to the package constant.
+	Schema string `form:"schema" json:"schema"`
+}
+
+// ValidateLoginCodeParams defines parameters for ValidateLoginCode.
+type ValidateLoginCodeParams struct {
+	// Clientid Configured Tuya client identifier.
+	Clientid string `form:"clientid" json:"clientid"`
+
+	// Usercode Home Assistant authorization access code.
+	Usercode string `form:"usercode" json:"usercode"`
+}
+
+// GetDevicesByUserParams defines parameters for GetDevicesByUser.
+type GetDevicesByUserParams struct {
+	// From Source filter; Tuya documents home and sharing.
+	From *string `form:"from,omitempty" json:"from,omitempty"`
+
+	// PageNo Current page number.
+	PageNo *int `form:"page_no,omitempty" json:"page_no,omitempty"`
+
+	// PageSize Number of devices per page.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+}
+
+// UpdateDeviceNameJSONRequestBody defines body for UpdateDeviceName for application/json ContentType.
+type UpdateDeviceNameJSONRequestBody = UpdateNameBody
+
+// UpdateDeviceFunctionNameJSONRequestBody defines body for UpdateDeviceFunctionName for application/json ContentType.
+type UpdateDeviceFunctionNameJSONRequestBody = UpdateNameBody
+
+// UpdateMultiOutletNameJSONRequestBody defines body for UpdateMultiOutletName for application/json ContentType.
+type UpdateMultiOutletNameJSONRequestBody = UpdateMultiOutletNameBody
+
+// AddDeviceUserJSONRequestBody defines body for AddDeviceUser for application/json ContentType.
+type AddDeviceUserJSONRequestBody = DeviceUserBody
+
+// UpdateDeviceUserJSONRequestBody defines body for UpdateDeviceUser for application/json ContentType.
+type UpdateDeviceUserJSONRequestBody = DeviceUserBody
+
+// GetMessageQueueConfigJSONRequestBody defines body for GetMessageQueueConfig for application/json ContentType.
+type GetMessageQueueConfigJSONRequestBody = MessageQueueConfigBody
+
+// StartRTCSessionJSONRequestBody defines body for StartRTCSession for application/json ContentType.
+type StartRTCSessionJSONRequestBody = RTCOfferBody
+
+// SendDeviceCommandsJSONRequestBody defines body for SendDeviceCommands for application/json ContentType.
+type SendDeviceCommandsJSONRequestBody = SendCommandsBody
+
+// Getter for additional properties for BooleanResultEnvelope. Returns the specified
+// element and whether it was found
+func (a BooleanResultEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for BooleanResultEnvelope
+func (a *BooleanResultEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for BooleanResultEnvelope to handle AdditionalProperties
+func (a *BooleanResultEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for BooleanResultEnvelope to handle AdditionalProperties
+func (a BooleanResultEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceDetailsEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceDetailsEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceDetailsEnvelope
+func (a *DeviceDetailsEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceDetailsEnvelope to handle AdditionalProperties
+func (a *DeviceDetailsEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceDetailsEnvelope to handle AdditionalProperties
+func (a DeviceDetailsEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceListByUserEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceListByUserEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceListByUserEnvelope
+func (a *DeviceListByUserEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceListByUserEnvelope to handle AdditionalProperties
+func (a *DeviceListByUserEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceListByUserEnvelope to handle AdditionalProperties
+func (a DeviceListByUserEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
 }
 
 // Getter for additional properties for DeviceListEnvelope. Returns the specified
@@ -149,12 +1386,52 @@ func (a *DeviceListEnvelope) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
 	if raw, found := object["result"]; found {
 		err = json.Unmarshal(raw, &a.Result)
 		if err != nil {
 			return fmt.Errorf("error reading 'result': %w", err)
 		}
 		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
 	}
 
 	if len(object) != 0 {
@@ -176,10 +1453,45 @@ func (a DeviceListEnvelope) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
 	if a.Result != nil {
 		object["result"], err = json.Marshal(a.Result)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
 		}
 	}
 
@@ -278,6 +1590,448 @@ func (a DeviceListResult) MarshalJSON() ([]byte, error) {
 		object["total"], err = json.Marshal(a.Total)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'total': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceLogRecord. Returns the specified
+// element and whether it was found
+func (a DeviceLogRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceLogRecord
+func (a *DeviceLogRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceLogRecord to handle AdditionalProperties
+func (a *DeviceLogRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["event_from"]; found {
+		err = json.Unmarshal(raw, &a.EventFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'event_from': %w", err)
+		}
+		delete(object, "event_from")
+	}
+
+	if raw, found := object["event_id"]; found {
+		err = json.Unmarshal(raw, &a.EventId)
+		if err != nil {
+			return fmt.Errorf("error reading 'event_id': %w", err)
+		}
+		delete(object, "event_id")
+	}
+
+	if raw, found := object["event_time"]; found {
+		err = json.Unmarshal(raw, &a.EventTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'event_time': %w", err)
+		}
+		delete(object, "event_time")
+	}
+
+	if raw, found := object["row"]; found {
+		err = json.Unmarshal(raw, &a.Row)
+		if err != nil {
+			return fmt.Errorf("error reading 'row': %w", err)
+		}
+		delete(object, "row")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["value"]; found {
+		err = json.Unmarshal(raw, &a.Value)
+		if err != nil {
+			return fmt.Errorf("error reading 'value': %w", err)
+		}
+		delete(object, "value")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceLogRecord to handle AdditionalProperties
+func (a DeviceLogRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.EventFrom != nil {
+		object["event_from"], err = json.Marshal(a.EventFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'event_from': %w", err)
+		}
+	}
+
+	if a.EventId != nil {
+		object["event_id"], err = json.Marshal(a.EventId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'event_id': %w", err)
+		}
+	}
+
+	if a.EventTime != nil {
+		object["event_time"], err = json.Marshal(a.EventTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'event_time': %w", err)
+		}
+	}
+
+	if a.Row != nil {
+		object["row"], err = json.Marshal(a.Row)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'row': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	object["value"], err = json.Marshal(a.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'value': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceLogsEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceLogsEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceLogsEnvelope
+func (a *DeviceLogsEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceLogsEnvelope to handle AdditionalProperties
+func (a *DeviceLogsEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceLogsEnvelope to handle AdditionalProperties
+func (a DeviceLogsEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceLogsResult. Returns the specified
+// element and whether it was found
+func (a DeviceLogsResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceLogsResult
+func (a *DeviceLogsResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceLogsResult to handle AdditionalProperties
+func (a *DeviceLogsResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["count"]; found {
+		err = json.Unmarshal(raw, &a.Count)
+		if err != nil {
+			return fmt.Errorf("error reading 'count': %w", err)
+		}
+		delete(object, "count")
+	}
+
+	if raw, found := object["current_row_key"]; found {
+		err = json.Unmarshal(raw, &a.CurrentRowKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'current_row_key': %w", err)
+		}
+		delete(object, "current_row_key")
+	}
+
+	if raw, found := object["device_id"]; found {
+		err = json.Unmarshal(raw, &a.DeviceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'device_id': %w", err)
+		}
+		delete(object, "device_id")
+	}
+
+	if raw, found := object["has_next"]; found {
+		err = json.Unmarshal(raw, &a.HasNext)
+		if err != nil {
+			return fmt.Errorf("error reading 'has_next': %w", err)
+		}
+		delete(object, "has_next")
+	}
+
+	if raw, found := object["logs"]; found {
+		err = json.Unmarshal(raw, &a.Logs)
+		if err != nil {
+			return fmt.Errorf("error reading 'logs': %w", err)
+		}
+		delete(object, "logs")
+	}
+
+	if raw, found := object["next_row_key"]; found {
+		err = json.Unmarshal(raw, &a.NextRowKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_row_key': %w", err)
+		}
+		delete(object, "next_row_key")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceLogsResult to handle AdditionalProperties
+func (a DeviceLogsResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Count != nil {
+		object["count"], err = json.Marshal(a.Count)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'count': %w", err)
+		}
+	}
+
+	if a.CurrentRowKey != nil {
+		object["current_row_key"], err = json.Marshal(a.CurrentRowKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'current_row_key': %w", err)
+		}
+	}
+
+	if a.DeviceId != nil {
+		object["device_id"], err = json.Marshal(a.DeviceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'device_id': %w", err)
+		}
+	}
+
+	if a.HasNext != nil {
+		object["has_next"], err = json.Marshal(a.HasNext)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'has_next': %w", err)
+		}
+	}
+
+	if a.Logs != nil {
+		object["logs"], err = json.Marshal(a.Logs)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'logs': %w", err)
+		}
+	}
+
+	if a.NextRowKey != nil {
+		object["next_row_key"], err = json.Marshal(a.NextRowKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_row_key': %w", err)
 		}
 	}
 
@@ -643,6 +2397,247 @@ func (a DeviceRecord) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for DeviceSpecification. Returns the specified
+// element and whether it was found
+func (a DeviceSpecification) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceSpecification
+func (a *DeviceSpecification) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceSpecification to handle AdditionalProperties
+func (a *DeviceSpecification) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["category"]; found {
+		err = json.Unmarshal(raw, &a.Category)
+		if err != nil {
+			return fmt.Errorf("error reading 'category': %w", err)
+		}
+		delete(object, "category")
+	}
+
+	if raw, found := object["functions"]; found {
+		err = json.Unmarshal(raw, &a.Functions)
+		if err != nil {
+			return fmt.Errorf("error reading 'functions': %w", err)
+		}
+		delete(object, "functions")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceSpecification to handle AdditionalProperties
+func (a DeviceSpecification) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Category != nil {
+		object["category"], err = json.Marshal(a.Category)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'category': %w", err)
+		}
+	}
+
+	if a.Functions != nil {
+		object["functions"], err = json.Marshal(a.Functions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'functions': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceSpecificationEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceSpecificationEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceSpecificationEnvelope
+func (a *DeviceSpecificationEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceSpecificationEnvelope to handle AdditionalProperties
+func (a *DeviceSpecificationEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceSpecificationEnvelope to handle AdditionalProperties
+func (a DeviceSpecificationEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for DeviceStatus. Returns the specified
 // element and whether it was found
 func (a DeviceStatus) Get(fieldName string) (value interface{}, found bool) {
@@ -674,6 +2669,14 @@ func (a *DeviceStatus) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'code': %w", err)
 		}
 		delete(object, "code")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
 	}
 
 	if raw, found := object["value"]; found {
@@ -710,9 +2713,4742 @@ func (a DeviceStatus) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
 	object["value"], err = json.Marshal(a.Value)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'value': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceStatusEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceStatusEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceStatusEnvelope
+func (a *DeviceStatusEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceStatusEnvelope to handle AdditionalProperties
+func (a *DeviceStatusEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceStatusEnvelope to handle AdditionalProperties
+func (a DeviceStatusEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceStatusMapping. Returns the specified
+// element and whether it was found
+func (a DeviceStatusMapping) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceStatusMapping
+func (a *DeviceStatusMapping) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceStatusMapping to handle AdditionalProperties
+func (a *DeviceStatusMapping) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["dpCode"]; found {
+		err = json.Unmarshal(raw, &a.DpCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'dpCode': %w", err)
+		}
+		delete(object, "dpCode")
+	}
+
+	if raw, found := object["dpId"]; found {
+		err = json.Unmarshal(raw, &a.DpId)
+		if err != nil {
+			return fmt.Errorf("error reading 'dpId': %w", err)
+		}
+		delete(object, "dpId")
+	}
+
+	if raw, found := object["statusCode"]; found {
+		err = json.Unmarshal(raw, &a.StatusCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'statusCode': %w", err)
+		}
+		delete(object, "statusCode")
+	}
+
+	if raw, found := object["supportLocal"]; found {
+		err = json.Unmarshal(raw, &a.SupportLocal)
+		if err != nil {
+			return fmt.Errorf("error reading 'supportLocal': %w", err)
+		}
+		delete(object, "supportLocal")
+	}
+
+	if raw, found := object["valueConvert"]; found {
+		err = json.Unmarshal(raw, &a.ValueConvert)
+		if err != nil {
+			return fmt.Errorf("error reading 'valueConvert': %w", err)
+		}
+		delete(object, "valueConvert")
+	}
+
+	if raw, found := object["valueType"]; found {
+		err = json.Unmarshal(raw, &a.ValueType)
+		if err != nil {
+			return fmt.Errorf("error reading 'valueType': %w", err)
+		}
+		delete(object, "valueType")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceStatusMapping to handle AdditionalProperties
+func (a DeviceStatusMapping) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.DpCode != nil {
+		object["dpCode"], err = json.Marshal(a.DpCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'dpCode': %w", err)
+		}
+	}
+
+	if a.DpId != nil {
+		object["dpId"], err = json.Marshal(a.DpId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'dpId': %w", err)
+		}
+	}
+
+	if a.StatusCode != nil {
+		object["statusCode"], err = json.Marshal(a.StatusCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'statusCode': %w", err)
+		}
+	}
+
+	if a.SupportLocal != nil {
+		object["supportLocal"], err = json.Marshal(a.SupportLocal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'supportLocal': %w", err)
+		}
+	}
+
+	if a.ValueConvert != nil {
+		object["valueConvert"], err = json.Marshal(a.ValueConvert)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'valueConvert': %w", err)
+		}
+	}
+
+	if a.ValueType != nil {
+		object["valueType"], err = json.Marshal(a.ValueType)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'valueType': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceStatusResult. Returns the specified
+// element and whether it was found
+func (a DeviceStatusResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceStatusResult
+func (a *DeviceStatusResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceStatusResult to handle AdditionalProperties
+func (a *DeviceStatusResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["category"]; found {
+		err = json.Unmarshal(raw, &a.Category)
+		if err != nil {
+			return fmt.Errorf("error reading 'category': %w", err)
+		}
+		delete(object, "category")
+	}
+
+	if raw, found := object["dpStatusRelationDTOS"]; found {
+		err = json.Unmarshal(raw, &a.DpStatusRelationDTOS)
+		if err != nil {
+			return fmt.Errorf("error reading 'dpStatusRelationDTOS': %w", err)
+		}
+		delete(object, "dpStatusRelationDTOS")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceStatusResult to handle AdditionalProperties
+func (a DeviceStatusResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Category != nil {
+		object["category"], err = json.Marshal(a.Category)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'category': %w", err)
+		}
+	}
+
+	if a.DpStatusRelationDTOS != nil {
+		object["dpStatusRelationDTOS"], err = json.Marshal(a.DpStatusRelationDTOS)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'dpStatusRelationDTOS': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceUserBody. Returns the specified
+// element and whether it was found
+func (a DeviceUserBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceUserBody
+func (a *DeviceUserBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceUserBody to handle AdditionalProperties
+func (a *DeviceUserBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["birthday"]; found {
+		err = json.Unmarshal(raw, &a.Birthday)
+		if err != nil {
+			return fmt.Errorf("error reading 'birthday': %w", err)
+		}
+		delete(object, "birthday")
+	}
+
+	if raw, found := object["contact"]; found {
+		err = json.Unmarshal(raw, &a.Contact)
+		if err != nil {
+			return fmt.Errorf("error reading 'contact': %w", err)
+		}
+		delete(object, "contact")
+	}
+
+	if raw, found := object["height"]; found {
+		err = json.Unmarshal(raw, &a.Height)
+		if err != nil {
+			return fmt.Errorf("error reading 'height': %w", err)
+		}
+		delete(object, "height")
+	}
+
+	if raw, found := object["nick_name"]; found {
+		err = json.Unmarshal(raw, &a.NickName)
+		if err != nil {
+			return fmt.Errorf("error reading 'nick_name': %w", err)
+		}
+		delete(object, "nick_name")
+	}
+
+	if raw, found := object["sex"]; found {
+		err = json.Unmarshal(raw, &a.Sex)
+		if err != nil {
+			return fmt.Errorf("error reading 'sex': %w", err)
+		}
+		delete(object, "sex")
+	}
+
+	if raw, found := object["weight"]; found {
+		err = json.Unmarshal(raw, &a.Weight)
+		if err != nil {
+			return fmt.Errorf("error reading 'weight': %w", err)
+		}
+		delete(object, "weight")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceUserBody to handle AdditionalProperties
+func (a DeviceUserBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Birthday != nil {
+		object["birthday"], err = json.Marshal(a.Birthday)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'birthday': %w", err)
+		}
+	}
+
+	if a.Contact != nil {
+		object["contact"], err = json.Marshal(a.Contact)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contact': %w", err)
+		}
+	}
+
+	if a.Height != nil {
+		object["height"], err = json.Marshal(a.Height)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'height': %w", err)
+		}
+	}
+
+	object["nick_name"], err = json.Marshal(a.NickName)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'nick_name': %w", err)
+	}
+
+	object["sex"], err = json.Marshal(a.Sex)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'sex': %w", err)
+	}
+
+	if a.Weight != nil {
+		object["weight"], err = json.Marshal(a.Weight)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'weight': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceUserEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceUserEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceUserEnvelope
+func (a *DeviceUserEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceUserEnvelope to handle AdditionalProperties
+func (a *DeviceUserEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceUserEnvelope to handle AdditionalProperties
+func (a DeviceUserEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceUserRecord. Returns the specified
+// element and whether it was found
+func (a DeviceUserRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceUserRecord
+func (a *DeviceUserRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceUserRecord to handle AdditionalProperties
+func (a *DeviceUserRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["birthday"]; found {
+		err = json.Unmarshal(raw, &a.Birthday)
+		if err != nil {
+			return fmt.Errorf("error reading 'birthday': %w", err)
+		}
+		delete(object, "birthday")
+	}
+
+	if raw, found := object["contact"]; found {
+		err = json.Unmarshal(raw, &a.Contact)
+		if err != nil {
+			return fmt.Errorf("error reading 'contact': %w", err)
+		}
+		delete(object, "contact")
+	}
+
+	if raw, found := object["device_id"]; found {
+		err = json.Unmarshal(raw, &a.DeviceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'device_id': %w", err)
+		}
+		delete(object, "device_id")
+	}
+
+	if raw, found := object["height"]; found {
+		err = json.Unmarshal(raw, &a.Height)
+		if err != nil {
+			return fmt.Errorf("error reading 'height': %w", err)
+		}
+		delete(object, "height")
+	}
+
+	if raw, found := object["nick_name"]; found {
+		err = json.Unmarshal(raw, &a.NickName)
+		if err != nil {
+			return fmt.Errorf("error reading 'nick_name': %w", err)
+		}
+		delete(object, "nick_name")
+	}
+
+	if raw, found := object["sex"]; found {
+		err = json.Unmarshal(raw, &a.Sex)
+		if err != nil {
+			return fmt.Errorf("error reading 'sex': %w", err)
+		}
+		delete(object, "sex")
+	}
+
+	if raw, found := object["user_id"]; found {
+		err = json.Unmarshal(raw, &a.UserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'user_id': %w", err)
+		}
+		delete(object, "user_id")
+	}
+
+	if raw, found := object["weight"]; found {
+		err = json.Unmarshal(raw, &a.Weight)
+		if err != nil {
+			return fmt.Errorf("error reading 'weight': %w", err)
+		}
+		delete(object, "weight")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceUserRecord to handle AdditionalProperties
+func (a DeviceUserRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Birthday != nil {
+		object["birthday"], err = json.Marshal(a.Birthday)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'birthday': %w", err)
+		}
+	}
+
+	if a.Contact != nil {
+		object["contact"], err = json.Marshal(a.Contact)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contact': %w", err)
+		}
+	}
+
+	if a.DeviceId != nil {
+		object["device_id"], err = json.Marshal(a.DeviceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'device_id': %w", err)
+		}
+	}
+
+	if a.Height != nil {
+		object["height"], err = json.Marshal(a.Height)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'height': %w", err)
+		}
+	}
+
+	if a.NickName != nil {
+		object["nick_name"], err = json.Marshal(a.NickName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'nick_name': %w", err)
+		}
+	}
+
+	if a.Sex != nil {
+		object["sex"], err = json.Marshal(a.Sex)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sex': %w", err)
+		}
+	}
+
+	if a.UserId != nil {
+		object["user_id"], err = json.Marshal(a.UserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'user_id': %w", err)
+		}
+	}
+
+	if a.Weight != nil {
+		object["weight"], err = json.Marshal(a.Weight)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'weight': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DeviceUsersEnvelope. Returns the specified
+// element and whether it was found
+func (a DeviceUsersEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DeviceUsersEnvelope
+func (a *DeviceUsersEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DeviceUsersEnvelope to handle AdditionalProperties
+func (a *DeviceUsersEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DeviceUsersEnvelope to handle AdditionalProperties
+func (a DeviceUsersEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for FactoryInfoRecord. Returns the specified
+// element and whether it was found
+func (a FactoryInfoRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for FactoryInfoRecord
+func (a *FactoryInfoRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for FactoryInfoRecord to handle AdditionalProperties
+func (a *FactoryInfoRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["mac"]; found {
+		err = json.Unmarshal(raw, &a.Mac)
+		if err != nil {
+			return fmt.Errorf("error reading 'mac': %w", err)
+		}
+		delete(object, "mac")
+	}
+
+	if raw, found := object["sn"]; found {
+		err = json.Unmarshal(raw, &a.Sn)
+		if err != nil {
+			return fmt.Errorf("error reading 'sn': %w", err)
+		}
+		delete(object, "sn")
+	}
+
+	if raw, found := object["uuid"]; found {
+		err = json.Unmarshal(raw, &a.Uuid)
+		if err != nil {
+			return fmt.Errorf("error reading 'uuid': %w", err)
+		}
+		delete(object, "uuid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for FactoryInfoRecord to handle AdditionalProperties
+func (a FactoryInfoRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Id != nil {
+		object["id"], err = json.Marshal(a.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'id': %w", err)
+		}
+	}
+
+	if a.Mac != nil {
+		object["mac"], err = json.Marshal(a.Mac)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mac': %w", err)
+		}
+	}
+
+	if a.Sn != nil {
+		object["sn"], err = json.Marshal(a.Sn)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sn': %w", err)
+		}
+	}
+
+	if a.Uuid != nil {
+		object["uuid"], err = json.Marshal(a.Uuid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'uuid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for FactoryInfosEnvelope. Returns the specified
+// element and whether it was found
+func (a FactoryInfosEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for FactoryInfosEnvelope
+func (a *FactoryInfosEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for FactoryInfosEnvelope to handle AdditionalProperties
+func (a *FactoryInfosEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for FactoryInfosEnvelope to handle AdditionalProperties
+func (a FactoryInfosEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for HomeDevicesEnvelope. Returns the specified
+// element and whether it was found
+func (a HomeDevicesEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for HomeDevicesEnvelope
+func (a *HomeDevicesEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for HomeDevicesEnvelope to handle AdditionalProperties
+func (a *HomeDevicesEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for HomeDevicesEnvelope to handle AdditionalProperties
+func (a HomeDevicesEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for HomeListEnvelope. Returns the specified
+// element and whether it was found
+func (a HomeListEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for HomeListEnvelope
+func (a *HomeListEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for HomeListEnvelope to handle AdditionalProperties
+func (a *HomeListEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for HomeListEnvelope to handle AdditionalProperties
+func (a HomeListEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for HomeRecord. Returns the specified
+// element and whether it was found
+func (a HomeRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for HomeRecord
+func (a *HomeRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for HomeRecord to handle AdditionalProperties
+func (a *HomeRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["background"]; found {
+		err = json.Unmarshal(raw, &a.Background)
+		if err != nil {
+			return fmt.Errorf("error reading 'background': %w", err)
+		}
+		delete(object, "background")
+	}
+
+	if raw, found := object["geoName"]; found {
+		err = json.Unmarshal(raw, &a.GeoName)
+		if err != nil {
+			return fmt.Errorf("error reading 'geoName': %w", err)
+		}
+		delete(object, "geoName")
+	}
+
+	if raw, found := object["groupId"]; found {
+		err = json.Unmarshal(raw, &a.GroupId)
+		if err != nil {
+			return fmt.Errorf("error reading 'groupId': %w", err)
+		}
+		delete(object, "groupId")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["lat"]; found {
+		err = json.Unmarshal(raw, &a.Lat)
+		if err != nil {
+			return fmt.Errorf("error reading 'lat': %w", err)
+		}
+		delete(object, "lat")
+	}
+
+	if raw, found := object["lon"]; found {
+		err = json.Unmarshal(raw, &a.Lon)
+		if err != nil {
+			return fmt.Errorf("error reading 'lon': %w", err)
+		}
+		delete(object, "lon")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["ownerId"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'ownerId': %w", err)
+		}
+		delete(object, "ownerId")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["uid"]; found {
+		err = json.Unmarshal(raw, &a.Uid)
+		if err != nil {
+			return fmt.Errorf("error reading 'uid': %w", err)
+		}
+		delete(object, "uid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for HomeRecord to handle AdditionalProperties
+func (a HomeRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Background != nil {
+		object["background"], err = json.Marshal(a.Background)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'background': %w", err)
+		}
+	}
+
+	if a.GeoName != nil {
+		object["geoName"], err = json.Marshal(a.GeoName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'geoName': %w", err)
+		}
+	}
+
+	if a.GroupId != nil {
+		object["groupId"], err = json.Marshal(a.GroupId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'groupId': %w", err)
+		}
+	}
+
+	if a.Id != nil {
+		object["id"], err = json.Marshal(a.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'id': %w", err)
+		}
+	}
+
+	if a.Lat != nil {
+		object["lat"], err = json.Marshal(a.Lat)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lat': %w", err)
+		}
+	}
+
+	if a.Lon != nil {
+		object["lon"], err = json.Marshal(a.Lon)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lon': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.OwnerId != nil {
+		object["ownerId"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ownerId': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.Uid != nil {
+		object["uid"], err = json.Marshal(a.Uid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'uid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for LoginCodeEnvelope. Returns the specified
+// element and whether it was found
+func (a LoginCodeEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for LoginCodeEnvelope
+func (a *LoginCodeEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for LoginCodeEnvelope to handle AdditionalProperties
+func (a *LoginCodeEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for LoginCodeEnvelope to handle AdditionalProperties
+func (a LoginCodeEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for LoginCodeResult. Returns the specified
+// element and whether it was found
+func (a LoginCodeResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for LoginCodeResult
+func (a *LoginCodeResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for LoginCodeResult to handle AdditionalProperties
+func (a *LoginCodeResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["access_token"]; found {
+		err = json.Unmarshal(raw, &a.AccessToken)
+		if err != nil {
+			return fmt.Errorf("error reading 'access_token': %w", err)
+		}
+		delete(object, "access_token")
+	}
+
+	if raw, found := object["endpoint"]; found {
+		err = json.Unmarshal(raw, &a.Endpoint)
+		if err != nil {
+			return fmt.Errorf("error reading 'endpoint': %w", err)
+		}
+		delete(object, "endpoint")
+	}
+
+	if raw, found := object["expire_time"]; found {
+		err = json.Unmarshal(raw, &a.ExpireTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'expire_time': %w", err)
+		}
+		delete(object, "expire_time")
+	}
+
+	if raw, found := object["refresh_token"]; found {
+		err = json.Unmarshal(raw, &a.RefreshToken)
+		if err != nil {
+			return fmt.Errorf("error reading 'refresh_token': %w", err)
+		}
+		delete(object, "refresh_token")
+	}
+
+	if raw, found := object["terminal_id"]; found {
+		err = json.Unmarshal(raw, &a.TerminalId)
+		if err != nil {
+			return fmt.Errorf("error reading 'terminal_id': %w", err)
+		}
+		delete(object, "terminal_id")
+	}
+
+	if raw, found := object["uid"]; found {
+		err = json.Unmarshal(raw, &a.Uid)
+		if err != nil {
+			return fmt.Errorf("error reading 'uid': %w", err)
+		}
+		delete(object, "uid")
+	}
+
+	if raw, found := object["username"]; found {
+		err = json.Unmarshal(raw, &a.Username)
+		if err != nil {
+			return fmt.Errorf("error reading 'username': %w", err)
+		}
+		delete(object, "username")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for LoginCodeResult to handle AdditionalProperties
+func (a LoginCodeResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AccessToken != nil {
+		object["access_token"], err = json.Marshal(a.AccessToken)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'access_token': %w", err)
+		}
+	}
+
+	if a.Endpoint != nil {
+		object["endpoint"], err = json.Marshal(a.Endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'endpoint': %w", err)
+		}
+	}
+
+	if a.ExpireTime != nil {
+		object["expire_time"], err = json.Marshal(a.ExpireTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expire_time': %w", err)
+		}
+	}
+
+	if a.RefreshToken != nil {
+		object["refresh_token"], err = json.Marshal(a.RefreshToken)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'refresh_token': %w", err)
+		}
+	}
+
+	if a.TerminalId != nil {
+		object["terminal_id"], err = json.Marshal(a.TerminalId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'terminal_id': %w", err)
+		}
+	}
+
+	if a.Uid != nil {
+		object["uid"], err = json.Marshal(a.Uid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'uid': %w", err)
+		}
+	}
+
+	if a.Username != nil {
+		object["username"], err = json.Marshal(a.Username)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'username': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MessageQueueConfigBody. Returns the specified
+// element and whether it was found
+func (a MessageQueueConfigBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MessageQueueConfigBody
+func (a *MessageQueueConfigBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MessageQueueConfigBody to handle AdditionalProperties
+func (a *MessageQueueConfigBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["linkId"]; found {
+		err = json.Unmarshal(raw, &a.LinkId)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkId': %w", err)
+		}
+		delete(object, "linkId")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MessageQueueConfigBody to handle AdditionalProperties
+func (a MessageQueueConfigBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["linkId"], err = json.Marshal(a.LinkId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'linkId': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MessageQueueConfigEnvelope. Returns the specified
+// element and whether it was found
+func (a MessageQueueConfigEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MessageQueueConfigEnvelope
+func (a *MessageQueueConfigEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MessageQueueConfigEnvelope to handle AdditionalProperties
+func (a *MessageQueueConfigEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MessageQueueConfigEnvelope to handle AdditionalProperties
+func (a MessageQueueConfigEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MessageQueueConfiguration. Returns the specified
+// element and whether it was found
+func (a MessageQueueConfiguration) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MessageQueueConfiguration
+func (a *MessageQueueConfiguration) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MessageQueueConfiguration to handle AdditionalProperties
+func (a *MessageQueueConfiguration) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["clientId"]; found {
+		err = json.Unmarshal(raw, &a.ClientId)
+		if err != nil {
+			return fmt.Errorf("error reading 'clientId': %w", err)
+		}
+		delete(object, "clientId")
+	}
+
+	if raw, found := object["expireTime"]; found {
+		err = json.Unmarshal(raw, &a.ExpireTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'expireTime': %w", err)
+		}
+		delete(object, "expireTime")
+	}
+
+	if raw, found := object["password"]; found {
+		err = json.Unmarshal(raw, &a.Password)
+		if err != nil {
+			return fmt.Errorf("error reading 'password': %w", err)
+		}
+		delete(object, "password")
+	}
+
+	if raw, found := object["topic"]; found {
+		err = json.Unmarshal(raw, &a.Topic)
+		if err != nil {
+			return fmt.Errorf("error reading 'topic': %w", err)
+		}
+		delete(object, "topic")
+	}
+
+	if raw, found := object["url"]; found {
+		err = json.Unmarshal(raw, &a.Url)
+		if err != nil {
+			return fmt.Errorf("error reading 'url': %w", err)
+		}
+		delete(object, "url")
+	}
+
+	if raw, found := object["username"]; found {
+		err = json.Unmarshal(raw, &a.Username)
+		if err != nil {
+			return fmt.Errorf("error reading 'username': %w", err)
+		}
+		delete(object, "username")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MessageQueueConfiguration to handle AdditionalProperties
+func (a MessageQueueConfiguration) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.ClientId != nil {
+		object["clientId"], err = json.Marshal(a.ClientId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'clientId': %w", err)
+		}
+	}
+
+	if a.ExpireTime != nil {
+		object["expireTime"], err = json.Marshal(a.ExpireTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expireTime': %w", err)
+		}
+	}
+
+	if a.Password != nil {
+		object["password"], err = json.Marshal(a.Password)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'password': %w", err)
+		}
+	}
+
+	if a.Topic != nil {
+		object["topic"], err = json.Marshal(a.Topic)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'topic': %w", err)
+		}
+	}
+
+	if a.Url != nil {
+		object["url"], err = json.Marshal(a.Url)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'url': %w", err)
+		}
+	}
+
+	if a.Username != nil {
+		object["username"], err = json.Marshal(a.Username)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'username': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MessageQueueSubscription. Returns the specified
+// element and whether it was found
+func (a MessageQueueSubscription) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MessageQueueSubscription
+func (a *MessageQueueSubscription) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MessageQueueSubscription to handle AdditionalProperties
+func (a *MessageQueueSubscription) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["sub"]; found {
+		err = json.Unmarshal(raw, &a.Sub)
+		if err != nil {
+			return fmt.Errorf("error reading 'sub': %w", err)
+		}
+		delete(object, "sub")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MessageQueueSubscription to handle AdditionalProperties
+func (a MessageQueueSubscription) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Sub != nil {
+		object["sub"], err = json.Marshal(a.Sub)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sub': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MessageQueueTopic. Returns the specified
+// element and whether it was found
+func (a MessageQueueTopic) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MessageQueueTopic
+func (a *MessageQueueTopic) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MessageQueueTopic to handle AdditionalProperties
+func (a *MessageQueueTopic) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["devId"]; found {
+		err = json.Unmarshal(raw, &a.DevId)
+		if err != nil {
+			return fmt.Errorf("error reading 'devId': %w", err)
+		}
+		delete(object, "devId")
+	}
+
+	if raw, found := object["ownerId"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'ownerId': %w", err)
+		}
+		delete(object, "ownerId")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MessageQueueTopic to handle AdditionalProperties
+func (a MessageQueueTopic) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.DevId != nil {
+		object["devId"], err = json.Marshal(a.DevId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'devId': %w", err)
+		}
+	}
+
+	if a.OwnerId != nil {
+		object["ownerId"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ownerId': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MultiOutletNameRecord. Returns the specified
+// element and whether it was found
+func (a MultiOutletNameRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MultiOutletNameRecord
+func (a *MultiOutletNameRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MultiOutletNameRecord to handle AdditionalProperties
+func (a *MultiOutletNameRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["identifier"]; found {
+		err = json.Unmarshal(raw, &a.Identifier)
+		if err != nil {
+			return fmt.Errorf("error reading 'identifier': %w", err)
+		}
+		delete(object, "identifier")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MultiOutletNameRecord to handle AdditionalProperties
+func (a MultiOutletNameRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Identifier != nil {
+		object["identifier"], err = json.Marshal(a.Identifier)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'identifier': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for MultiOutletNamesEnvelope. Returns the specified
+// element and whether it was found
+func (a MultiOutletNamesEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for MultiOutletNamesEnvelope
+func (a *MultiOutletNamesEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for MultiOutletNamesEnvelope to handle AdditionalProperties
+func (a *MultiOutletNamesEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for MultiOutletNamesEnvelope to handle AdditionalProperties
+func (a MultiOutletNamesEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for QRCodeEnvelope. Returns the specified
+// element and whether it was found
+func (a QRCodeEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for QRCodeEnvelope
+func (a *QRCodeEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for QRCodeEnvelope to handle AdditionalProperties
+func (a *QRCodeEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for QRCodeEnvelope to handle AdditionalProperties
+func (a QRCodeEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for QRCodeResult. Returns the specified
+// element and whether it was found
+func (a QRCodeResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for QRCodeResult
+func (a *QRCodeResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for QRCodeResult to handle AdditionalProperties
+func (a *QRCodeResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["qrcode"]; found {
+		err = json.Unmarshal(raw, &a.Qrcode)
+		if err != nil {
+			return fmt.Errorf("error reading 'qrcode': %w", err)
+		}
+		delete(object, "qrcode")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for QRCodeResult to handle AdditionalProperties
+func (a QRCodeResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Qrcode != nil {
+		object["qrcode"], err = json.Marshal(a.Qrcode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'qrcode': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RTCOfferBody. Returns the specified
+// element and whether it was found
+func (a RTCOfferBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RTCOfferBody
+func (a *RTCOfferBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RTCOfferBody to handle AdditionalProperties
+func (a *RTCOfferBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["sdp"]; found {
+		err = json.Unmarshal(raw, &a.Sdp)
+		if err != nil {
+			return fmt.Errorf("error reading 'sdp': %w", err)
+		}
+		delete(object, "sdp")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RTCOfferBody to handle AdditionalProperties
+func (a RTCOfferBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["sdp"], err = json.Marshal(a.Sdp)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'sdp': %w", err)
+	}
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RTCSessionEnvelope. Returns the specified
+// element and whether it was found
+func (a RTCSessionEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RTCSessionEnvelope
+func (a *RTCSessionEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RTCSessionEnvelope to handle AdditionalProperties
+func (a *RTCSessionEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RTCSessionEnvelope to handle AdditionalProperties
+func (a RTCSessionEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RTCSessionResult. Returns the specified
+// element and whether it was found
+func (a RTCSessionResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RTCSessionResult
+func (a *RTCSessionResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RTCSessionResult to handle AdditionalProperties
+func (a *RTCSessionResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["sdp"]; found {
+		err = json.Unmarshal(raw, &a.Sdp)
+		if err != nil {
+			return fmt.Errorf("error reading 'sdp': %w", err)
+		}
+		delete(object, "sdp")
+	}
+
+	if raw, found := object["session_id"]; found {
+		err = json.Unmarshal(raw, &a.SessionId)
+		if err != nil {
+			return fmt.Errorf("error reading 'session_id': %w", err)
+		}
+		delete(object, "session_id")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RTCSessionResult to handle AdditionalProperties
+func (a RTCSessionResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Sdp != nil {
+		object["sdp"], err = json.Marshal(a.Sdp)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sdp': %w", err)
+		}
+	}
+
+	if a.SessionId != nil {
+		object["session_id"], err = json.Marshal(a.SessionId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'session_id': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RawSharingMessage. Returns the specified
+// element and whether it was found
+func (a RawSharingMessage) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawSharingMessage
+func (a *RawSharingMessage) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawSharingMessage to handle AdditionalProperties
+func (a *RawSharingMessage) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["data"]; found {
+		err = json.Unmarshal(raw, &a.Data)
+		if err != nil {
+			return fmt.Errorf("error reading 'data': %w", err)
+		}
+		delete(object, "data")
+	}
+
+	if raw, found := object["protocol"]; found {
+		err = json.Unmarshal(raw, &a.Protocol)
+		if err != nil {
+			return fmt.Errorf("error reading 'protocol': %w", err)
+		}
+		delete(object, "protocol")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawSharingMessage to handle AdditionalProperties
+func (a RawSharingMessage) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Data != nil {
+		object["data"], err = json.Marshal(a.Data)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'data': %w", err)
+		}
+	}
+
+	object["protocol"], err = json.Marshal(a.Protocol)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'protocol': %w", err)
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RefreshTokenEnvelope. Returns the specified
+// element and whether it was found
+func (a RefreshTokenEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RefreshTokenEnvelope
+func (a *RefreshTokenEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RefreshTokenEnvelope to handle AdditionalProperties
+func (a *RefreshTokenEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RefreshTokenEnvelope to handle AdditionalProperties
+func (a RefreshTokenEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RefreshedTokenResult. Returns the specified
+// element and whether it was found
+func (a RefreshedTokenResult) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RefreshedTokenResult
+func (a *RefreshedTokenResult) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RefreshedTokenResult to handle AdditionalProperties
+func (a *RefreshedTokenResult) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["accessToken"]; found {
+		err = json.Unmarshal(raw, &a.AccessToken)
+		if err != nil {
+			return fmt.Errorf("error reading 'accessToken': %w", err)
+		}
+		delete(object, "accessToken")
+	}
+
+	if raw, found := object["expireTime"]; found {
+		err = json.Unmarshal(raw, &a.ExpireTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'expireTime': %w", err)
+		}
+		delete(object, "expireTime")
+	}
+
+	if raw, found := object["refreshToken"]; found {
+		err = json.Unmarshal(raw, &a.RefreshToken)
+		if err != nil {
+			return fmt.Errorf("error reading 'refreshToken': %w", err)
+		}
+		delete(object, "refreshToken")
+	}
+
+	if raw, found := object["uid"]; found {
+		err = json.Unmarshal(raw, &a.Uid)
+		if err != nil {
+			return fmt.Errorf("error reading 'uid': %w", err)
+		}
+		delete(object, "uid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RefreshedTokenResult to handle AdditionalProperties
+func (a RefreshedTokenResult) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AccessToken != nil {
+		object["accessToken"], err = json.Marshal(a.AccessToken)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'accessToken': %w", err)
+		}
+	}
+
+	if a.ExpireTime != nil {
+		object["expireTime"], err = json.Marshal(a.ExpireTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expireTime': %w", err)
+		}
+	}
+
+	if a.RefreshToken != nil {
+		object["refreshToken"], err = json.Marshal(a.RefreshToken)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'refreshToken': %w", err)
+		}
+	}
+
+	if a.Uid != nil {
+		object["uid"], err = json.Marshal(a.Uid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'uid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SendCommandsBody. Returns the specified
+// element and whether it was found
+func (a SendCommandsBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SendCommandsBody
+func (a *SendCommandsBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SendCommandsBody to handle AdditionalProperties
+func (a *SendCommandsBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["commands"]; found {
+		err = json.Unmarshal(raw, &a.Commands)
+		if err != nil {
+			return fmt.Errorf("error reading 'commands': %w", err)
+		}
+		delete(object, "commands")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SendCommandsBody to handle AdditionalProperties
+func (a SendCommandsBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Commands != nil {
+		object["commands"], err = json.Marshal(a.Commands)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commands': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SendCommandsBody_Commands_Item. Returns the specified
+// element and whether it was found
+func (a SendCommandsBody_Commands_Item) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SendCommandsBody_Commands_Item
+func (a *SendCommandsBody_Commands_Item) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SendCommandsBody_Commands_Item to handle AdditionalProperties
+func (a *SendCommandsBody_Commands_Item) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["value"]; found {
+		err = json.Unmarshal(raw, &a.Value)
+		if err != nil {
+			return fmt.Errorf("error reading 'value': %w", err)
+		}
+		delete(object, "value")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SendCommandsBody_Commands_Item to handle AdditionalProperties
+func (a SendCommandsBody_Commands_Item) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["code"], err = json.Marshal(a.Code)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'code': %w", err)
+	}
+
+	object["value"], err = json.Marshal(a.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'value': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SpecificationFunction. Returns the specified
+// element and whether it was found
+func (a SpecificationFunction) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SpecificationFunction
+func (a *SpecificationFunction) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SpecificationFunction to handle AdditionalProperties
+func (a *SpecificationFunction) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["desc"]; found {
+		err = json.Unmarshal(raw, &a.Desc)
+		if err != nil {
+			return fmt.Errorf("error reading 'desc': %w", err)
+		}
+		delete(object, "desc")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if raw, found := object["values"]; found {
+		err = json.Unmarshal(raw, &a.Values)
+		if err != nil {
+			return fmt.Errorf("error reading 'values': %w", err)
+		}
+		delete(object, "values")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SpecificationFunction to handle AdditionalProperties
+func (a SpecificationFunction) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Desc != nil {
+		object["desc"], err = json.Marshal(a.Desc)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'desc': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	object["values"], err = json.Marshal(a.Values)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'values': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SpecificationStatus. Returns the specified
+// element and whether it was found
+func (a SpecificationStatus) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SpecificationStatus
+func (a *SpecificationStatus) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SpecificationStatus to handle AdditionalProperties
+func (a *SpecificationStatus) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if raw, found := object["values"]; found {
+		err = json.Unmarshal(raw, &a.Values)
+		if err != nil {
+			return fmt.Errorf("error reading 'values': %w", err)
+		}
+		delete(object, "values")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SpecificationStatus to handle AdditionalProperties
+func (a SpecificationStatus) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	object["values"], err = json.Marshal(a.Values)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'values': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for StringResultEnvelope. Returns the specified
+// element and whether it was found
+func (a StringResultEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for StringResultEnvelope
+func (a *StringResultEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for StringResultEnvelope to handle AdditionalProperties
+func (a *StringResultEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for StringResultEnvelope to handle AdditionalProperties
+func (a StringResultEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SubDeviceRecord. Returns the specified
+// element and whether it was found
+func (a SubDeviceRecord) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SubDeviceRecord
+func (a *SubDeviceRecord) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SubDeviceRecord to handle AdditionalProperties
+func (a *SubDeviceRecord) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["active_time"]; found {
+		err = json.Unmarshal(raw, &a.ActiveTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'active_time': %w", err)
+		}
+		delete(object, "active_time")
+	}
+
+	if raw, found := object["category"]; found {
+		err = json.Unmarshal(raw, &a.Category)
+		if err != nil {
+			return fmt.Errorf("error reading 'category': %w", err)
+		}
+		delete(object, "category")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["online"]; found {
+		err = json.Unmarshal(raw, &a.Online)
+		if err != nil {
+			return fmt.Errorf("error reading 'online': %w", err)
+		}
+		delete(object, "online")
+	}
+
+	if raw, found := object["owner_id"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'owner_id': %w", err)
+		}
+		delete(object, "owner_id")
+	}
+
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
+	if raw, found := object["update_time"]; found {
+		err = json.Unmarshal(raw, &a.UpdateTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'update_time': %w", err)
+		}
+		delete(object, "update_time")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SubDeviceRecord to handle AdditionalProperties
+func (a SubDeviceRecord) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.ActiveTime != nil {
+		object["active_time"], err = json.Marshal(a.ActiveTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'active_time': %w", err)
+		}
+	}
+
+	if a.Category != nil {
+		object["category"], err = json.Marshal(a.Category)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'category': %w", err)
+		}
+	}
+
+	if a.Id != nil {
+		object["id"], err = json.Marshal(a.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'id': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.Online != nil {
+		object["online"], err = json.Marshal(a.Online)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'online': %w", err)
+		}
+	}
+
+	if a.OwnerId != nil {
+		object["owner_id"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
+		}
+	}
+
+	if a.UpdateTime != nil {
+		object["update_time"], err = json.Marshal(a.UpdateTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'update_time': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SubDevicesEnvelope. Returns the specified
+// element and whether it was found
+func (a SubDevicesEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SubDevicesEnvelope
+func (a *SubDevicesEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SubDevicesEnvelope to handle AdditionalProperties
+func (a *SubDevicesEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SubDevicesEnvelope to handle AdditionalProperties
+func (a SubDevicesEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Result != nil {
+		object["result"], err = json.Marshal(a.Result)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'result': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for TuyaErrorEnvelope. Returns the specified
+// element and whether it was found
+func (a TuyaErrorEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for TuyaErrorEnvelope
+func (a *TuyaErrorEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for TuyaErrorEnvelope to handle AdditionalProperties
+func (a *TuyaErrorEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for TuyaErrorEnvelope to handle AdditionalProperties
+func (a TuyaErrorEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.Msg != nil {
+		object["msg"], err = json.Marshal(a.Msg)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+		}
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for UpdateMultiOutletNameBody. Returns the specified
+// element and whether it was found
+func (a UpdateMultiOutletNameBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for UpdateMultiOutletNameBody
+func (a *UpdateMultiOutletNameBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for UpdateMultiOutletNameBody to handle AdditionalProperties
+func (a *UpdateMultiOutletNameBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["identifier"]; found {
+		err = json.Unmarshal(raw, &a.Identifier)
+		if err != nil {
+			return fmt.Errorf("error reading 'identifier': %w", err)
+		}
+		delete(object, "identifier")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for UpdateMultiOutletNameBody to handle AdditionalProperties
+func (a UpdateMultiOutletNameBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["identifier"], err = json.Marshal(a.Identifier)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'identifier': %w", err)
+	}
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for UpdateNameBody. Returns the specified
+// element and whether it was found
+func (a UpdateNameBody) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for UpdateNameBody
+func (a *UpdateNameBody) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for UpdateNameBody to handle AdditionalProperties
+func (a *UpdateNameBody) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for UpdateNameBody to handle AdditionalProperties
+func (a UpdateNameBody) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {

@@ -110,7 +110,7 @@ snapshot, `AuthService.RefreshToken` returns replacement credentials without
 changing the session, and `Session.SetTokens` applies credentials to subsequent
 requests. Serialize refreshes and persist the rotated access/refresh token pair
 atomically in application-managed storage. Never print tokens or persist them
-in source-controlled files. See the [authentication guide](docs/authentication.md).
+in source-controlled files. See the [authentication guide](https://portpowered.github.io/go-tuya/docs/guides/authentication).
 
 ## Errors
 
@@ -146,10 +146,12 @@ flows worked with their real Tuya account(s), but those tests were not recorded
 with sanitized exchanges or route-by-route provenance. The report cannot be
 independently reproduced or reviewed from this repository and does not establish
 behavior for every account or device model. No private captures are checked in.
-`GET /v1.0/devices` is the only exact route in the checked-in provider schema;
-the `/v1.0/m/...` routes are private routes without matching public wire
-specifications. See [test and fixture notes](docs/testing.md) and the
-[provider evidence review](docs/provider-evidence.md) for scope.
+The checked-in OpenAPI inventory covers the HTTP routes used by this client.
+Its Device Management paths match Tuya's published route catalogue; the
+`/v1.0/m/...` routes are implementation-derived and lack matching public wire
+specifications. See the [testing guide](https://portpowered.github.io/go-tuya/docs/guides/testing)
+and [provider evidence review](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence)
+for scope.
 
 Run the checks from the module root:
 
@@ -163,17 +165,17 @@ Run the checks from the module root:
 | Format Go files | `make fmt` |
 
 The live integration test is opt-in and requires real Tuya credentials. It
-queries the account and devices; see [testing notes](docs/testing.md) before
-running it.
+queries the account and devices; see the
+[testing guide](https://portpowered.github.io/go-tuya/docs/guides/testing)
+before running it.
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
-- [Authentication and token handling](docs/authentication.md)
-- [Device queries and commands](docs/device-control.md)
-- [Message queue events](docs/events.md)
-- [Tuya protocol notes](docs/TUYA.md)
-- [Published API reference and customer guides](https://portpowered.github.io/go-tuya/)
+- [Documentation guides and API reference](https://portpowered.github.io/go-tuya/docs/guides/)
+- [Authentication](https://portpowered.github.io/go-tuya/docs/guides/authentication)
+- [Devices and commands](https://portpowered.github.io/go-tuya/docs/guides/device-control)
+- [Events](https://portpowered.github.io/go-tuya/docs/guides/events)
+- [Provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence)
 - [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
 
 ## License

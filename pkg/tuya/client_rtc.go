@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // RTCStream represents an active WebRTC stream with a Tuya camera device.
@@ -45,7 +47,7 @@ type encryptedRTCSessionResponse struct {
 
 func (s encryptedRTCSignaling) Start(ctx context.Context, req StartRTCStreamRequest) (RTCSessionInfo, error) {
 	resp, err := s.client.Post(ctx,
-		fmt.Sprintf("/v1.0/m/life/ipc/%s/webrtc/session", req.DeviceID),
+		fmt.Sprintf(wire.RouteStartRTCSession, req.DeviceID),
 		nil,
 		map[string]interface{}{"sdp": req.SDPOffer, "type": "offer"},
 		&req,
@@ -63,7 +65,7 @@ func (s encryptedRTCSignaling) Start(ctx context.Context, req StartRTCStreamRequ
 
 func (s encryptedRTCSignaling) Stop(ctx context.Context, req StopRTCStreamRequest) error {
 	_, err := s.client.Delete(ctx,
-		fmt.Sprintf("/v1.0/m/life/ipc/%s/webrtc/session/%s", req.DeviceID, req.SessionID),
+		fmt.Sprintf(wire.RouteStopRTCSession, req.DeviceID, req.SessionID),
 		nil,
 		&req,
 	)

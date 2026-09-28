@@ -1,0 +1,67 @@
+---
+title: Authentication
+description: Sign in with QR approval and manage Tuya credentials explicitly.
+---
+
+# Authentication
+
+The Device Sharing flow starts with `GenerateQrCodeForLogin`. Show its
+`QrFormattedCode` in a QR-capable app, wait for the account owner to approve,
+then validate the returned login code. This example creates a reusable client
+and an account-scoped session:
+
+Reference: [QR challenge](../../openapi/authentication/generateLoginQRCode),
+[login-code validation](../../openapi/authentication/validateLoginCode), and
+[token refresh](../../openapi/authentication/refreshAccessToken).
+
+```go
+base, err := tuya.NewClient(
+    tuya.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
+    tuya.WithRegion(tuya.TuyaRegionUS),
+)
+if err != nil {
+    return err
+}
+
+session := base.NewSession(tuya.Tokens{})
+defer session.Close(ctx)
+
+login, err := session.AuthService.GenerateQrCodeForLogin(ctx, tuya.LoginRequest{
+    AccessCode: accessCode,
+    Schema:     tuya.AuthenticationSchema,
+})
+if err != nil {
+    return err
+}
+// Display login.QrFormattedCode and wait for approval.
+
+tokens, err := session.AuthService.ValidateLoginCode(ctx, tuya.ValidateLoginCodeRequest{
+    LoginCode: login.Code,
+    UserCode:  accessCode,
+})
+if err != nil {
+    return err
+}
+session.SetTokens(tuya.Tokens{
+    AccessToken:  tokens.AccessToken,
+    RefreshToken: tokens.RefreshToken,
+    ExpireTime:   tokens.ExpireTime,
+})
+// Persist the tokens securely in application-managed storage.
+```
+
+The client holds reusable endpoint and transport settings. A session holds one
+account's tokens and connection state. `session.Tokens()` returns the current
+credentials; requests do not refresh them automatically. Call
+`session.AuthService.RefreshToken` with the session's refresh token, persist the
+rotated token pair together, then call `session.SetTokens` to use them. For
+existing credentials, initialize the session with `tuya.Tokens{...}`. Serialize
+concurrent refreshes.
+Use `WithHTTPClient` or `WithHTTPTransport` to set a timeout or custom
+transport; the default HTTP client has no timeout.
+
+Access codes, QR challenges, and tokens are credentials. Keep them out of
+source control and logs. Authentication requests may include credentials in
+URLs, so redact request URLs and errors before sharing diagnostics. See the
+[authentication example](https://github.com/portpowered/go-tuya/tree/main/examples/auth)
+and [token refresh example](https://github.com/portpowered/go-tuya/tree/main/examples/token_refresh).

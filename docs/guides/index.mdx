@@ -1,28 +1,19 @@
 ---
 title: go-tuya guides
-description: Evidence-scoped documentation for the standalone Tuya Go client.
+description: Guides for the standalone Tuya Go client.
 ---
 
 # go-tuya guides
 
-This site publishes the reviewed API subset and customer guides for
-[`github.com/portpowered/go-tuya`](https://github.com/portpowered/go-tuya).
+Use these guides with the [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya).
+They describe the standalone client and distinguish published Tuya references
+from implementation-derived behavior.
 
-The only HTTP route currently described by a matching official wire reference
-is [`GET /v1.0/devices`](./device-list). Tuya's documentation covers its path,
-query parameters, and result pagination fields. The client reaches this path
-through its Device Sharing encrypted transport; the route documentation does
-not specify or verify that transport.
-
-The client's `/v1.0/m/...` routes and event, authentication, and RTC flows do
-not have matching provider wire specifications or sanitized captures. The
-maintainer reports that the implemented API flows worked with their real Tuya
-account(s), but the tests were not recorded with route-by-route provenance.
-These guides describe that report separately from the public wire references.
-The repository's authored guides explain the current Go implementation and
-identify its limits:
-
-- [Authentication and token handling](https://github.com/portpowered/go-tuya/blob/main/docs/authentication.md)
-- [Device queries and commands](https://github.com/portpowered/go-tuya/blob/main/docs/device-control.md)
-- [Message queue events](https://github.com/portpowered/go-tuya/blob/main/docs/events.md)
-- [Provider evidence review](https://github.com/portpowered/go-tuya/blob/main/docs/provider-evidence.md)
+- [Authentication](./authentication)
+- [Query devices](./device-list)
+- [Devices and commands](./device-control)
+- [Events](./events)
+- [Testing and evidence](./testing)
+- [Provider evidence](./provider-evidence)
+- [API schema](./schema)
+- [Tuya service notes](./tuya)

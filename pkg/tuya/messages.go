@@ -12,6 +12,8 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // GetMessageQueueConfig retrieves MQTT configuration from Tuya API
@@ -19,7 +21,7 @@ import (
 func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (MessageQueueConfig, error) {
 	linkID := uuid.New().String()
 
-	resp, err := s.Client.EncryptedClient.Post(ctx, "/v1.0/m/life/ha/access/config",
+	resp, err := s.Client.EncryptedClient.Post(ctx, wire.RouteGetMessageQueueConfig,
 		map[string]interface{}{},
 		map[string]interface{}{
 			"linkId": linkID,
@@ -415,13 +417,20 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	topic := msg.Topic()
 	payload := msg.Payload()
 
-	log.Printf("Received message on topic %s: %s", topic, string(payload))
-
 	// Parse message
-	var messageData map[string]interface{}
-	if err := json.Unmarshal(payload, &messageData); err != nil {
+	var sharingMessage wire.RawSharingMessage
+	if err := json.Unmarshal(payload, &sharingMessage); err != nil {
 		log.Printf("Failed to parse message JSON: %v", err)
 		return
+	}
+	messageData := make(map[string]interface{}, len(sharingMessage.AdditionalProperties)+3)
+	for key, value := range sharingMessage.AdditionalProperties {
+		messageData[key] = value
+	}
+	messageData["protocol"] = float64(sharingMessage.Protocol)
+	messageData["data"] = sharingMessage.Data
+	if sharingMessage.T != nil {
+		messageData["t"] = *sharingMessage.T
 	}
 
 	// Handle general message listeners

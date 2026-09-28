@@ -1,0 +1,39 @@
+---
+title: Testing and evidence
+description: Run local checks and understand what the tests establish.
+---
+
+# Testing and evidence
+
+Run the local checks from the repository root:
+
+```sh
+make lint
+make check
+make coverage
+make replay
+```
+
+`make coverage` measures non-generated Go code under `pkg/` and enforces an
+80% minimum. Replay tests inject an HTTP transport and read hand-authored
+fixtures from `tests/replay/fixtures`. Those fixtures are synthetic examples of
+the current implementation; they are not Tuya captures and do not validate
+private provider schemas.
+
+The maintainer reports that the implemented flows worked with real Tuya
+accounts, but the account tests were not recorded with sanitized exchanges or
+route-by-route provenance. No private account or device captures are included
+in the repository.
+
+An opt-in integration test makes read-only account requests. Use a test account
+and keep credentials out of shell history and shared output:
+
+```sh
+TUYA_AUTH_TOKEN="$TUYA_AUTH_TOKEN" \
+TUYA_REFRESH_TOKEN="$TUYA_REFRESH_TOKEN" \
+TUYA_AUTH_TOKEN_EXPIRED="$TUYA_AUTH_TOKEN_EXPIRED" \
+go test -tags=integration ./pkg/tuya -run TestIntegration_DeviceManagementWorkflow
+```
+
+See [the integration test](https://github.com/portpowered/go-tuya/blob/main/pkg/tuya/integration_test.go)
+for setup details. Live tests are excluded from pull-request CI.

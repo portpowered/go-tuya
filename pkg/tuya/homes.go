@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // HomeService provides methods for managing smart homes
@@ -11,7 +13,7 @@ type HomeService service
 
 // QueryHomes retrieves all homes for the authenticated user
 func (h *HomeService) QueryHomes(ctx context.Context, req QueryHomesRequest) (QueryHomesResponse, error) {
-	resp, err := h.client.EncryptedClient.Get(ctx, "/v1.0/m/life/users/homes", nil, &req)
+	resp, err := h.client.EncryptedClient.Get(ctx, wire.RouteQueryHomes, nil, &req)
 	if err != nil {
 		return QueryHomesResponse{}, err
 	}

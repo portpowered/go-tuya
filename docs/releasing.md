@@ -2,13 +2,12 @@
 
 ## Provider evidence review
 
-The maintainer reports that the implemented API flows worked with their real
-Tuya account(s). Those tests were not documented with sanitized exchanges or
+The maintainer reports that the implemented API flows worked with real Tuya
+accounts. Those tests were not documented with sanitized exchanges or
 route-by-route provenance, so the repository cannot independently reproduce
-or inspect them. The README and [provider evidence review](provider-evidence.md)
-record this limit. The checked-in provider schema covers the exact documented
-`GET /v1.0/devices` route; the `/v1.0/m/...` routes remain private routes without
-matching public wire specifications, despite the reported account-test success.
+or inspect them. The README and [provider evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence)
+record this limit. The OpenAPI inventory includes the routes used by the client
+and labels each operation as provider-documented or implementation-derived.
 Keep that distinction in release notes and customer documentation.
 
 Follow the pre-release review in the template's
@@ -16,8 +15,8 @@ Follow the pre-release review in the template's
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
 [`template-checklist.md`](template-checklist.md) as a separate sign-off. The
-first clean-history release is `v0.1.0`; checklist item 3 records the live
-badge and Go Reference verification separately.
+first clean-history release was `v0.1.0`; `v0.2.0` introduced `pkg/tuya`.
+Checklist item 3 records the latest badge and Go Reference checks.
 
 The module path is `github.com/portpowered/go-tuya`. The public client package
 is `github.com/portpowered/go-tuya/pkg/tuya`. The first tag had no prior stable

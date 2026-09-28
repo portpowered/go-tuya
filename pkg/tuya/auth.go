@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // AuthService is the service used to generate the QR code, and then validate the code to get the access token.
@@ -26,7 +28,7 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		RefreshToken: req.RefreshToken,
 	}
 
-	response, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf("/v1.0/m/token/%s", req.RefreshToken), nil, &req)
+	response, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteRefreshAccessToken, req.RefreshToken), nil, &req)
 	if err != nil {
 		return RefreshTokenResponse{}, fmt.Errorf("failed to refresh token: %w", err)
 	}
@@ -80,9 +82,9 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	if schema == "" {
 		schema = AuthenticationSchema
 	}
-	url := fmt.Sprintf("%s/v1.0/m/life/home-assistant/qrcode/tokens?clientid=%s&usercode=%s&schema=%s",
-		c.client.AuthenticationURL, c.client.ClientID, req.AccessCode, schema)
-	httpRequest, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	url := fmt.Sprintf("%s%s?clientid=%s&usercode=%s&schema=%s",
+		c.client.AuthenticationURL, wire.RouteGenerateLoginQRCode, c.client.ClientID, req.AccessCode, schema)
+	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, url, nil)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -125,10 +127,10 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 // "result":{"access_token":"1231","refresh_token":"123123","expire_time":7200,
 // "terminal_id":"1231231","uid":"1231","username":"123123","endpoint":"https://apigw.tuyaus.com"}}
 func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCodeRequest) (ValidateLoginCodeResponse, error) {
-	url := fmt.Sprintf("%s/v1.0/m/life/home-assistant/qrcode/tokens/%s?clientid=%s&usercode=%s",
-		c.client.AuthenticationURL, req.LoginCode, c.client.ClientID, req.UserCode)
+	url := fmt.Sprintf("%s%s?clientid=%s&usercode=%s",
+		c.client.AuthenticationURL, fmt.Sprintf(wire.RouteValidateLoginCode, req.LoginCode), c.client.ClientID, req.UserCode)
 
-	httpRequest, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, url, nil)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, err
 	}

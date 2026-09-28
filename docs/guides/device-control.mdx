@@ -1,0 +1,51 @@
+---
+title: Devices and commands
+description: Query Tuya devices and send device-specific commands.
+---
+
+# Devices and commands
+
+Use the account's `HomeService` and `DevicesService` to find devices and read
+their status or specifications. The [Query devices](../device-list) guide covers
+the method backed by Tuya's documented device-list route.
+
+Reference: [home list](../../openapi/tuya-private-routes/queryHomes),
+[home devices](../../openapi/tuya-private-routes/queryHomeDevices), and
+[send commands](../../openapi/tuya-private-routes/sendDeviceCommands).
+
+```go
+homes, err := session.HomeService.QueryHomes(ctx, tuya.QueryHomesRequest{})
+if err != nil {
+    return err
+}
+if len(homes.Results) == 0 {
+    return errors.New("no homes found")
+}
+
+devices, err := session.DevicesService.QueryDevicesByHome(ctx,
+    tuya.QueryDevicesByHomeRequest{HomeID: homes.Results[0].ID})
+if err != nil {
+    return err
+}
+fmt.Printf("Found %d devices\n", len(devices.Results))
+```
+
+The device service also provides status, specification, detail, log, factory,
+sub-device, and user operations. Device response values can contain local keys,
+account identifiers, location, and state. Select fields explicitly instead of
+logging complete response structs.
+
+Command codes and values depend on the device. Check its specification before
+sending a command. This example changes a real device when run with live
+credentials:
+
+```go
+_, err := session.DevicesService.SendCommands(ctx, tuya.SendCommandsRequest{
+    DeviceID: deviceID,
+    Commands: []tuya.Command{{Code: "switch_led_1", Value: true}},
+})
+```
+
+Review the target and command before running the
+[command example](https://github.com/portpowered/go-tuya/tree/main/examples/command).
+The library does not implement local-network device control.

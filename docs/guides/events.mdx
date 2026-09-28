@@ -1,0 +1,48 @@
+---
+title: Events
+description: Listen for Tuya account and device events.
+---
+
+# Events
+
+Each account session owns a `MessageQueue`. Register a listener, start the
+queue, and stop it when the listener's lifetime ends. Handle events without
+logging complete payloads, which can contain device identifiers and state.
+
+```go
+queue := session.MessageQueue
+_, err := queue.AddDeviceListener(ctx, tuya.AddDeviceListenerRequest{
+    DeviceID: deviceID,
+    Callback: func(_ string, event tuya.Event) {
+        switch event.(type) {
+        case *tuya.DeviceStateChangeEvent:
+            // Handle a state change.
+        case *tuya.DeviceManagementEvent:
+            // Handle a management event.
+        }
+    },
+})
+if err != nil {
+    return err
+}
+
+if _, err := queue.Start(ctx, tuya.MessageQueueStartRequest{}); err != nil {
+    return err
+}
+defer queue.Stop(context.Background(), tuya.MessageQueueStopRequest{})
+```
+
+The parser handles device-state protocol 4 and device-management protocol 20
+messages. Unknown management codes remain generic management events. Synthetic
+tests cover these parser cases; they do not define Tuya's full event catalog or
+guarantee which events an account or device will send. Handle callback
+concurrency in your application and close the session when finished.
+
+The built-in client subscribes over MQTT to topics supplied by Tuya's message
+queue configuration. The [AsyncAPI inventory](https://github.com/portpowered/go-tuya/blob/main/api/mqtt.asyncapi.yaml)
+records the current implementation-derived channel behavior; it is not a
+provider-verified event catalog. The client does not provide a built-in
+WebSocket event connection.
+
+See the generated references for [owner events](../../asyncapi/message-events/receiveOwnerEvents)
+and [device status events](../../asyncapi/message-events/receiveDeviceStatus).
