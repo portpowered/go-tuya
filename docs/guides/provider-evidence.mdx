@@ -34,6 +34,11 @@ encryption transport. A documented route match does not verify that transport
 or response fields beyond those shown by Tuya. No sanitized live exchanges or
 private account/device captures are included in this repository.
 
+The OpenAPI server list follows the library's configured cloud and QR login
+hosts. Tuya's [general Cloud API endpoint list](https://developer.tuya.com/en/docs/iot/api-request?id=Ka4a8uuo1j4t4)
+uses a different US host, so these server choices are implementation-derived
+for this Device Sharing client.
+
 Message queue connections use MQTT topics returned by Tuya's queue
 configuration. Their channel and event behavior is documented separately in
 the [AsyncAPI inventory](https://github.com/portpowered/go-tuya/blob/main/api/mqtt.asyncapi.yaml)
