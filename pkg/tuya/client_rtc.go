@@ -45,8 +45,8 @@ func (s encryptedRTCSignaling) Start(ctx context.Context, req StartRTCStreamRequ
 	if err != nil {
 		return RTCSessionInfo{}, err
 	}
-	resp, err := s.client.Post(ctx,
-		fmt.Sprintf(wire.RouteStartRTCSession, req.DeviceID),
+	resp, err := s.client.requestOperation(ctx, wire.OperationStartRTCSession(),
+		[]any{req.DeviceID},
 		nil,
 		body,
 		&req,
@@ -67,8 +67,9 @@ func (s encryptedRTCSignaling) Start(ctx context.Context, req StartRTCStreamRequ
 }
 
 func (s encryptedRTCSignaling) Stop(ctx context.Context, req StopRTCStreamRequest) error {
-	_, err := s.client.Delete(ctx,
-		fmt.Sprintf(wire.RouteStopRTCSession, req.DeviceID, req.SessionID),
+	_, err := s.client.requestOperation(ctx, wire.OperationStopRTCSession(),
+		[]any{req.DeviceID, req.SessionID},
+		nil,
 		nil,
 		&req,
 	)

@@ -11,7 +11,7 @@ type HomeService service
 
 // QueryHomes retrieves all homes for the authenticated user
 func (h *HomeService) QueryHomes(ctx context.Context, req QueryHomesRequest) (QueryHomesResponse, error) {
-	resp, err := h.client.EncryptedClient.Get(ctx, wire.RouteQueryHomes, nil, &req)
+	resp, err := h.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomes(), nil, nil, nil, &req)
 	if err != nil {
 		return QueryHomesResponse{}, err
 	}

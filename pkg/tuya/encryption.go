@@ -30,6 +30,16 @@ type EncryptedClient struct {
 	Client *Session
 }
 
+// requestOperation dispatches an inventoried operation using its generated
+// method and path as one unit.
+func (c *EncryptedClient) requestOperation(ctx context.Context, operation wire.Operation, pathArgs []any, params, body map[string]interface{}, request OperationRequest) (*EncryptedAPIResponse, error) {
+	path := operation.Path
+	if len(pathArgs) > 0 {
+		path = fmt.Sprintf(path, pathArgs...)
+	}
+	return c.makeRequest(ctx, operation.Method, path, params, body, request)
+}
+
 // Get performs an encrypted GET request
 func (c *EncryptedClient) Get(ctx context.Context, path string, params map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
 	return c.makeRequest(ctx, "GET", path, params, nil, operationRequest)

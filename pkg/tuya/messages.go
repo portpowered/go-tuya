@@ -25,7 +25,7 @@ func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (Me
 	if err != nil {
 		return MessageQueueConfig{}, err
 	}
-	resp, err := s.Client.EncryptedClient.Post(ctx, wire.RouteGetMessageQueueConfig,
+	resp, err := s.Client.EncryptedClient.requestOperation(ctx, wire.OperationGetMessageQueueConfig(), nil,
 		map[string]interface{}{},
 		body,
 		&MessageQueueStartRequest{})
@@ -266,8 +266,8 @@ func (s *SharingMessageQueueImpl) AddDeviceListener(_ context.Context, req AddDe
 
 	// Subscribe to device topic if MQTT is connected
 	if state.mqttClient != nil && state.mqttClient.IsConnected() && state.mqConfig != (MessageQueueConfig{}) {
-		deviceTopic := state.getDeviceTopic(req.DeviceID, false) // Assume support_local = true
-		state.mqttClient.Subscribe(deviceTopic, 0, nil)
+		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", req.DeviceID)
+		subscribeChannel(state.mqttClient, wire.MQTTChannelDeviceStatus, deviceTopic)
 	}
 
 	return AddDeviceListenerResponse{
@@ -397,15 +397,26 @@ func (state *mqttState) onConnect(client mqtt.Client) {
 	// Subscribe to topics with existing listeners
 	state.listenersMux.RLock()
 	for topic := range state.messageListeners {
-		client.Subscribe(topic, 0, nil)
+		subscribeChannel(client, wire.MQTTChannelOwnerEvents, topic)
 		log.Printf("Subscribed to listener topic: %s", topic)
 	}
 	for deviceID := range state.deviceListeners {
+		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
+		subscribeChannel(client, wire.MQTTChannelDeviceStatus, deviceTopic)
 		topic := state.getDeviceTopic(deviceID, false)
-		client.Subscribe(topic, 0, nil)
 		log.Printf("Subscribed to device listener topic: %s", topic)
 	}
 	state.listenersMux.RUnlock()
+}
+
+func subscribeChannel(client mqtt.Client, channel wire.MQTTChannel, runtimeTopic string) {
+	client.Subscribe(channelAddress(channel, runtimeTopic), 0, nil)
+}
+
+func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
+	address := string(channel)
+	address = strings.ReplaceAll(address, "{ownerTopic}", runtimeTopic)
+	return strings.ReplaceAll(address, "{deviceTopic}", runtimeTopic)
 }
 
 // onConnectionLost handles MQTT connection lost
@@ -471,9 +482,9 @@ func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) strin
 		// When a device supports local, we do the mapping between the data point id and the more comprehensible name.
 		// i.e. dp1 -> led_dimmer_1.
 		// To do this, each device needs to maintain the corresponding specification strategy with it for local transformations.
-		return strings.ReplaceAll(wire.MQTTChannelDeviceLocal, "{deviceTopic}", topic)
+		return channelAddress(wire.MQTTChannelDeviceLocal, topic)
 	}
-	return strings.ReplaceAll(wire.MQTTChannelDeviceStatus, "{deviceTopic}", topic)
+	return channelAddress(wire.MQTTChannelDeviceStatus, topic)
 }
 
 // extractDeviceIDFromTopic extracts device ID from topic string

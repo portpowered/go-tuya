@@ -29,7 +29,7 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		RefreshToken: req.RefreshToken,
 	}
 
-	response, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteRefreshAccessToken, req.RefreshToken), nil, &req)
+	response, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationRefreshAccessToken(), []any{req.RefreshToken}, nil, nil, &req)
 	if err != nil {
 		return RefreshTokenResponse{}, fmt.Errorf("failed to refresh token: %w", err)
 	}

@@ -33,5 +33,8 @@ go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 \
 go run ./tools/wireroutes
 ```
 
-`wireroutes` generates HTTP route and MQTT channel constants. Check them with
-`go run ./tools/wireroutes -check`.
+`wireroutes` generates paired HTTP operation descriptors and typed MQTT channel
+templates. The encrypted client dispatches operations through those descriptors.
+Subscriptions use the generated channel templates. Run
+`go run ./tools/wireroutes -check` to check generated output and reject new
+unschematized paths, handwritten operation methods, and MQTT subscriptions.

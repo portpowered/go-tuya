@@ -19,7 +19,7 @@ func (c *DevicesService) QueryDevicesByHome(ctx context.Context, req QueryDevice
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Get(ctx, wire.RouteQueryHomeDevices, params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
@@ -40,7 +40,7 @@ func (c *DevicesService) QueryDevicesByHomeAssistantDevices(ctx context.Context,
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Get(ctx, wire.RouteQueryHomeDevices, params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
@@ -190,7 +190,7 @@ func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevices
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Get(ctx, wire.RouteQueryHomeDevices, params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
@@ -220,7 +220,7 @@ func (c *DevicesService) SendCommands(ctx context.Context, req SendCommandsReque
 	if err != nil {
 		return SendCommandsResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Post(ctx, fmt.Sprintf(wire.RouteSendDeviceCommands, req.DeviceID), map[string]interface{}{}, body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationSendDeviceCommands(), []any{req.DeviceID}, map[string]interface{}{}, body, &req)
 	if err != nil {
 		return SendCommandsResponse{}, err
 	}
@@ -247,7 +247,7 @@ func (c *DevicesService) GetDeviceStreamAllocate(_ context.Context, _ GetDeviceS
 // QueryDeviceStatus retrieves the current status of a device
 func (c *DevicesService) QueryDeviceStatus(ctx context.Context,
 	req QueryDeviceStatusRequest) (QueryDeviceStatusResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteQueryDeviceStatus, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryDeviceStatus(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return QueryDeviceStatusResponse{}, err
 	}
@@ -289,7 +289,7 @@ func buildDeviceUserBody(nickName string, sex int, birthday *int64, height, weig
 func (c *DevicesService) QueryDeviceSpecification(ctx context.Context,
 	req QueryDeviceSpecificationRequest) (QueryDeviceSpecificationResponse, error) {
 
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteQueryDeviceSpecification, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryDeviceSpecification(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return QueryDeviceSpecificationResponse{}, err
 	}
@@ -313,7 +313,7 @@ func (c *DevicesService) QueryDeviceSpecification(ctx context.Context,
 
 // GetDeviceDetails retrieves detailed information about a single device.
 func (c *DevicesService) GetDeviceDetails(ctx context.Context, req GetDeviceDetailsRequest) (GetDeviceDetailsResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteGetDeviceDetails, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetDeviceDetails(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return GetDeviceDetailsResponse{}, err
 	}
@@ -351,7 +351,7 @@ func (c *DevicesService) QueryDevicesByUser(ctx context.Context, req QueryDevice
 		return QueryDevicesByUserResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteGetDevicesByUser, req.UID), params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetDevicesByUser(), []any{req.UID}, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByUserResponse{}, err
 	}
@@ -382,7 +382,7 @@ func (c *DevicesService) QueryDevices(ctx context.Context, req QueryDevicesReque
 		return QueryDevicesResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Get(ctx, wire.RouteGetDeviceList, params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetDeviceList(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesResponse{}, err
 	}
@@ -419,7 +419,7 @@ func (c *DevicesService) UpdateDeviceFunctionName(ctx context.Context, req Updat
 	if err != nil {
 		return UpdateDeviceFunctionNameResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Put(ctx, fmt.Sprintf(wire.RouteUpdateDeviceFunctionName, req.DeviceID, req.FunctionCode), body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateDeviceFunctionName(), []any{req.DeviceID, req.FunctionCode}, nil, body, &req)
 	if err != nil {
 		return UpdateDeviceFunctionNameResponse{}, err
 	}
@@ -463,7 +463,7 @@ func (c *DevicesService) QueryDeviceLogs(ctx context.Context, req QueryDeviceLog
 		return QueryDeviceLogsResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteGetDeviceLogs, req.DeviceID), params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetDeviceLogs(), []any{req.DeviceID}, params, nil, &req)
 	if err != nil {
 		return QueryDeviceLogsResponse{}, err
 	}
@@ -485,7 +485,7 @@ func (c *DevicesService) QueryDeviceLogs(ctx context.Context, req QueryDeviceLog
 
 // ResetDeviceFactoryDefaults restores a device to factory defaults.
 func (c *DevicesService) ResetDeviceFactoryDefaults(ctx context.Context, req ResetDeviceFactoryDefaultsRequest) (ResetDeviceFactoryDefaultsResponse, error) {
-	resp, err := c.client.EncryptedClient.Put(ctx, fmt.Sprintf(wire.RouteResetDeviceFactory, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationResetDeviceFactory(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return ResetDeviceFactoryDefaultsResponse{}, err
 	}
@@ -502,7 +502,7 @@ func (c *DevicesService) ResetDeviceFactoryDefaults(ctx context.Context, req Res
 
 // DeleteDevice removes a device by ID.
 func (c *DevicesService) DeleteDevice(ctx context.Context, req DeleteDeviceRequest) (DeleteDeviceResponse, error) {
-	resp, err := c.client.EncryptedClient.Delete(ctx, fmt.Sprintf(wire.RouteDeleteDevice, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationDeleteDevice(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return DeleteDeviceResponse{}, err
 	}
@@ -519,7 +519,7 @@ func (c *DevicesService) DeleteDevice(ctx context.Context, req DeleteDeviceReque
 
 // QuerySubDevices returns sub-devices for a gateway.
 func (c *DevicesService) QuerySubDevices(ctx context.Context, req QuerySubDevicesRequest) (QuerySubDevicesResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteGetSubDevices, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetSubDevices(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return QuerySubDevicesResponse{}, err
 	}
@@ -551,7 +551,7 @@ func (c *DevicesService) QueryDeviceFactoryInfos(ctx context.Context, req QueryD
 		return QueryDeviceFactoryInfosResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Get(ctx, wire.RouteGetFactoryInfos, params, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetFactoryInfos(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDeviceFactoryInfosResponse{}, err
 	}
@@ -580,7 +580,7 @@ func (c *DevicesService) UpdateDeviceName(ctx context.Context, req UpdateDeviceN
 	if err != nil {
 		return UpdateDeviceNameResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.Put(ctx, fmt.Sprintf(wire.RouteUpdateDeviceName, req.DeviceID), body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateDeviceName(), []any{req.DeviceID}, nil, body, &req)
 	if err != nil {
 		return UpdateDeviceNameResponse{}, err
 	}
@@ -602,7 +602,7 @@ func (c *DevicesService) AddDeviceUser(ctx context.Context, req AddDeviceUserReq
 		return AddDeviceUserResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Post(ctx, fmt.Sprintf(wire.RouteAddDeviceUser, req.DeviceID), nil, body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationAddDeviceUser(), []any{req.DeviceID}, nil, body, &req)
 	if err != nil {
 		return AddDeviceUserResponse{}, err
 	}
@@ -624,7 +624,7 @@ func (c *DevicesService) UpdateDeviceUser(ctx context.Context, req UpdateDeviceU
 		return UpdateDeviceUserResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Put(ctx, fmt.Sprintf(wire.RouteUpdateDeviceUser, req.DeviceID, req.UserID), body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateDeviceUser(), []any{req.DeviceID, req.UserID}, nil, body, &req)
 	if err != nil {
 		return UpdateDeviceUserResponse{}, err
 	}
@@ -641,7 +641,7 @@ func (c *DevicesService) UpdateDeviceUser(ctx context.Context, req UpdateDeviceU
 
 // DeleteDeviceUser removes a user from a device.
 func (c *DevicesService) DeleteDeviceUser(ctx context.Context, req DeleteDeviceUserRequest) (DeleteDeviceUserResponse, error) {
-	resp, err := c.client.EncryptedClient.Delete(ctx, fmt.Sprintf(wire.RouteDeleteDeviceUser, req.DeviceID, req.UserID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationDeleteDeviceUser(), []any{req.DeviceID, req.UserID}, nil, nil, &req)
 	if err != nil {
 		return DeleteDeviceUserResponse{}, err
 	}
@@ -658,7 +658,7 @@ func (c *DevicesService) DeleteDeviceUser(ctx context.Context, req DeleteDeviceU
 
 // GetDeviceUser retrieves a single device user.
 func (c *DevicesService) GetDeviceUser(ctx context.Context, req GetDeviceUserRequest) (GetDeviceUserResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteGetDeviceUser, req.DeviceID, req.UserID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationGetDeviceUser(), []any{req.DeviceID, req.UserID}, nil, nil, &req)
 	if err != nil {
 		return GetDeviceUserResponse{}, err
 	}
@@ -682,7 +682,7 @@ func (c *DevicesService) GetDeviceUser(ctx context.Context, req GetDeviceUserReq
 
 // ListDeviceUsers lists device users for a given device.
 func (c *DevicesService) ListDeviceUsers(ctx context.Context, req ListDeviceUsersRequest) (ListDeviceUsersResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteListDeviceUsers, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationListDeviceUsers(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return ListDeviceUsersResponse{}, err
 	}
@@ -715,7 +715,7 @@ func (c *DevicesService) UpdateMultiOutletName(ctx context.Context, req UpdateMu
 		return UpdateMultiOutletNameResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.Put(ctx, fmt.Sprintf(wire.RouteUpdateMultiOutletName, req.DeviceID), body, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateMultiOutletName(), []any{req.DeviceID}, nil, body, &req)
 	if err != nil {
 		return UpdateMultiOutletNameResponse{}, err
 	}
@@ -732,7 +732,7 @@ func (c *DevicesService) UpdateMultiOutletName(ctx context.Context, req UpdateMu
 
 // ListMultiOutletNames lists identifiers/names for a multi-outlet device.
 func (c *DevicesService) ListMultiOutletNames(ctx context.Context, req ListMultiOutletNamesRequest) (ListMultiOutletNamesResponse, error) {
-	resp, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf(wire.RouteListMultiOutletNames, req.DeviceID), nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationListMultiOutletNames(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return ListMultiOutletNamesResponse{}, err
 	}
