@@ -17,6 +17,12 @@ type totals struct {
 	all     int64
 }
 
+type coverageBlock struct {
+	source     string
+	statements int64
+	covered    bool
+}
+
 func main() {
 	profile := flag.String("profile", "coverage.out", "Go coverage profile")
 	minimum := flag.Float64("min", 80, "minimum combined statement coverage percent")
@@ -42,12 +48,16 @@ func report(profile string, minimum float64, percentOnly bool, filteredProfile s
 
 	byPackage := make(map[string]totals)
 	generated := make(map[string]bool)
-	var filtered strings.Builder
+	blocks := make(map[string]coverageBlock)
+	mode := ""
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "mode:") {
-			filtered.WriteString(line + "\n")
+			if mode != "" && mode != line {
+				return fmt.Errorf("coverage profile has conflicting modes: %q and %q", mode, line)
+			}
+			mode = line
 			continue
 		}
 		fields := strings.Fields(line)
@@ -74,7 +84,6 @@ func report(profile string, minimum float64, percentOnly bool, filteredProfile s
 		if isGenerated {
 			continue
 		}
-		filtered.WriteString(line + "\n")
 		statements, err := strconv.ParseInt(fields[1], 10, 64)
 		if err != nil || statements < 0 {
 			return fmt.Errorf("invalid statement count in %q", line)
@@ -83,16 +92,43 @@ func report(profile string, minimum float64, percentOnly bool, filteredProfile s
 		if err != nil || count < 0 {
 			return fmt.Errorf("invalid execution count in %q", line)
 		}
-		packageName := path.Dir(source)
-		entry := byPackage[packageName]
-		entry.all += statements
-		if count > 0 {
-			entry.covered += statements
+		if previous, exists := blocks[location]; exists {
+			if previous.statements != statements {
+				return fmt.Errorf("coverage block %q has conflicting statement counts", location)
+			}
+			previous.covered = previous.covered || count > 0
+			blocks[location] = previous
+		} else {
+			blocks[location] = coverageBlock{source: source, statements: statements, covered: count > 0}
 		}
-		byPackage[packageName] = entry
 	}
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+	if mode == "" {
+		return fmt.Errorf("coverage profile has no mode header")
+	}
+	keys := make([]string, 0, len(blocks))
+	for location := range blocks {
+		keys = append(keys, location)
+	}
+	sort.Strings(keys)
+	var filtered strings.Builder
+	filtered.WriteString(mode + "\n")
+	for _, location := range keys {
+		block := blocks[location]
+		count := 0
+		if block.covered {
+			count = 1
+		}
+		fmt.Fprintf(&filtered, "%s %d %d\n", location, block.statements, count)
+		packageName := path.Dir(block.source)
+		entry := byPackage[packageName]
+		entry.all += block.statements
+		if block.covered {
+			entry.covered += block.statements
+		}
+		byPackage[packageName] = entry
 	}
 	if filteredProfile != "" {
 		if err := os.WriteFile(filteredProfile, []byte(filtered.String()), 0600); err != nil {

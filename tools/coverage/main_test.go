@@ -77,4 +77,21 @@ func TestReportUsesStatementWeightsAndExcludesGeneratedFiles(t *testing.T) {
 	if err := report("coverage.out", 41, false, ""); err == nil {
 		t.Fatal("41% should fail")
 	}
+	// A -coverpkg profile can repeat each block for several package test
+	// binaries. Count the block once and merge coverage from all copies.
+	profile += "example.com/test/pkg/sample/client.go:1.1,1.2 4 0\n"
+	profile += "example.com/test/pkg/sample/client.go:2.1,2.2 6 1\n"
+	if err := os.WriteFile("coverage.out", []byte(profile), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := report("coverage.out", 100, false, "filtered.out"); err != nil {
+		t.Fatalf("duplicate blocks should merge to 100%%: %v", err)
+	}
+	filtered, err = os.ReadFile("filtered.out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(filtered), "client.go:") != 2 {
+		t.Fatalf("filtered profile did not deduplicate blocks: %s", filtered)
+	}
 }
