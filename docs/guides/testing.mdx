@@ -24,12 +24,13 @@ All 28 schema HTTP operations have stored synthetic request/response pairs.
 Replay checks the method, origin, escaped path, query, relevant headers, and
 body before returning the paired response. Encrypted values are decrypted and
 compared with fixture meanings; signatures are recomputed. An ordered MQTT
-transcript checks connect, owner/device subscriptions, incoming events,
+transcript starts with the paired encrypted HTTP configuration request, then
+checks MQTT factory options, connect, owner/device subscriptions, incoming events,
 callbacks, unsubscribe, and disconnect. Both transports reject unexpected or
 duplicate exchanges and require every expected exchange to be consumed. These
 synthetic checks do not establish live provider behavior.
 
-The current non-generated statement result is 82.4% (1,304/1,583). The raw
+The current non-generated statement result is 82.6% (1,308/1,583). The raw
 `go tool cover` total includes generated wire code, so it is not the release
 metric. Remaining low-coverage areas include MQTT retry and expiry branches
 (`runMQTTLoop` 57.7%, `connectMQTT` 69.0%) and unimplemented public placeholders

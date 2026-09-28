@@ -1,6 +1,9 @@
 {
   "provenance": "Hand-authored synthetic owner/device session; no broker or account capture",
   "frames": [
+    {"direction":"client", "action":"http-request", "topic":"/v1.0/m/life/ha/access/config", "payload":"getMessageQueueConfig"},
+    {"direction":"server", "action":"http-response", "topic":"/v1.0/m/life/ha/access/config", "payload":"200"},
+    {"direction":"client", "action":"factory", "topic":"ssl://mqtt.example.invalid:8883", "payload":"synthetic-mqtt-client"},
     {"direction":"client", "action":"connect", "topic":"ssl://mqtt.example.invalid:8883"},
     {"direction":"client", "action":"subscribe", "topic":"general"},
     {"direction":"client", "action":"subscribe", "topic":"cloud/device/device-1/in/channel/sta"},
