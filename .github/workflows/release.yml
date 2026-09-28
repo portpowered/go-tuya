@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: '1.25.0'
           cache: true
       - name: Verify generated wire artifacts on the tag
         run: |
