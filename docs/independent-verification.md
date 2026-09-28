@@ -3,9 +3,12 @@
 Reviewer: independent Codex reviewer (not an implementer of the Tuya migration)
 
 Reviewed implementation commit: `1123ac3088a8b535267997330d7187f565cc162b` (2026-09-28).
-This is a **working review**. Items marked open have not been signed off. A final
-review must name the release tag commit, exact-tag workflow results, and the
-later documentation-only signoff commit, if those are different.
+The provisional report commit was `e30b71238388f8093acb555dd3a2557900078ee4`.
+The successful `v0.3.1` release tag points to
+`37584e21efc67b50ddfabea459c7b3cf428bab64`. The only change between the
+provisional report and tag was selecting Go 1.25 in the release workflow. The
+commit containing this final report and checklist signoff is documentation-only
+relative to the tag; its SHA is recorded in Git history.
 
 The criteria are the 14 numbered items in
 [`go-third-party-template/docs/library-standards.md`](https://github.com/portpowered/go-third-party-template/blob/main/docs/library-standards.md),
@@ -20,18 +23,18 @@ but the exchanges were not recorded with sanitized, operation-level provenance.
 | --- | --- | --- |
 | 1. Standalone library | Verified | `pkg/tuya`, root examples, README, and `docs/guides` describe provider use; a search found no portos-backend import, application adapter, or rollout plan. The Home Assistant wording names Tuya's private route family, not a consuming application dependency. |
 | 2. Operations and errors | Verified | README and MDX guides describe supported authentication, devices, commands, events, transport options, and synthetic versus undocumented account evidence. Examples use exported methods. `ClientError.Kind` provides stable invalid-operation, unauthorized, not-found, transport, provider, and protocol classes; `Unwrap` retains causes. README and authentication MDX document `errors.As`; synthetic tests cover transport, provider HTTP statuses, and replayed API errors. |
-| 3. Badges | Verified for the existing release | README has Go version, CI, coverage, release, Go Reference, license, and Documentation badges with this repository's destinations. `v0.2.0` and its public package are published. Recheck the badge and latest release URL after the next tag. |
-| 4. Complete schema-generated wire surface | **Open** | See the operation/channel inventory and negative tests below. OpenAPI and AsyncAPI, generated descriptors, parameter and header models, encrypted envelopes, nested MQTT payload models, and call sites were inspected. The exported raw encrypted methods now reject method/path pairs outside the generated inventory. Unused handwritten raw/legacy response models were removed. The exact-tag generation, inventory, coverage, and release workflow have not run for these changes. |
+| 3. Badges | Verified | README has Go version, CI, coverage, release, Go Reference, license, and Documentation badges with this repository's destinations. `v0.3.1` is published; its versioned Go Reference page and the Pages coverage report return HTTP 200. |
+| 4. Complete schema-generated wire surface | Verified on `v0.3.1` | See the operation/channel inventory and negative tests below. OpenAPI and AsyncAPI, generated descriptors, parameter and header models, encrypted envelopes, nested MQTT payload models, and call sites were inspected. The exported raw encrypted methods reject method/path pairs outside the generated inventory; unused handwritten raw/legacy response models were removed. Exact-tag Release run `36489207604` passed regeneration/drift, method/path/channel gate, and 82.2% non-generated coverage before publication. |
 | 5. Offline checks and fixture provenance | Verified locally | `make lint`, `make check` (build, route gate, race tests), and `make replay` passed at the reviewed commit. `tests/replay/fixtures/**/synthetic` has provenance notes; no captured fixtures are claimed. Current live account tests remain undocumented. |
 | 6. Synthetic coverage | Verified | `make coverage` measured 82.2% (1,302/1,583) non-generated statements, above the CI 80% floor; `tools/coverage` excludes `*.gen.go`/generated markers and reports package and combined values. Synthetic tests exercise queue failure, reconnect, status, stop, backpressure, and typed error paths. `docs/guides/testing.mdx` and the checklist report remaining low-coverage MQTT retry/expiry branches and unimplemented placeholders. The 90% target is not a hard gate. |
-| 7. Package boundaries | Verified locally | Public package is `pkg/tuya`; schema-generated private models/descriptors are `pkg/tuya/internal/wire`; examples and replay fixtures are separate. `v0.2.0` passed a separate public-proxy consumer build for this import path. A fresh consumer check for the breaking next release is required on its tag. |
+| 7. Package boundaries | Verified on `v0.3.1` | Public package is `pkg/tuya`; schema-generated private models/descriptors are `pkg/tuya/internal/wire`; examples and replay fixtures are separate. The exact-tag release job fetched `v0.3.1` through the public Go proxy and compiled a fresh separate consumer of `pkg/tuya`; versioned Go Reference returned HTTP 200. |
 | 8. Option-based construction | Verified | `NewClient(...Option)`, endpoint validation, HTTP, MQTT, RTC, region, and client-ID options exist and have synthetic tests. `WithHTTPClient` and `WithHTTPTransport` reject duplicates and mutual conflicts in either order; a synthetic test covers both orders. Account tokens remain outside reusable client options. |
 | 9. Session state and lifecycle | Verified | `Client` holds reusable options, while `Session` owns tokens, queue, and RTC state. `MessageQueue.Status` exposes connection state/error; `Start` reports initial failure and `Stop` cancels and waits for the loop. Callbacks run synchronously and serially, applying backpressure rather than spawning unbounded work; the events guide states that policy. Deterministic race-enabled tests exercise connection failure, reconnect, stop, and blocked-callback delivery. |
 | 10. Transport injection | Verified | `WithHTTPClient`/`WithHTTPTransport` cover auth, encrypted cloud HTTP and built-in HTTP RTC signaling; `WithMQTTClientFactory` and `WithRTCSignaling` cover MQTT and alternate signaling edges. Synthetic HTTP, MQTT, and RTC tests use those seams. No built-in WebSocket endpoint exists. |
 | 11. Explicit credentials | Verified | `AuthService.RefreshToken` returns rotated credentials without mutating the session; `Session.Tokens` and `SetTokens` expose caller-managed state. Synthetic refresh tests check the unchanged session until explicit assignment. |
 | 12. MDX customer guides | Verified at the reviewed commit | Nine `docs/guides/*.mdx` pages cover important workflows and link generated OpenAPI/AsyncAPI references. QR example instructions moved from `examples/auth/README.md` into authentication MDX; its README is now a pointer. Documentation deployed for `1123ac3`; I downloaded its 46-page artifact and reran the full link checker (773 internal links passed). |
-| 13. Concise published copy | Verified before the next release | I inspected the rendered root, guide, 28 OpenAPI, and three AsyncAPI pages. All 28 operation descriptions label generated cURL as a route illustration and point to the signed/encrypted client flow; global cloud servers and QR-specific auth servers match client defaults. The 46-page link checker found 773 valid internal links, and all 17 external destinations returned HTTP 200. The shared Fumadocs client code hydrates the server selection from schema; a coordinator observed the correct cloud/QR hosts in the live hydrated browser. The static prerender still contains Fumadocs' `example.com` fallback, so this review does not treat the static cURL text as a live snippet. Recheck new release notes after tagging. |
-| 14. Independent signoff | **Open** | This document records the independent audit, but item 4's exact-tag gate and the next release-note check remain unresolved. Tracking these findings does not sign them off. Re-audit the tag run and docs-only signoff commit before checking item 14. |
+| 13. Concise published copy | Verified | I inspected the rendered root, guide, 28 OpenAPI, and three AsyncAPI pages. All 28 operation descriptions label generated cURL as a route illustration and point to the signed/encrypted client flow; global cloud servers and QR-specific auth servers match client defaults. The 46-page link checker found 773 valid internal links, and all 17 external destinations returned HTTP 200. Fumadocs hydrates server selection from schema; a coordinator observed the correct cloud/QR hosts in the live browser. Its static prerender contains an `example.com` fallback, so that text is not treated as a live snippet. The corrected `v0.3.1` release notes summarize the changes and link the Pages evidence guide and `v0.2.0...v0.3.1` changelog. |
+| 14. Independent signoff | Verified | This reviewer did not implement the migration. Each item above was inspected against the code, generated artifacts, call sites, tests, CI, docs, and release record. The exact-tag run passed; all recorded findings were corrected and rechecked. The final report/checklist commit changes documentation only relative to tag `37584e2`; its CI and Documentation status should be checked after push as a final publication confirmation. |
 
 ## Item 4: HTTP operation inventory
 
@@ -92,8 +95,8 @@ path, unknown operation/channel names, and direct Subscribe/Unsubscribe calls.
 `TestEncryptedClientRejectsUnschematizedOperation` separately rejects an
 unknown route, wrong method, and unexpected query on exported raw helpers.
 I reran these negative tests, generation, and tracked generated-file drift at
-the reviewed commit; they passed. Final exact-tag release checks remain
-required.
+the reviewed implementation commit. The same generation and route gates passed
+in the `v0.3.1` exact-tag workflow.
 
 ## Checks at the reviewed implementation commit
 
@@ -104,6 +107,8 @@ required.
 - `make generate-wire` followed by `git diff --exit-code` on all three generated wire files: no drift.
 - CI and Documentation for `1123ac3`: passed. I independently downloaded the resulting Pages artifact; `tools/check_site_links.py` found 773 valid internal links across 46 rendered pages. All 17 external destinations returned HTTP 200.
 - `api/openapi.yaml` declares the default US cloud server, three other regional cloud servers, and QR-specific authentication server overrides. All 28 rendered operation descriptions qualify the cURL as a route illustration. I inspected Fumadocs' `use-server.js` and `operation.js`: SSR uses `example.com` while the hydrated client resolves the selected schema server. A coordinator separately observed the correct hosts in the live hydrated browser; the reviewer browser surface was unavailable, so the hydration evidence is code inspection plus that separate observation.
+- `v0.3.0` pointed to the provisional report commit `e30b712` but failed release preflight. Its workflow used Go 1.24 with `GOTOOLCHAIN=local`; `oapi-codegen/v2@v2.8.0` requires Go 1.25. The publish job was skipped, and no GitHub Release was created for that tag.
+- `v0.3.1` points to `37584e2`, which changed only the release workflow's Go selection. [Release run 36489207604](https://github.com/portpowered/go-tuya/actions/runs/36489207604) passed both verify and publish. Verify passed regeneration/drift and the route/channel gate, 82.2% coverage (1,302/1,583), module configuration, pre-v1 compatibility policy, build, race, vet, replay, and fresh public Go-proxy consumer compilation. [The published release](https://github.com/portpowered/go-tuya/releases/tag/v0.3.1) and versioned Go Reference return HTTP 200. I reread the corrected release copy: it lists the nine removed exported legacy types, explains the failed `v0.3.0` tag, preserves the provider-evidence limit, and links the `v0.2.0...v0.3.1` changelog and published guides.
 
 ## Findings disposition
 
@@ -113,5 +118,6 @@ and separate QR example guide were corrected at `d376de5`. Coverage reporting
 was added at `6832ae0`; typed errors, conflict validation, and callback
 backpressure were added at `c4f30aa`. The published request examples were
 qualified and schema server defaults added at `1123ac3`. I retested those
-changes above. The exact-tag release check remains open; this review does not
-sign off item 14 while that gate is pending.
+changes above. The `v0.3.1` exact-tag gate and corrected release copy close the
+remaining findings. The final signoff commit changes only this report and the
+library checklist relative to the release tag.
