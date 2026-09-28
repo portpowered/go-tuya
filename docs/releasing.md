@@ -18,6 +18,18 @@ resources, and wire responses. Review the pending entries in
 first clean-history release was `v0.1.0`; `v0.2.0` introduced `pkg/tuya`.
 Checklist item 3 records the latest badge and Go Reference checks.
 
+## v0.3.0 migration
+
+The next release removes nine unused exported legacy wire structs:
+`DeviceResponseResult`, `DeviceResponseResultElement`, `HomeResponse`,
+`HomeResponseResult`, `HomeResponseResultElement`, `RawMQTTMessage`,
+`MessageQueueConfigResponse`, `MessageQueueConfigTopicInfo`, and
+`MessageQueueTopicSubscription`.
+Use the named client operation results and event interfaces instead. The
+`v0.3.0` compatibility policy permits this pre-v1 API break; a `v0.2.x` patch
+release would not. Exported encrypted request helper signatures stay the same,
+but now reject method/path pairs absent from `api/openapi.yaml`.
+
 The module path is `github.com/portpowered/go-tuya`. The public client package
 is `github.com/portpowered/go-tuya/pkg/tuya`. The first tag had no prior stable
 release, so the API compatibility tool reported that it had no baseline. For

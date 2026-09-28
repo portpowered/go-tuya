@@ -41,12 +41,21 @@ func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (Me
 	if wireResponse.Result != nil {
 		wireConfig = *wireResponse.Result
 	}
-	respData, err := convertWireValue[MessageQueueConfigResponse](wireConfig)
-	if err != nil {
-		return MessageQueueConfig{}, fmt.Errorf("failed to map MQTT config response: %w", err)
+	config := MessageQueueConfig{
+		URL:        dereference(wireConfig.Url),
+		ClientID:   dereference(wireConfig.ClientId),
+		Username:   dereference(wireConfig.Username),
+		Password:   dereference(wireConfig.Password),
+		ExpireTime: dereference(wireConfig.ExpireTime),
 	}
-
-	config := respData.ToMessageQueueConfig()
+	if wireConfig.Topic != nil {
+		if wireConfig.Topic.OwnerId != nil {
+			config.OwnerTopic = dereference(wireConfig.Topic.OwnerId.Sub)
+		}
+		if wireConfig.Topic.DevId != nil {
+			config.DeviceTopic = dereference(wireConfig.Topic.DevId.Sub)
+		}
+	}
 	return config, nil
 }
 
@@ -61,46 +70,12 @@ type MessageQueueConfig struct {
 	DeviceTopic string `json:"deviceTopic"`
 }
 
-// MessageQueueConfigResponse represents the API response structure for MQTT topic.
-type MessageQueueConfigResponse struct {
-	URL        string                      `json:"url"`
-	ClientID   string                      `json:"clientId"`
-	Username   string                      `json:"username"`
-	Password   string                      `json:"password"`
-	ExpireTime int64                       `json:"expireTime"`
-	Topic      MessageQueueConfigTopicInfo `json:"topic"`
-}
-
-// MessageQueueConfigTopicInfo represents the topic configuration structure
-type MessageQueueConfigTopicInfo struct {
-	OwnerID MessageQueueTopicSubscription `json:"ownerId"`
-	DevID   MessageQueueTopicSubscription `json:"devId"`
-}
-
-// MessageQueueTopicSubscription represents a topic subscription configuration
-type MessageQueueTopicSubscription struct {
-	Sub string `json:"sub"`
-}
-
 // MQTTClientFactory creates the MQTT edge client used by a session's message
 // queue. It can be replaced with a test double or custom Paho client.
 type MQTTClientFactory func(*mqtt.ClientOptions) mqtt.Client
 
 func newMQTTClient(options *mqtt.ClientOptions) mqtt.Client {
 	return mqtt.NewClient(options)
-}
-
-// ToMessageQueueConfig converts the API response to MessageQueueConfig
-func (r *MessageQueueConfigResponse) ToMessageQueueConfig() MessageQueueConfig {
-	return MessageQueueConfig{
-		URL:         r.URL,
-		ClientID:    r.ClientID,
-		Username:    r.Username,
-		Password:    r.Password,
-		ExpireTime:  r.ExpireTime,
-		OwnerTopic:  r.Topic.OwnerID.Sub,
-		DeviceTopic: r.Topic.DevID.Sub,
-	}
 }
 
 // MessageListener represents a callback function for MQTT messages
@@ -117,6 +92,12 @@ type mqttState struct {
 	isRunning   atomic.Bool
 	stopCh      chan struct{}
 	reconnectCh chan struct{}
+	doneCh      chan struct{}
+	connect     func(context.Context, *SharingMessageQueueImpl) error
+	cancel      context.CancelFunc
+	connected   atomic.Bool
+	statusMux   sync.RWMutex
+	lastError   error
 
 	// Message listeners
 	messageListeners map[string][]MessageListener
@@ -125,6 +106,36 @@ type mqttState struct {
 
 	// Lifecycle management
 	lifecycleMux sync.Mutex
+}
+
+// MessageQueueStatus reports whether the session queue is running and connected,
+// and the most recent connection error. A successful connection clears LastError.
+type MessageQueueStatus struct {
+	Running   bool
+	Connected bool
+	LastError error
+}
+
+// Status returns a snapshot of the message queue lifecycle.
+func (s *SharingMessageQueueImpl) Status() MessageQueueStatus {
+	state := s.State
+	state.statusMux.RLock()
+	defer state.statusMux.RUnlock()
+	return MessageQueueStatus{Running: state.isRunning.Load(), Connected: state.connected.Load(), LastError: state.lastError}
+}
+
+func (state *mqttState) recordConnection(err error) {
+	state.connected.Store(err == nil)
+	state.statusMux.Lock()
+	state.lastError = err
+	state.statusMux.Unlock()
+}
+
+func (state *mqttState) connectOnce(ctx context.Context, queue *SharingMessageQueueImpl) error {
+	if state.connect != nil {
+		return state.connect(ctx, queue)
+	}
+	return state.connectMQTT(ctx, queue)
 }
 
 // getOrCreateState gets or creates the MQTT state for a SharingMessageQueueImpl instance
@@ -145,10 +156,22 @@ func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStart
 	// Initialize internal state
 	state.stopCh = make(chan struct{})
 	state.reconnectCh = make(chan struct{}, 1)
+	state.doneCh = make(chan struct{})
+	loopCtx, cancel := context.WithCancel(ctx)
+	state.cancel = cancel
+	if err := state.connectOnce(loopCtx, s); err != nil {
+		state.recordConnection(err)
+		cancel()
+		state.cancel = nil
+		state.stopCh = nil
+		state.doneCh = nil
+		return MessageQueueStartResponse{Success: false, Message: err.Error()}, err
+	}
+	state.recordConnection(nil)
 	state.isRunning.Store(true)
 
 	// Start MQTT management goroutine
-	go state.runMQTTLoop(ctx, s)
+	go state.runMQTTLoop(loopCtx, s)
 
 	return MessageQueueStartResponse{
 		Success: true,
@@ -162,22 +185,31 @@ func (s *SharingMessageQueueImpl) Stop(_ context.Context, _ MessageQueueStopRequ
 	state.lifecycleMux.Lock()
 	defer state.lifecycleMux.Unlock()
 
-	if !state.isRunning.Load() {
+	if state.stopCh == nil {
 		return MessageQueueStopResponse{
 			Success: true,
 			Message: "Message queue already stopped",
 		}, nil
 	}
 
-	state.isRunning.Store(false)
-
 	// Signal stop to background goroutine
 	close(state.stopCh)
+	if state.cancel != nil {
+		state.cancel()
+		state.cancel = nil
+	}
+	if state.doneCh != nil {
+		<-state.doneCh
+		state.doneCh = nil
+	}
+	state.stopCh = nil
+	state.isRunning.Store(false)
 
 	// Disconnect MQTT client
 	if state.mqttClient != nil && state.mqttClient.IsConnected() {
 		state.mqttClient.Disconnect(250)
 	}
+	state.connected.Store(false)
 
 	return MessageQueueStopResponse{
 		Success: true,
@@ -285,8 +317,8 @@ func (s *SharingMessageQueueImpl) RemoveDeviceListener(_ context.Context, req Re
 
 	// Unsubscribe from device topic if MQTT is connected
 	if state.mqttClient != nil && state.mqttClient.IsConnected() && state.mqConfig != (MessageQueueConfig{}) {
-		deviceTopic := state.getDeviceTopic(req.DeviceID, false) // Assume support_local = true
-		state.mqttClient.Unsubscribe(deviceTopic)
+		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", req.DeviceID)
+		unsubscribeChannel(state.mqttClient, wire.MQTTChannelDeviceStatus, deviceTopic)
 	}
 
 	return RemoveDeviceListenerResponse{
@@ -296,50 +328,47 @@ func (s *SharingMessageQueueImpl) RemoveDeviceListener(_ context.Context, req Re
 
 // runMQTTLoop manages the MQTT connection lifecycle
 func (state *mqttState) runMQTTLoop(ctx context.Context, s *SharingMessageQueueImpl) {
+	defer close(state.doneCh)
+	defer state.isRunning.Store(false)
 	backoffSeconds := 1
 	ticker := time.NewTicker(2 * time.Hour) // Refresh every 2 hours
 	defer ticker.Stop()
 
 	for {
+		expiry := time.Duration(max(state.mqConfig.ExpireTime-60, 1)) * time.Second
+		expiryTimer := time.NewTimer(expiry)
 		select {
 		case <-state.stopCh:
+			expiryTimer.Stop()
+			return
+		case <-ctx.Done():
+			expiryTimer.Stop()
+			state.recordConnection(ctx.Err())
 			return
 		case <-state.reconnectCh:
-			// Force reconnection
-			if err := state.connectMQTT(ctx, s); err != nil {
-				// TODO: terminate and message to the user that the message queue failed.
-				_ = err // Log error but continue
-			}
-			backoffSeconds = 1
 		case <-ticker.C:
-			// Regular refresh
-			if err := state.connectMQTT(ctx, s); err != nil {
-				// TODO: terminate and message to the user that the message queue failed.
-				_ = err // Log error but continue
-			}
-			backoffSeconds = 1
-		default:
-			// Initial connection or retry after error
-			err := state.connectMQTT(ctx, s)
-			if err != nil {
-				log.Printf("Failed to connect to MQTT: %v, retrying in %d seconds", err, backoffSeconds)
-				time.Sleep(time.Duration(backoffSeconds) * time.Second)
-				backoffSeconds = min(backoffSeconds*2, 60) // Max 60 seconds
-			} else {
-				backoffSeconds = 1
-				// Wait for next event or timer
-				select {
-				case <-state.stopCh:
-					return
-				case <-state.reconnectCh:
-					continue
-				case <-ticker.C:
-					continue
-				case <-time.After(time.Duration(state.mqConfig.ExpireTime-60) * time.Second):
-					continue
-				}
-			}
+		case <-expiryTimer.C:
 		}
+		expiryTimer.Stop()
+		if err := state.connectOnce(ctx, s); err != nil {
+			state.recordConnection(err)
+			log.Printf("Failed to connect to MQTT: %v, retrying in %d seconds", err, backoffSeconds)
+			select {
+			case <-state.stopCh:
+				return
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Duration(backoffSeconds) * time.Second):
+			}
+			backoffSeconds = min(backoffSeconds*2, 60)
+			select {
+			case state.reconnectCh <- struct{}{}:
+			default:
+			}
+			continue
+		}
+		state.recordConnection(nil)
+		backoffSeconds = 1
 	}
 }
 
@@ -380,8 +409,13 @@ func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueI
 
 	// Connect
 	token := state.mqttClient.Connect()
-	if token.Wait() && token.Error() != nil {
-		return fmt.Errorf("MQTT connection failed: %w", token.Error())
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("MQTT connection canceled: %w", ctx.Err())
+	case <-token.Done():
+		if err := token.Error(); err != nil {
+			return fmt.Errorf("MQTT connection failed: %w", err)
+		}
 	}
 
 	log.Printf("Connected to MQTT broker: %s", config.URL)
@@ -413,6 +447,10 @@ func subscribeChannel(client mqtt.Client, channel wire.MQTTChannel, runtimeTopic
 	client.Subscribe(channelAddress(channel, runtimeTopic), 0, nil)
 }
 
+func unsubscribeChannel(client mqtt.Client, channel wire.MQTTChannel, runtimeTopic string) {
+	client.Unsubscribe(channelAddress(channel, runtimeTopic))
+}
+
 func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
 	address := string(channel)
 	address = strings.ReplaceAll(address, "{ownerTopic}", runtimeTopic)
@@ -422,6 +460,7 @@ func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
 // onConnectionLost handles MQTT connection lost
 func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
 	log.Printf("MQTT connection lost: %v", err)
+	state.recordConnection(err)
 
 	// Signal reconnection if still running
 	if state.isRunning.Load() {

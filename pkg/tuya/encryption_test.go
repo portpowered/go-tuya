@@ -21,7 +21,7 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	t.Parallel()
 
 	const (
-		path         = "/v1.0/devices/test-device/commands"
+		path         = "/v1.1/m/thing/test-device/commands"
 		appKey       = "test-client-id"
 		accessToken  = "test-access-token"
 		refreshToken = "test-refresh-token"
@@ -159,9 +159,25 @@ func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
 	session.SetTokens(Tokens{AccessToken: "synthetic-access", RefreshToken: "synthetic-refresh"})
 	session.EncryptedClient = &EncryptedClient{Client: session}
 
-	_, err := session.EncryptedClient.Get(context.Background(), "/synthetic", nil, testOperationRequest{})
+	_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "failed to create request") {
 		t.Fatalf("request error = %v, want URL construction error", err)
+	}
+}
+
+func TestEncryptedClientRejectsUnschematizedOperation(t *testing.T) {
+	session := &Session{HTTPClient: &http.Client{}, CloudAPIURL: "https://example.invalid", ClientID: "synthetic-client-id"}
+	session.SetTokens(Tokens{AccessToken: "synthetic-access", RefreshToken: "synthetic-refresh"})
+	session.EncryptedClient = &EncryptedClient{Client: session}
+	for _, candidate := range []struct{ method, path string }{
+		{http.MethodGet, "/v1.0/unknown"},
+		{http.MethodPost, "/v1.0/devices"},
+		{http.MethodGet, "/v1.0/devices?unexpected=1"},
+	} {
+		_, err := session.EncryptedClient.makeRequest(context.Background(), candidate.method, candidate.path, nil, nil, testOperationRequest{})
+		if err == nil || !strings.Contains(err.Error(), "not in api/openapi.yaml") {
+			t.Fatalf("%s %s: got %v, want schema rejection", candidate.method, candidate.path, err)
+		}
 	}
 }
 

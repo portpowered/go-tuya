@@ -93,6 +93,9 @@ func bad() { subscribeChannel(client, wire.MQTTChannelGhost, "topic") }
 		{"direct subscription", `package tuya
 func bad() { client.Subscribe("topic", 0, nil) }
 `},
+		{"direct unsubscription", `package tuya
+func bad() { client.Unsubscribe("topic") }
+`},
 		{"mismatched direct method", `package tuya
 func bad() { _ = wire.RouteGetDevice; http.NewRequestWithContext(ctx, wire.MethodDeleteDevice, url, nil) }
 `},

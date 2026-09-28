@@ -68,6 +68,9 @@ func (c *EncryptedClient) Delete(ctx context.Context, path string, params map[st
 // Then the response looks like
 // { result: "encrypted response data", success: true, code: 200, msg: "success", t: 123, tid: "123" }
 func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, params, body map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
+	if !wire.IsKnownOperation(method, path) {
+		return nil, fmt.Errorf("operation %s %s is not in api/openapi.yaml", method, path)
+	}
 	// Generate request ID and secret
 	rid := GenerateRID()
 	sid := ""

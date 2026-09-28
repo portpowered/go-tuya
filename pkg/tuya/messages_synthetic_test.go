@@ -2,6 +2,7 @@ package tuya
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,6 +14,80 @@ import (
 type syntheticMQTTMessage struct {
 	topic   string
 	payload []byte
+}
+
+func TestSyntheticMessageQueueStartReportsConnectionFailure(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue := client.NewSession(Tokens{}).MessageQueue
+	want := errors.New("synthetic broker unavailable")
+	queue.State.connect = func(context.Context, *SharingMessageQueueImpl) error { return want }
+	result, err := queue.Start(context.Background(), MessageQueueStartRequest{})
+	if !errors.Is(err, want) || result.Success {
+		t.Fatalf("Start = %+v, %v; want connection failure", result, err)
+	}
+	status := queue.Status()
+	if status.Running || status.Connected || !errors.Is(status.LastError, want) {
+		t.Fatalf("Status = %+v", status)
+	}
+}
+
+func TestSyntheticMessageQueueStopWaitsForReconnect(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue := client.NewSession(Tokens{}).MessageQueue
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	attempts := 0
+	queue.State.connect = func(context.Context, *SharingMessageQueueImpl) error {
+		attempts++
+		if attempts == 1 {
+			return nil
+		}
+		close(entered)
+		<-release
+		return errors.New("synthetic reconnect failure")
+	}
+	if result, err := queue.Start(context.Background(), MessageQueueStartRequest{}); err != nil || !result.Success {
+		t.Fatalf("Start = %+v, %v", result, err)
+	}
+	if status := queue.Status(); !status.Running || !status.Connected || status.LastError != nil {
+		t.Fatalf("initial Status = %+v", status)
+	}
+	if _, err := queue.RefreshMQ(context.Background(), RefreshMQRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("reconnect did not start")
+	}
+	stopped := make(chan error, 1)
+	go func() {
+		_, err := queue.Stop(context.Background(), MessageQueueStopRequest{})
+		stopped <- err
+	}()
+	select {
+	case <-stopped:
+		t.Fatal("Stop returned before reconnect exited")
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case err := <-stopped:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Stop did not wait for loop exit")
+	}
+	if status := queue.Status(); status.Running || status.Connected || status.LastError == nil {
+		t.Fatalf("final Status = %+v", status)
+	}
 }
 
 func (m syntheticMQTTMessage) Duplicate() bool   { return false }

@@ -29,14 +29,6 @@ const (
 	BizcodeDpNameUpdate = "dpNameUpdate"
 )
 
-// RawMQTTMessage represents the legacy public shape of a raw MQTT message.
-// Deprecated: wire decoding uses the generated internal wire.RawSharingMessage model.
-type RawMQTTMessage struct {
-	Protocol int                    `json:"protocol"`
-	Data     map[string]interface{} `json:"data"`
-	T        int64                  `json:"t,omitempty"`
-}
-
 // Event represents the base interface for all event types
 type Event interface {
 	GetDeviceID() string

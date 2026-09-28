@@ -57,6 +57,18 @@ credentials; requests do not refresh them automatically. Call
 rotated token pair together, then call `session.SetTokens` to use them. For
 existing credentials, initialize the session with `tuya.Tokens{...}`. Serialize
 concurrent refreshes.
+
+The [terminal QR example](https://github.com/portpowered/go-tuya/tree/main/examples/auth)
+calls both login methods. From `examples/auth`, run it with the access code in
+an environment variable:
+
+```sh
+TUYA_ACCESS_CODE="<access-code>" go run .
+```
+
+The example suppresses token values. Store the returned token pair in a
+secret manager or OS keychain. Do not log the access code, QR challenge, tokens,
+request URLs, or unredacted errors.
 Use `WithHTTPClient` or `WithHTTPTransport` to set a timeout or custom
 transport; the default HTTP client has no timeout.
 

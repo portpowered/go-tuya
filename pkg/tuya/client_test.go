@@ -167,7 +167,7 @@ func TestClientDoesNotRefreshTokensDuringRequests(t *testing.T) {
 		t.Fatalf("NewClient() error = %v", err)
 	}
 	session := client.NewSession(Tokens{})
-	_, err = session.EncryptedClient.Get(context.Background(), "/synthetic", nil, testOperationRequest{})
+	_, err = session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "refresh token is required") {
 		t.Fatalf("request error = %v, want an explicit missing-token error", err)
 	}
@@ -275,6 +275,12 @@ type stubMQTTToken struct {
 }
 
 func (stubMQTTToken) Wait() bool { return true }
+
+func (stubMQTTToken) Done() <-chan struct{} {
+	done := make(chan struct{})
+	close(done)
+	return done
+}
 
 func (stubMQTTToken) Error() error { return nil }
 

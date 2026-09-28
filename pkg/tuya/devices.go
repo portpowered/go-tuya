@@ -150,39 +150,6 @@ func decodeBooleanResult(response *EncryptedAPIResponse) (bool, error) {
 	return dereference(wireResponse.Result), nil
 }
 
-// DeviceResponseResult represents a legacy response structure for device queries.
-// Deprecated: use the operation-specific response types.
-type DeviceResponseResult struct {
-	Result []DeviceResponseResultElement `json:"result"`
-}
-
-// DeviceResponseResultElement represents a legacy single-device response.
-// Deprecated: use Device and the operation-specific response types.
-type DeviceResponseResultElement struct {
-	ID          string   `json:"id"`
-	UUID        string   `json:"uuid"`
-	Name        string   `json:"name"`
-	OwnerID     string   `json:"owner_id"`
-	UID         string   `json:"uid"`
-	ProductID   string   `json:"product_id"`
-	ProductName string   `json:"product_name"`
-	SubCategory string   `json:"subCategory,omitempty"`
-	Category    string   `json:"category"`
-	Icon        string   `json:"icon"`
-	IP          string   `json:"ip"`
-	LocalKey    string   `json:"local_key"`
-	Online      bool     `json:"online"`
-	Sub         bool     `json:"sub"`
-	BizType     int      `json:"biz_type"`
-	ActiveTime  int64    `json:"active_time"`
-	CreateTime  int64    `json:"create_time"`
-	UpdateTime  int64    `json:"update_time"`
-	TimeZone    string   `json:"time_zone"`
-	Lat         string   `json:"lat"`
-	Lon         string   `json:"lon"`
-	Status      []Status `json:"status"`
-}
-
 // QueryDevicesByIDs fetches devices by their IDs
 func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevicesByIDsRequest) (QueryDevicesByIDsResponse, error) {
 	deviceIDs := strings.Join(req.DeviceIDs, ",")
