@@ -2,8 +2,6 @@ package tuya
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
@@ -18,32 +16,29 @@ func (h *HomeService) QueryHomes(ctx context.Context, req QueryHomesRequest) (Qu
 		return QueryHomesResponse{}, err
 	}
 
-	// 1. Marshal the map to JSON bytes
-	jsonData, err := json.Marshal(resp.Body)
+	wireResponse, err := decodeWireResponse[wire.HomeListEnvelope](resp)
 	if err != nil {
-		fmt.Println("Error marshalling map:", err)
 		return QueryHomesResponse{}, err
 	}
-	var unmarshalledResponse HomeResponseResult
-	err = json.Unmarshal(jsonData, &unmarshalledResponse)
-	if err != nil {
-		return QueryHomesResponse{}, err
+	var wireHomes []wire.HomeRecord
+	if wireResponse.Result != nil {
+		wireHomes = *wireResponse.Result
 	}
 
-	homes := mapHomes(unmarshalledResponse)
+	homes := mapWireHomes(wireHomes)
 	return QueryHomesResponse{
 		Results: homes,
 	}, nil
 }
 
-func mapHomes(unmarshalledResponse HomeResponseResult) []Home {
-	homes := make([]Home, len(unmarshalledResponse.Result))
-	for i, home := range unmarshalledResponse.Result {
+func mapWireHomes(records []wire.HomeRecord) []Home {
+	homes := make([]Home, len(records))
+	for i, home := range records {
 		homes[i] = Home{
 			// The home id is the owner id. Confusing.
-			ID:      home.OwnerID,
-			Name:    home.Name,
-			GeoName: home.GeoName,
+			ID:      dereference(home.OwnerId),
+			Name:    dereference(home.Name),
+			GeoName: dereference(home.GeoName),
 		}
 	}
 	return homes

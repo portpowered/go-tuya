@@ -7,7 +7,45 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
+
+func syntheticQRCodeEnvelope(success bool) wire.QRCodeEnvelope {
+	tid := "test-tid"
+	timestamp := int64(1234567890)
+	response := wire.QRCodeEnvelope{Success: &success, Tid: &tid, T: &timestamp}
+	if success {
+		code := "test-qr-code-token"
+		response.Result = &wire.QRCodeResult{Qrcode: &code}
+	}
+	return response
+}
+
+func syntheticLoginCodeEnvelope(success bool) wire.LoginCodeEnvelope {
+	tid := "test-tid"
+	timestamp := int64(1234567890)
+	response := wire.LoginCodeEnvelope{Success: &success, Tid: &tid, T: &timestamp}
+	if success {
+		accessToken := "test-access-token"
+		refreshToken := "test-refresh-token"
+		expireTime := int64(7200)
+		terminalID := "test-terminal-id"
+		uid := "test-uid"
+		username := "test-username"
+		endpoint := "https://openapi.tuyaus.com"
+		response.Result = &wire.LoginCodeResult{
+			AccessToken:  &accessToken,
+			RefreshToken: &refreshToken,
+			ExpireTime:   &expireTime,
+			TerminalId:   &terminalID,
+			Uid:          &uid,
+			Username:     &username,
+			Endpoint:     &endpoint,
+		}
+	}
+	return response
+}
 
 // setupAuthServiceWithMockServer creates an AuthService with a mocked HTTPS server
 func setupAuthServiceWithMockServer(handler http.HandlerFunc) (*AuthService, *httptest.Server) {
@@ -52,16 +90,7 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 		}
 
 		// Return successful response
-		response := tuyaCloudLoginResponse{
-			Success: true,
-			Tid:     "test-tid",
-			T:       1234567890,
-			Result: struct {
-				Qrcode string `json:"qrcode"`
-			}{
-				Qrcode: "test-qr-code-token",
-			},
-		}
+		response := syntheticQRCodeEnvelope(true)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
@@ -102,16 +131,7 @@ func TestAuthService_GenerateQrCodeForLogin_DefaultSchema(t *testing.T) {
 			t.Errorf("Expected schema=%s, got %s", AuthenticationSchema, query.Get("schema"))
 		}
 
-		response := tuyaCloudLoginResponse{
-			Success: true,
-			Tid:     "test-tid",
-			T:       1234567890,
-			Result: struct {
-				Qrcode string `json:"qrcode"`
-			}{
-				Qrcode: "test-qr-code-token",
-			},
-		}
+		response := syntheticQRCodeEnvelope(true)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
@@ -137,11 +157,7 @@ func TestAuthService_GenerateQrCodeForLogin_DefaultSchema(t *testing.T) {
 func TestAuthService_GenerateQrCodeForLogin_Failure(t *testing.T) {
 	// Mock failure response
 	mockHandler := func(w http.ResponseWriter, r *http.Request) {
-		response := tuyaCloudLoginResponse{
-			Success: false,
-			Tid:     "test-tid",
-			T:       1234567890,
-		}
+		response := syntheticQRCodeEnvelope(false)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
@@ -216,28 +232,7 @@ func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
 		}
 
 		// Return successful response
-		response := tuyaCloudValidateLoginCodeResponse{
-			Success: true,
-			Tid:     "test-tid",
-			T:       1234567890,
-			Result: struct {
-				AccessToken  string `json:"access_token"`
-				RefreshToken string `json:"refresh_token"`
-				ExpireTime   int64  `json:"expire_time"`
-				TerminalID   string `json:"terminal_id"`
-				UID          string `json:"uid"`
-				Username     string `json:"username"`
-				Endpoint     string `json:"endpoint"`
-			}{
-				AccessToken:  "test-access-token",
-				RefreshToken: "test-refresh-token",
-				ExpireTime:   7200,
-				TerminalID:   "test-terminal-id",
-				UID:          "test-uid",
-				Username:     "test-username",
-				Endpoint:     "https://openapi.tuyaus.com",
-			},
-		}
+		response := syntheticLoginCodeEnvelope(true)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
@@ -296,11 +291,7 @@ func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
 func TestAuthService_ValidateLoginCode_Failure(t *testing.T) {
 	// Mock failure response
 	mockHandler := func(w http.ResponseWriter, r *http.Request) {
-		response := tuyaCloudValidateLoginCodeResponse{
-			Success: false,
-			Tid:     "test-tid",
-			T:       1234567890,
-		}
+		response := syntheticLoginCodeEnvelope(false)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)

@@ -40,27 +40,30 @@ type encryptedRTCSignaling struct {
 	client *EncryptedClient
 }
 
-type encryptedRTCSessionResponse struct {
-	SessionID string `json:"session_id"`
-	SDP       string `json:"sdp"`
-}
-
 func (s encryptedRTCSignaling) Start(ctx context.Context, req StartRTCStreamRequest) (RTCSessionInfo, error) {
+	body, err := wireRequestMap(wire.RTCOfferBody{Sdp: req.SDPOffer, Type: wire.Offer})
+	if err != nil {
+		return RTCSessionInfo{}, err
+	}
 	resp, err := s.client.Post(ctx,
 		fmt.Sprintf(wire.RouteStartRTCSession, req.DeviceID),
 		nil,
-		map[string]interface{}{"sdp": req.SDPOffer, "type": "offer"},
+		body,
 		&req,
 	)
 	if err != nil {
 		return RTCSessionInfo{}, fmt.Errorf("failed to initiate WebRTC session: %w", err)
 	}
 
-	response, err := serialize[encryptedRTCSessionResponse](resp)
+	wireResponse, err := decodeWireResponse[wire.RTCSessionEnvelope](resp)
 	if err != nil {
 		return RTCSessionInfo{}, fmt.Errorf("failed to parse WebRTC session response: %w", err)
 	}
-	return RTCSessionInfo{SessionID: response.SessionID, SDPAnswer: response.SDP}, nil
+	var session wire.RTCSessionResult
+	if wireResponse.Result != nil {
+		session = *wireResponse.Result
+	}
+	return RTCSessionInfo{SessionID: dereference(session.SessionId), SDPAnswer: dereference(session.Sdp)}, nil
 }
 
 func (s encryptedRTCSignaling) Stop(ctx context.Context, req StopRTCStreamRequest) error {

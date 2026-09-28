@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
@@ -33,24 +34,23 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		return RefreshTokenResponse{}, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
-	if success, ok := response.Body["success"].(bool); ok && success {
-		if result, ok := response.Body["result"].(map[string]interface{}); ok {
-			tokenInfo := map[string]interface{}{
-				"t":             response.Body["t"],
-				"expire_time":   result["expireTime"],
-				"uid":           result["uid"],
-				"access_token":  result["accessToken"],
-				"refresh_token": result["refreshToken"],
-			}
-			info := NewCustomerTokenInfo(tokenInfo)
-			return RefreshTokenResponse{
-				AccessToken:  info.AccessToken,
-				RefreshToken: info.RefreshToken,
-				ExpireTime:   info.ExpireTime,
-				UID:          info.UID,
-				T:            info.T,
-			}, nil
-		}
+	wireResponse, err := decodeWireResponse[wire.RefreshTokenEnvelope](response)
+	if err != nil {
+		return RefreshTokenResponse{}, fmt.Errorf("failed to decode refresh response: %w", err)
+	}
+	if dereference(wireResponse.Success) && wireResponse.Result != nil {
+		timestamp := dereference(wireResponse.T)
+		expirySeconds := dereference(wireResponse.Result.ExpireTime)
+		return RefreshTokenResponse{
+			AccessToken:  dereference(wireResponse.Result.AccessToken),
+			RefreshToken: dereference(wireResponse.Result.RefreshToken),
+			// The refresh endpoint returns expireTime as a duration in seconds.
+			// The public RefreshTokenResponse has historically exposed its
+			// expiry as an epoch timestamp in milliseconds.
+			ExpireTime: timestamp + expirySeconds*1000,
+			UID:        dereference(wireResponse.Result.Uid),
+			T:          timestamp,
+		}, nil
 	}
 	return RefreshTokenResponse{}, fmt.Errorf("failed to refresh token: %+v", response)
 }
@@ -82,9 +82,16 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	if schema == "" {
 		schema = AuthenticationSchema
 	}
-	url := fmt.Sprintf("%s%s?clientid=%s&usercode=%s&schema=%s",
-		c.client.AuthenticationURL, wire.RouteGenerateLoginQRCode, c.client.ClientID, req.AccessCode, schema)
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, url, nil)
+	query, err := wireQueryValues(wire.GenerateLoginQRCodeParams{
+		Clientid: c.client.ClientID,
+		Usercode: req.AccessCode,
+		Schema:   schema,
+	})
+	if err != nil {
+		return LoginResponse{}, err
+	}
+	endpoint := c.client.AuthenticationURL + wire.RouteGenerateLoginQRCode + "?" + query.Encode()
+	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, endpoint, nil)
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -97,14 +104,18 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	defer func() {
 		_ = response.Body.Close()
 	}()
-	var loginResponse tuyaCloudLoginResponse
+	var loginResponse wire.QRCodeEnvelope
 	err = json.NewDecoder(response.Body).Decode(&loginResponse)
 	if err != nil {
 		return LoginResponse{}, err
 	}
 
-	if !loginResponse.Success {
+	if !dereference(loginResponse.Success) {
 		return LoginResponse{}, fmt.Errorf("login failed: %+v", loginResponse)
+	}
+	var qrCode string
+	if loginResponse.Result != nil {
+		qrCode = dereference(loginResponse.Result.Qrcode)
 	}
 
 	// Possible response:
@@ -114,8 +125,8 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	// The QRlogin has to be prefixed with: f"tuyaSmart--qrLogin?token=
 	// See: https://github.com/home-assistant/core/blob/dev/homeassistant/components/tuya/config_flow.py#L48
 	return LoginResponse{
-		Code:            loginResponse.Result.Qrcode,
-		QrFormattedCode: fmt.Sprintf("tuyaSmart--qrLogin?token=%s", loginResponse.Result.Qrcode),
+		Code:            qrCode,
+		QrFormattedCode: fmt.Sprintf("tuyaSmart--qrLogin?token=%s", qrCode),
 	}, nil
 }
 
@@ -127,10 +138,16 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 // "result":{"access_token":"1231","refresh_token":"123123","expire_time":7200,
 // "terminal_id":"1231231","uid":"1231","username":"123123","endpoint":"https://apigw.tuyaus.com"}}
 func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCodeRequest) (ValidateLoginCodeResponse, error) {
-	url := fmt.Sprintf("%s%s?clientid=%s&usercode=%s",
-		c.client.AuthenticationURL, fmt.Sprintf(wire.RouteValidateLoginCode, req.LoginCode), c.client.ClientID, req.UserCode)
-
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, url, nil)
+	query, err := wireQueryValues(wire.ValidateLoginCodeParams{
+		Clientid: c.client.ClientID,
+		Usercode: req.UserCode,
+	})
+	if err != nil {
+		return ValidateLoginCodeResponse{}, err
+	}
+	path := fmt.Sprintf(wire.RouteValidateLoginCode, url.PathEscape(req.LoginCode))
+	endpoint := c.client.AuthenticationURL + path + "?" + query.Encode()
+	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, endpoint, nil)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, err
 	}
@@ -143,50 +160,24 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 	defer func() {
 		_ = response.Body.Close()
 	}()
-	var validateLoginCodeResponse tuyaCloudValidateLoginCodeResponse
+	var validateLoginCodeResponse wire.LoginCodeEnvelope
 	err = json.NewDecoder(response.Body).Decode(&validateLoginCodeResponse)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, err
 	}
 
-	if !validateLoginCodeResponse.Success {
+	if !dereference(validateLoginCodeResponse.Success) || validateLoginCodeResponse.Result == nil {
 		return ValidateLoginCodeResponse{}, fmt.Errorf("validate login code failed: %+v", validateLoginCodeResponse)
 	}
 
 	return ValidateLoginCodeResponse{
-		Success:      true,
-		AccessToken:  validateLoginCodeResponse.Result.AccessToken,
-		RefreshToken: validateLoginCodeResponse.Result.RefreshToken,
-		ExpireTime:   validateLoginCodeResponse.Result.ExpireTime,
-		TerminalID:   validateLoginCodeResponse.Result.TerminalID,
-		UID:          validateLoginCodeResponse.Result.UID,
-		Username:     validateLoginCodeResponse.Result.Username,
-		Endpoint:     validateLoginCodeResponse.Result.Endpoint,
+		Success:      dereference(validateLoginCodeResponse.Success),
+		AccessToken:  dereference(validateLoginCodeResponse.Result.AccessToken),
+		RefreshToken: dereference(validateLoginCodeResponse.Result.RefreshToken),
+		ExpireTime:   dereference(validateLoginCodeResponse.Result.ExpireTime),
+		TerminalID:   dereference(validateLoginCodeResponse.Result.TerminalId),
+		UID:          dereference(validateLoginCodeResponse.Result.Uid),
+		Username:     dereference(validateLoginCodeResponse.Result.Username),
+		Endpoint:     dereference(validateLoginCodeResponse.Result.Endpoint),
 	}, nil
-}
-
-// tuyaCloudValidateLoginCodeResponse represents the response from validating a login code
-type tuyaCloudValidateLoginCodeResponse struct {
-	Success bool   `json:"success"`
-	Tid     string `json:"tid"`
-	T       int64  `json:"t"`
-	Result  struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpireTime   int64  `json:"expire_time"`
-		TerminalID   string `json:"terminal_id"`
-		UID          string `json:"uid"`
-		Username     string `json:"username"`
-		Endpoint     string `json:"endpoint"`
-	}
-}
-
-// tuyaCloudLoginResponse represents the response from generating a login QR code to be scanned by the Tuya Smart app.
-type tuyaCloudLoginResponse struct {
-	Success bool   `json:"success"`
-	Tid     string `json:"tid"`
-	T       int64  `json:"t,omitempty"`
-	Result  struct {
-		Qrcode string `json:"qrcode"`
-	} `json:"result"`
 }

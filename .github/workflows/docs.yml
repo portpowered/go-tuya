@@ -43,7 +43,8 @@ jobs:
         run: |
           git ls-files --error-unmatch pkg/tuya/internal/wire/models.gen.go
           git ls-files --error-unmatch pkg/tuya/internal/wire/routes.gen.go
-          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go
+          git ls-files --error-unmatch pkg/tuya/internal/wire/mqtt.gen.go
+          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go pkg/tuya/internal/wire/mqtt.gen.go
       - name: Test with coverage
         if: github.event_name != 'pull_request'
         run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...

@@ -21,20 +21,29 @@ import (
 func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (MessageQueueConfig, error) {
 	linkID := uuid.New().String()
 
+	body, err := wireRequestMap(wire.MessageQueueConfigBody{LinkId: linkID})
+	if err != nil {
+		return MessageQueueConfig{}, err
+	}
 	resp, err := s.Client.EncryptedClient.Post(ctx, wire.RouteGetMessageQueueConfig,
 		map[string]interface{}{},
-		map[string]interface{}{
-			"linkId": linkID,
-		},
+		body,
 		&MessageQueueStartRequest{})
 	if err != nil {
 		return MessageQueueConfig{}, err
 	}
 
-	// Parse response using serialize function like devices operations
-	respData, err := serialize[MessageQueueConfigResponse](resp)
+	wireResponse, err := decodeWireResponse[wire.MessageQueueConfigEnvelope](resp)
 	if err != nil {
 		return MessageQueueConfig{}, fmt.Errorf("failed to parse MQTT config response: %w", err)
+	}
+	var wireConfig wire.MessageQueueConfiguration
+	if wireResponse.Result != nil {
+		wireConfig = *wireResponse.Result
+	}
+	respData, err := convertWireValue[MessageQueueConfigResponse](wireConfig)
+	if err != nil {
+		return MessageQueueConfig{}, fmt.Errorf("failed to map MQTT config response: %w", err)
 	}
 
 	config := respData.ToMessageQueueConfig()
@@ -471,11 +480,9 @@ func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) strin
 		// When a device supports local, we do the mapping between the data point id and the more comprehensible name.
 		// i.e. dp1 -> led_dimmer_1.
 		// To do this, each device needs to maintain the corresponding specification strategy with it for local transformations.
-		topic += "/pen"
-	} else {
-		topic += "/sta"
+		return strings.ReplaceAll(wire.MQTTChannelDeviceLocal, "{deviceTopic}", topic)
 	}
-	return topic
+	return strings.ReplaceAll(wire.MQTTChannelDeviceStatus, "{deviceTopic}", topic)
 }
 
 // extractDeviceIDFromTopic extracts device ID from topic string
