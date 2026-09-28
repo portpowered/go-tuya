@@ -18,10 +18,10 @@ stream controls. Applications provide and securely store credentials.
 Requires Go 1.24 or later.
 
 ```sh
-go get github.com/portpowered/go-tuya@main
+go get github.com/portpowered/go-tuya@v0.1.0
 ```
 
-Use `@main` until a release is cut from the cleaned history; older version tags
+`v0.1.0` is the first release from the cleaned history. Older version tags
 were removed during credential-history cleanup.
 
 Import the client package:

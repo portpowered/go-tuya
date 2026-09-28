@@ -1,6 +1,6 @@
 # Releasing
 
-## Before the first release
+## Provider evidence review
 
 The maintainer reports that the implemented API flows worked with their real
 Tuya account(s). Those tests were not documented with sanitized exchanges or
@@ -15,16 +15,15 @@ Follow the pre-release review in the template's
 [`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/main/docs/releasing.md),
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
-[`template-checklist.md`](template-checklist.md) as a separate sign-off. Adding
-this workflow does not sign off checklist item 3; keep it unchecked until a
-GitHub Release, Go proxy fetch, and live release-badge check have all succeeded.
+[`template-checklist.md`](template-checklist.md) as a separate sign-off. The
+first clean-history release is `v0.1.0`; checklist item 3 records the live
+badge and Go Reference verification separately.
 
 The module path is `github.com/portpowered/go-tuya`. The public client package
 is `github.com/portpowered/go-tuya/tuya`, so the release workflow compares
-package `tuya`. The repository currently has no release tags. On the first tag,
-the API compatibility tool reports that there is no prior stable release and
-skips the comparison. Later tags compare the public package with the prior
-stable tag.
+package `tuya`. The first tag had no prior stable release, so the API
+compatibility tool reported that it had no baseline. Later tags compare the
+public package with the prior stable tag.
 
 ## Tag and verify
 
