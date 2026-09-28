@@ -3,6 +3,7 @@ package tuya
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -103,6 +104,7 @@ type mqttState struct {
 	messageListeners map[string][]MessageListener
 	deviceListeners  map[string][]DeviceListener
 	listenersMux     sync.RWMutex
+	deliveryMux      sync.Mutex
 
 	// Lifecycle management
 	lifecycleMux sync.Mutex
@@ -132,10 +134,17 @@ func (state *mqttState) recordConnection(err error) {
 }
 
 func (state *mqttState) connectOnce(ctx context.Context, queue *SharingMessageQueueImpl) error {
+	var err error
 	if state.connect != nil {
-		return state.connect(ctx, queue)
+		err = state.connect(ctx, queue)
+	} else {
+		err = state.connectMQTT(ctx, queue)
 	}
-	return state.connectMQTT(ctx, queue)
+	var classified *ClientError
+	if err != nil && !errors.As(err, &classified) {
+		return clientError(ErrorTransport, err)
+	}
+	return err
 }
 
 // getOrCreateState gets or creates the MQTT state for a SharingMessageQueueImpl instance
@@ -473,6 +482,8 @@ func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
 
 // onMessage handles incoming MQTT messages
 func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
+	state.deliveryMux.Lock()
+	defer state.deliveryMux.Unlock()
 	topic := msg.Topic()
 	payload := msg.Payload()
 
@@ -483,33 +494,27 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 
-	// Handle general message listeners
 	state.listenersMux.RLock()
-	defer state.listenersMux.RUnlock()
-	if listeners, exists := state.messageListeners[topic]; exists {
-		evt, err := parseRawSharingMessage(sharingMessage)
-		if err != nil {
-			log.Printf("Failed to parse device state change event JSON: %v", err)
-			return
-		}
-		for _, listener := range listeners {
-			go listener(topic, evt)
-		}
-	}
-
-	// Handle device-specific listeners
+	messageListeners := append([]MessageListener(nil), state.messageListeners[topic]...)
 	deviceID := state.extractDeviceIDFromTopic(topic)
+	var deviceListeners []DeviceListener
 	if deviceID != "" {
-		if listeners, exists := state.deviceListeners[deviceID]; exists {
-			evt, err := parseRawSharingMessage(sharingMessage)
-			if err != nil {
-				log.Printf("Failed to parse device state change event JSON: %v", err)
-				return
-			}
-			for _, listener := range listeners {
-				go listener(deviceID, evt)
-			}
-		}
+		deviceListeners = append([]DeviceListener(nil), state.deviceListeners[deviceID]...)
+	}
+	state.listenersMux.RUnlock()
+	if len(messageListeners) == 0 && len(deviceListeners) == 0 {
+		return
+	}
+	evt, err := parseRawSharingMessage(sharingMessage)
+	if err != nil {
+		log.Printf("Failed to parse device state change event JSON: %v", err)
+		return
+	}
+	for _, listener := range messageListeners {
+		listener(topic, evt)
+	}
+	for _, listener := range deviceListeners {
+		listener(deviceID, evt)
 	}
 
 }

@@ -90,6 +90,51 @@ func TestSyntheticMessageQueueStopWaitsForReconnect(t *testing.T) {
 	}
 }
 
+func TestSyntheticMessageDeliveryAppliesBackpressure(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue := client.NewSession(Tokens{}).MessageQueue
+	entered := make(chan struct{}, 2)
+	release := make(chan struct{})
+	_, err = queue.AddMessageListener(context.Background(), AddMessageListenerRequest{
+		Topic: "general",
+		Callback: func(_ string, _ interface{}) {
+			entered <- struct{}{}
+			<-release
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := syntheticMQTTMessage{topic: "general", payload: []byte(`{"protocol":4,"data":{"devId":"device-1","status":[]}}`)}
+	firstDone := make(chan struct{})
+	go func() { queue.State.onMessage(nil, message); close(firstDone) }()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("first callback did not start")
+	}
+	secondDone := make(chan struct{})
+	go func() { queue.State.onMessage(nil, message); close(secondDone) }()
+	select {
+	case <-entered:
+		t.Fatal("second callback ran while the first was blocked")
+	case <-secondDone:
+		t.Fatal("second dispatch completed while the first callback was blocked")
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(release)
+	for _, done := range []<-chan struct{}{firstDone, secondDone} {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("dispatch did not finish after callback release")
+		}
+	}
+}
+
 func (m syntheticMQTTMessage) Duplicate() bool   { return false }
 func (m syntheticMQTTMessage) Qos() byte         { return 0 }
 func (m syntheticMQTTMessage) Retained() bool    { return false }

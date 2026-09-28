@@ -36,7 +36,7 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 
 	wireResponse, err := decodeWireResponse[wire.RefreshTokenEnvelope](response)
 	if err != nil {
-		return RefreshTokenResponse{}, fmt.Errorf("failed to decode refresh response: %w", err)
+		return RefreshTokenResponse{}, clientError(ErrorProtocol, fmt.Errorf("failed to decode refresh response: %w", err))
 	}
 	if dereference(wireResponse.Success) && wireResponse.Result != nil {
 		timestamp := dereference(wireResponse.T)
@@ -52,7 +52,7 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 			T:          timestamp,
 		}, nil
 	}
-	return RefreshTokenResponse{}, fmt.Errorf("failed to refresh token: %+v", response)
+	return RefreshTokenResponse{}, clientError(ErrorProvider, fmt.Errorf("failed to refresh token: %+v", response))
 }
 
 // RefreshTokenRequest represents a request to refresh an access token
@@ -88,17 +88,17 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 		Schema:   schema,
 	})
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
 	endpoint := c.client.AuthenticationURL + wire.RouteGenerateLoginQRCode + "?" + query.Encode()
 	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, endpoint, nil)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, clientError(ErrorInvalidOperation, err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, clientError(ErrorTransport, err)
 	}
 
 	defer func() {
@@ -107,11 +107,11 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	var loginResponse wire.QRCodeEnvelope
 	err = json.NewDecoder(response.Body).Decode(&loginResponse)
 	if err != nil {
-		return LoginResponse{}, err
+		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
 
 	if !dereference(loginResponse.Success) {
-		return LoginResponse{}, fmt.Errorf("login failed: %+v", loginResponse)
+		return LoginResponse{}, clientError(ErrorProvider, fmt.Errorf("login failed: %+v", loginResponse))
 	}
 	var qrCode string
 	if loginResponse.Result != nil {
@@ -143,18 +143,18 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 		Usercode: req.UserCode,
 	})
 	if err != nil {
-		return ValidateLoginCodeResponse{}, err
+		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
 	path := fmt.Sprintf(wire.RouteValidateLoginCode, url.PathEscape(req.LoginCode))
 	endpoint := c.client.AuthenticationURL + path + "?" + query.Encode()
 	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, endpoint, nil)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, err
+		return ValidateLoginCodeResponse{}, clientError(ErrorInvalidOperation, err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, err
+		return ValidateLoginCodeResponse{}, clientError(ErrorTransport, err)
 	}
 
 	defer func() {
@@ -163,11 +163,11 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 	var validateLoginCodeResponse wire.LoginCodeEnvelope
 	err = json.NewDecoder(response.Body).Decode(&validateLoginCodeResponse)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, err
+		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
 
 	if !dereference(validateLoginCodeResponse.Success) || validateLoginCodeResponse.Result == nil {
-		return ValidateLoginCodeResponse{}, fmt.Errorf("validate login code failed: %+v", validateLoginCodeResponse)
+		return ValidateLoginCodeResponse{}, clientError(ErrorProvider, fmt.Errorf("validate login code failed: %+v", validateLoginCodeResponse))
 	}
 
 	return ValidateLoginCodeResponse{

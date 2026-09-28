@@ -13,6 +13,8 @@ type Option func(*clientOptions) error
 
 type clientOptions struct {
 	httpClient        *http.Client
+	httpClientSet     bool
+	httpTransportSet  bool
 	clientID          string
 	authenticationURL string
 	cloudAPIURL       string
@@ -50,26 +52,26 @@ func NewClient(options ...Option) (*Client, error) {
 	}
 	for index, option := range options {
 		if option == nil {
-			return nil, fmt.Errorf("client option %d is nil", index)
+			return nil, clientError(ErrorInvalidOperation, fmt.Errorf("client option %d is nil", index))
 		}
 		if err := option(&configured); err != nil {
-			return nil, fmt.Errorf("client option %d: %w", index, err)
+			return nil, clientError(ErrorInvalidOperation, fmt.Errorf("client option %d: %w", index, err))
 		}
 	}
 	if configured.httpClient == nil {
-		return nil, fmt.Errorf("HTTP client is required")
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("HTTP client is required"))
 	}
 	if strings.TrimSpace(configured.clientID) == "" {
-		return nil, fmt.Errorf("client ID must not be empty")
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("client ID must not be empty"))
 	}
 	if err := validateEndpoint("authentication URL", configured.authenticationURL); err != nil {
-		return nil, err
+		return nil, clientError(ErrorInvalidOperation, err)
 	}
 	if err := validateEndpoint("cloud API URL", configured.cloudAPIURL); err != nil {
-		return nil, err
+		return nil, clientError(ErrorInvalidOperation, err)
 	}
 	if configured.mqttClientFactory == nil {
-		return nil, fmt.Errorf("MQTT client factory is required")
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("MQTT client factory is required"))
 	}
 	return &Client{options: configured}, nil
 }
@@ -81,7 +83,11 @@ func WithHTTPClient(client *http.Client) Option {
 		if client == nil {
 			return fmt.Errorf("HTTP client must not be nil")
 		}
+		if options.httpClientSet || options.httpTransportSet {
+			return fmt.Errorf("HTTP client and transport options are mutually exclusive")
+		}
 		options.httpClient = client
+		options.httpClientSet = true
 		return nil
 	}
 }
@@ -93,7 +99,11 @@ func WithHTTPTransport(transport http.RoundTripper) Option {
 		if transport == nil {
 			return fmt.Errorf("HTTP transport must not be nil")
 		}
+		if options.httpClientSet || options.httpTransportSet {
+			return fmt.Errorf("HTTP client and transport options are mutually exclusive")
+		}
 		options.httpClient = &http.Client{Transport: transport}
+		options.httpTransportSet = true
 		return nil
 	}
 }

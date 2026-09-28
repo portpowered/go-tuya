@@ -95,7 +95,7 @@ func listHomes(ctx context.Context, accessToken, refreshToken string, expiryMill
 
 Use `WithHTTPClient` to provide timeouts or `WithHTTPTransport` to supply a
 custom `http.RoundTripper`, including a transport configured for HTTP/2. The
-default client has no request timeout. `WithRegion`, `WithCloudAPIURL`, and
+options are mutually exclusive. The default client has no request timeout. `WithRegion`, `WithCloudAPIURL`, and
 `WithAuthenticationURL` select endpoints; client options are validated when
 `NewClient` is called. The default cloud endpoint is the US region.
 
@@ -114,11 +114,13 @@ in source-controlled files. See the [authentication guide](https://portpowered.g
 
 ## Errors
 
-Operations return Go `error` values for transport, API, decoding, and protocol
-failures. This package does not provide a stable exported error type for
-classification, so callers should not parse error strings. Some authentication
-requests carry credentials in query parameters; redact errors and request URLs
-before logging them.
+HTTP, authentication, and wire decoding failures expose `*tuya.ClientError`.
+Use `errors.As` to inspect `Kind` (`ErrorUnauthorized`, `ErrorNotFound`,
+`ErrorTransport`, `ErrorProvider`, `ErrorProtocol`, or `ErrorInvalidOperation`).
+`errors.Is` and `errors.Unwrap` retain the underlying cause. Custom injected
+RTC transports may return their own error types. Some authentication requests
+carry credentials in query parameters; redact errors and request URLs before
+logging them.
 
 ## Examples
 

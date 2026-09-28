@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -349,8 +350,9 @@ func TestDeviceReadReplay_APIError(t *testing.T) {
 	if err == nil {
 		t.Fatal("QueryHomes() error = nil, want synthetic API error")
 	}
-	if got, want := err.Error(), "network error: (1010) synthetic token rejected"; got != want {
-		t.Fatalf("QueryHomes() error = %q, want %q", got, want)
+	var classified *tuya.ClientError
+	if !errors.As(err, &classified) || classified.Kind != tuya.ErrorUnauthorized {
+		t.Fatalf("QueryHomes() error = %v, want typed unauthorized failure", err)
 	}
 	assertReplayCalls(t, transport, replayKey{method: http.MethodGet, path: "/v1.0/m/life/users/homes"})
 }

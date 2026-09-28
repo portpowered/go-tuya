@@ -69,7 +69,7 @@ func (c *EncryptedClient) Delete(ctx context.Context, path string, params map[st
 // { result: "encrypted response data", success: true, code: 200, msg: "success", t: 123, tid: "123" }
 func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, params, body map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
 	if !wire.IsKnownOperation(method, path) {
-		return nil, fmt.Errorf("operation %s %s is not in api/openapi.yaml", method, path)
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("operation %s %s is not in api/openapi.yaml", method, path))
 	}
 	// Generate request ID and secret
 	rid := GenerateRID()
@@ -93,7 +93,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	} else {
 		token = tokens.RefreshToken
 		if token == "" {
-			return nil, fmt.Errorf("refresh token is required; set it on the session or request")
+			return nil, clientError(ErrorUnauthorized, fmt.Errorf("refresh token is required; set it on the session or request"))
 		}
 	}
 
@@ -114,7 +114,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		queryJSON := formToJSON(params)
 		encrypted, err := aesGCMEncrypt(queryJSON, secret)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt params: %w", err)
+			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt params: %w", err))
 		}
 		queryEncdata = string(encrypted)
 	}
@@ -123,14 +123,14 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		bodyJSON := formToJSON(body)
 		encrypted, err := aesGCMEncrypt(bodyJSON, secret)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt body: %w", err)
+			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt body: %w", err))
 		}
 		bodyEncdata = string(encrypted)
 		finalBody, err = json.Marshal(wire.EncryptedDataEnvelope{
 			Encdata: bodyEncdata,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal encrypted body envelope: %w", err)
+			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to marshal encrypted body envelope: %w", err))
 		}
 	}
 
@@ -141,7 +141,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	} else {
 		accessToken = tokens.AccessToken
 		if accessToken == "" {
-			return nil, fmt.Errorf("access token is required; set it on the session or request")
+			return nil, clientError(ErrorUnauthorized, fmt.Errorf("access token is required; set it on the session or request"))
 		}
 	}
 
@@ -156,7 +156,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	}
 	headers, err := wireStringMap(requestHeaders)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode request headers: %w", err)
+		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode request headers: %w", err))
 	}
 
 	// Generate signature
@@ -164,7 +164,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	requestHeaders.XSign = sign
 	headers, err = wireStringMap(requestHeaders)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode request headers: %w", err)
+		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode request headers: %w", err))
 	}
 
 	// Build URL
@@ -178,14 +178,14 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("failed to create request: %w", err))
 	}
 	q := req.URL.Query()
 	if queryEncdata != "" {
 		queryEnvelope := wire.EncryptedDataEnvelope{Encdata: queryEncdata}
 		encodedParams, err := wireQueryValues(queryEnvelope)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encode encrypted query envelope: %w", err)
+			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode encrypted query envelope: %w", err))
 		}
 		for key, values := range encodedParams {
 			for _, value := range values {
@@ -204,7 +204,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	// Make request
 	resp, err := c.Client.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
+		return nil, clientError(ErrorTransport, fmt.Errorf("failed to make request: %w", err))
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -216,18 +216,24 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		return nil, clientError(ErrorTransport, fmt.Errorf("failed to read response: %w", err))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response error: code=%d, content=%s", resp.StatusCode, string(respBody))
+		kind := ErrorProvider
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			kind = ErrorUnauthorized
+		} else if resp.StatusCode == http.StatusNotFound {
+			kind = ErrorNotFound
+		}
+		return nil, clientError(kind, fmt.Errorf("response error: code=%d, content=%s", resp.StatusCode, string(respBody)))
 	}
 
 	// Parse the encrypted transport envelope before handing the decrypted result
 	// to operation-specific generated models.
 	var transportResponse wire.EncryptedHTTPResponseEnvelope
 	if err := json.Unmarshal(respBody, &transportResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to unmarshal response: %w", err))
 	}
 
 	// Check success
@@ -236,18 +242,22 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		code, _ := transportResponse.Code.(string)
 		msg, _ := transportResponse.Msg.(string)
 		// map[string]interface {} ["code": "1010", "msg": "token is expired", "t": 1753502581085, "tid": "1231", "success": false, ]
-		return nil, fmt.Errorf("network error: (%s) %s", code, msg)
+		kind := ErrorProvider
+		if code == "1010" {
+			kind = ErrorUnauthorized
+		}
+		return nil, clientError(kind, fmt.Errorf("network error: (%s) %s", code, msg))
 	}
 	responseData, err := convertWireValue[map[string]interface{}](transportResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to map transport response: %w", err)
+		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to map transport response: %w", err))
 	}
 
 	// Decrypt result
 	if encResult, ok := transportResponse.Result.(string); ok {
 		decrypted, err := aesGCMDecrypt(encResult, secret)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt response: %w", err)
+			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to decrypt response: %w", err))
 		}
 
 		// Try to parse as JSON

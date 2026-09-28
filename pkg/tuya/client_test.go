@@ -129,6 +129,18 @@ func TestNewClientRejectsInvalidOptions(t *testing.T) {
 	}
 }
 
+func TestNewClientRejectsConflictingHTTPOptions(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) { return nil, nil })
+	for _, options := range [][]Option{
+		{WithHTTPClient(&http.Client{}), WithHTTPTransport(transport)},
+		{WithHTTPTransport(transport), WithHTTPClient(&http.Client{})},
+	} {
+		if _, err := NewClient(options...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+			t.Fatalf("conflicting HTTP options: got %v", err)
+		}
+	}
+}
+
 func TestWithHTTPTransportIsUsedByAuthenticationRequests(t *testing.T) {
 	called := false
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {

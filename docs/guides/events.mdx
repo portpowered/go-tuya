@@ -35,7 +35,10 @@ defer queue.Stop(context.Background(), tuya.MessageQueueStopRequest{})
 `Start` connects before returning and reports initial connection errors. For
 later connection failures, read `queue.Status()`; its `Connected` and
 `LastError` fields show the current state. `Stop` waits for the queue loop to
-exit and disconnects the broker. The session owns that queue state.
+exit and disconnects the broker. The session owns that queue state. Event
+callbacks run synchronously and serially without an unbounded goroutine queue;
+a slow callback delays later MQTT message delivery. Keep callbacks short or
+move work into an application-managed bounded queue.
 
 The parser handles device-state protocol 4 and device-management protocol 20
 messages. Unknown management codes remain generic management events. Synthetic

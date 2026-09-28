@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -178,6 +179,45 @@ func TestEncryptedClientRejectsUnschematizedOperation(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "not in api/openapi.yaml") {
 			t.Fatalf("%s %s: got %v, want schema rejection", candidate.method, candidate.path, err)
 		}
+	}
+}
+
+func TestClientErrorClassifiesAndPreservesTransportCause(t *testing.T) {
+	cause := errors.New("synthetic network failure")
+	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, cause
+	})}
+	session := &Session{HTTPClient: client, CloudAPIURL: "https://example.invalid", ClientID: "synthetic-client-id"}
+	session.SetTokens(Tokens{AccessToken: "synthetic-access", RefreshToken: "synthetic-refresh"})
+	session.EncryptedClient = &EncryptedClient{Client: session}
+	_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
+	var classified *ClientError
+	if !errors.As(err, &classified) || classified.Kind != ErrorTransport || !errors.Is(err, cause) {
+		t.Fatalf("transport error = %v, want typed transport error retaining cause", err)
+	}
+}
+
+func TestClientErrorClassifiesProviderStatus(t *testing.T) {
+	for _, candidate := range []struct {
+		status int
+		kind   ErrorKind
+	}{
+		{http.StatusUnauthorized, ErrorUnauthorized},
+		{http.StatusNotFound, ErrorNotFound},
+		{http.StatusServiceUnavailable, ErrorProvider},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(candidate.status)
+		}))
+		session := &Session{HTTPClient: server.Client(), CloudAPIURL: server.URL, ClientID: "synthetic-client-id"}
+		session.SetTokens(Tokens{AccessToken: "synthetic-access", RefreshToken: "synthetic-refresh"})
+		session.EncryptedClient = &EncryptedClient{Client: session}
+		_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
+		var classified *ClientError
+		if !errors.As(err, &classified) || classified.Kind != candidate.kind {
+			t.Errorf("status %d: error = %v, want kind %s", candidate.status, err, candidate.kind)
+		}
+		server.Close()
 	}
 }
 
