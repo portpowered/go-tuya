@@ -453,6 +453,68 @@ func TestParseEvent_MissingFields(t *testing.T) {
 	}
 }
 
+func TestParseDeviceStateChangeEventPublicMapAdapter(t *testing.T) {
+	event, err := ParseDeviceStateChangeEvent(map[string]interface{}{
+		"dataId":     "synthetic-data-id",
+		"devId":      "synthetic-device-id",
+		"productKey": "synthetic-product-key",
+		"status": []interface{}{
+			map[string]interface{}{"code": "switch", "value": true, "t": float64(1234)},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ParseDeviceStateChangeEvent() error = %v", err)
+	}
+	if event.DeviceID != "synthetic-device-id" || event.DataID != "synthetic-data-id" {
+		t.Fatalf("parsed event identity = %+v", event)
+	}
+	if len(event.Status) != 1 || event.Status[0].Code != "switch" || event.Status[0].Timestamp != 1234 || event.Status[0].Value != true {
+		t.Fatalf("parsed event status = %+v", event.Status)
+	}
+	if _, err := ParseDeviceStateChangeEvent(map[string]interface{}{"status": "not-an-array"}); err == nil {
+		t.Fatal("ParseDeviceStateChangeEvent() accepted a status value with the wrong shape")
+	}
+}
+
+func TestParseDeviceManagementEventPublicMapAdapter(t *testing.T) {
+	event, err := ParseDeviceManagementEvent(map[string]interface{}{
+		"productKey": "synthetic-product-key",
+		"bizCode":    BizcodeOnline,
+		"bizData": map[string]interface{}{
+			"devId": "synthetic-device-id",
+			"time":  float64(5678),
+		},
+	})
+	if err != nil {
+		t.Fatalf("ParseDeviceManagementEvent() error = %v", err)
+	}
+	online, ok := event.(*DeviceOnlineEvent)
+	if !ok {
+		t.Fatalf("event type = %T, want *DeviceOnlineEvent", event)
+	}
+	if online.DeviceID != "synthetic-device-id" || online.ProductKey != "synthetic-product-key" || online.Time != 5678 {
+		t.Fatalf("parsed online event = %+v", online)
+	}
+	genericEvent, err := ParseDeviceManagementEvent(map[string]interface{}{
+		"devId":      "synthetic-device-id",
+		"productKey": "synthetic-product-key",
+		"bizCode":    "futureEvent",
+		"bizData": map[string]interface{}{
+			"newProviderField": "retained",
+		},
+	})
+	if err != nil {
+		t.Fatalf("ParseDeviceManagementEvent(unknown code) error = %v", err)
+	}
+	management, ok := genericEvent.(*DeviceManagementEvent)
+	if !ok || management.BizData["newProviderField"] != "retained" {
+		t.Fatalf("generic management event = %#v", genericEvent)
+	}
+	if _, err := ParseDeviceManagementEvent(map[string]interface{}{"bizData": "not-an-object"}); err == nil {
+		t.Fatal("ParseDeviceManagementEvent() accepted a business payload with the wrong shape")
+	}
+}
+
 func TestProcessMQTTMessage_InvalidJSON(t *testing.T) {
 	invalidJSON := `{"protocol": 1000, "data": {invalid json`
 

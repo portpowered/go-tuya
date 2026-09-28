@@ -3,6 +3,8 @@ package tuya
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // This describes the overall message protocol that is sent over via MQTT to the client.
@@ -27,7 +29,8 @@ const (
 	BizcodeDpNameUpdate = "dpNameUpdate"
 )
 
-// RawMQTTMessage represents the raw message structure received from MQTT
+// RawMQTTMessage represents the legacy public shape of a raw MQTT message.
+// Deprecated: wire decoding uses the generated internal wire.RawSharingMessage model.
 type RawMQTTMessage struct {
 	Protocol int                    `json:"protocol"`
 	Data     map[string]interface{} `json:"data"`
@@ -40,7 +43,7 @@ type Event interface {
 	GetEventType() string
 }
 
-// DeviceStateChangeEvent represents a device state change event (protocol 1000)
+// DeviceStateChangeEvent represents a device state change event (protocol 4).
 type DeviceStateChangeEvent struct {
 	DataID     string               `json:"dataId"`
 	DeviceID   string               `json:"devId"`
@@ -202,152 +205,127 @@ func ParseEvent(rawMessage map[string]interface{}) (Event, error) {
 	}
 	protocol := int(protocolFloat)
 
-	// Extract data field
-	data, ok := rawMessage["data"].(map[string]interface{})
+	// Preserve the existing public validation errors before converting to the
+	// schema-generated transport and protocol data models.
+	_, ok = rawMessage["data"].(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("missing or invalid data field")
 	}
-
-	switch protocol {
-	case ProtocolDeviceReport:
-		return ParseDeviceStateChangeEvent(data)
-	case ProtocolOther:
-		return ParseDeviceManagementEvent(data)
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %d", protocol)
+	message, err := convertWireValue[wire.RawSharingMessage](rawMessage)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MQTT wire message: %w", err)
 	}
+	message.Protocol = wire.RawSharingMessageProtocol(protocol)
+	return parseRawSharingMessage(message)
 }
 
 // ParseDeviceStateChangeEvent parses a device state change event
 func ParseDeviceStateChangeEvent(data map[string]interface{}) (*DeviceStateChangeEvent, error) {
-	event := &DeviceStateChangeEvent{}
-
-	// Extract basic fields
-	if dataID, ok := data["dataId"].(string); ok {
-		event.DataID = dataID
+	wireData, err := convertWireValue[wire.RawDeviceReportData](data)
+	if err != nil {
+		return nil, fmt.Errorf("invalid device report payload: %w", err)
 	}
-	if devID, ok := data["devId"].(string); ok {
-		event.DeviceID = devID
-	}
-	if productKey, ok := data["productKey"].(string); ok {
-		event.ProductKey = productKey
-	}
-
-	// Parse status array
-	if statusArray, ok := data["status"].([]interface{}); ok {
-		event.Status = make([]DeviceStatusChange, len(statusArray))
-		for i, statusItem := range statusArray {
-			if statusMap, ok := statusItem.(map[string]interface{}); ok {
-				status := DeviceStatusChange{}
-				if code, ok := statusMap["code"].(string); ok {
-					status.Code = code
-				}
-				if value, ok := statusMap["value"]; ok {
-					status.Value = value
-				}
-				if t, ok := statusMap["t"].(float64); ok {
-					status.Timestamp = int64(t)
-				}
-				event.Status[i] = status
-			}
-		}
-	}
-
-	if event.DeviceID == "" {
-		return nil, fmt.Errorf("missing device ID in state change event")
-	}
-
-	return event, nil
+	return parseRawDeviceReport(wireData)
 }
 
 // ParseDeviceManagementEvent parses a device management event
 func ParseDeviceManagementEvent(data map[string]interface{}) (Event, error) {
-	// map[string]interface {} ["protocol": 20,
-	// 	"data": map[string]interface {}
-	// 			[
-	// 				"bizCode": *(*interface {})(0xc0001da258),
-	// 				"bizData": *(*interface {})(0xc0001da278),
-	// 				"ts": *(*interface {})(0xc0001da298),
-	// 			]
-	// 		]
-	// 	"t": 1753691950565,
-	// ]
-	//
+	wireData, err := convertWireValue[wire.RawDeviceManagementData](data)
+	if err != nil {
+		return nil, fmt.Errorf("invalid management event payload: %w", err)
+	}
+	return parseRawDeviceManagementEvent(wireData)
+}
 
-	// Extract basic fields
+func parseRawSharingMessage(message wire.RawSharingMessage) (Event, error) {
+	switch message.Protocol {
+	case wire.RawSharingMessageProtocol(ProtocolDeviceReport):
+		data, err := convertWireValue[wire.RawDeviceReportData](message.Data)
+		if err != nil {
+			return nil, fmt.Errorf("invalid device report payload: %w", err)
+		}
+		return parseRawDeviceReport(data)
+	case wire.RawSharingMessageProtocol(ProtocolOther):
+		data, err := convertWireValue[wire.RawDeviceManagementData](message.Data)
+		if err != nil {
+			return nil, fmt.Errorf("invalid management event payload: %w", err)
+		}
+		return parseRawDeviceManagementEvent(data)
+	default:
+		return nil, fmt.Errorf("unsupported protocol: %d", message.Protocol)
+	}
+}
 
-	productKey, _ := data["productKey"].(string)
-	bizCode, ok := data["bizCode"].(string)
-	if !ok {
+func parseRawDeviceReport(data wire.RawDeviceReportData) (*DeviceStateChangeEvent, error) {
+	event := &DeviceStateChangeEvent{
+		DataID:     dereference(data.DataId),
+		DeviceID:   dereference(data.DevId),
+		ProductKey: dereference(data.ProductKey),
+	}
+	if data.Status != nil {
+		event.Status = make([]DeviceStatusChange, len(*data.Status))
+		for i, status := range *data.Status {
+			event.Status[i] = DeviceStatusChange{
+				Code:      dereference(status.Code),
+				Value:     status.Value,
+				Timestamp: dereference(status.T),
+			}
+		}
+	}
+	if event.DeviceID == "" {
+		return nil, fmt.Errorf("missing device ID in state change event")
+	}
+	return event, nil
+}
+
+func parseRawDeviceManagementEvent(data wire.RawDeviceManagementData) (Event, error) {
+	productKey := dereference(data.ProductKey)
+	bizCode := dereference(data.BizCode)
+	if bizCode == "" {
 		return nil, fmt.Errorf("missing bizCode in management event")
 	}
+	devID := dereference(data.DevId)
+	if devID == "" && data.BizData != nil {
+		devID = dereference(data.BizData.DevId)
+	}
+	if devID == "" {
+		return nil, fmt.Errorf("missing devId in management event")
+	}
 
-	bizData, ok := data["bizData"].(map[string]interface{})
-	if !ok {
+	var bizData map[string]interface{}
+	if data.BizData != nil {
+		converted, err := convertWireValue[map[string]interface{}](*data.BizData)
+		if err != nil {
+			return nil, fmt.Errorf("invalid management business data: %w", err)
+		}
+		bizData = converted
+	} else {
 		bizData = make(map[string]interface{})
 	}
-
-	// Get devID from main data object first, then fall back to bizData
-	devID, ok := data["devId"].(string)
-	if !ok {
-		// Fall back to bizData if not in main data
-		if devIDFromBiz, ok := bizData["devId"].(string); ok {
-			devID = devIDFromBiz
-		} else {
-			return nil, fmt.Errorf("missing devId in management event")
-		}
+	var eventTime int64
+	if data.BizData != nil {
+		eventTime = dereference(data.BizData.Time)
 	}
 
-	// Create specific event types based on bizCode
 	switch bizCode {
 	case BizcodeOnline:
-		event := &DeviceOnlineEvent{
-			DeviceID:   devID,
-			ProductKey: productKey,
-		}
-		if time, ok := bizData["time"].(float64); ok {
-			event.Time = int64(time)
-		}
-		return event, nil
-
+		return &DeviceOnlineEvent{DeviceID: devID, ProductKey: productKey, Time: eventTime}, nil
 	case BizcodeOffline:
-		event := &DeviceOfflineEvent{
-			DeviceID:   devID,
-			ProductKey: productKey,
-		}
-		if time, ok := bizData["time"].(float64); ok {
-			event.Time = int64(time)
-		}
-		return event, nil
-
+		return &DeviceOfflineEvent{DeviceID: devID, ProductKey: productKey, Time: eventTime}, nil
 	case BizcodeNameUpdate:
-		event := &DeviceNameUpdateEvent{
-			DeviceID:   devID,
-			ProductKey: productKey,
+		var name string
+		if data.BizData != nil {
+			name = dereference(data.BizData.Name)
 		}
-		if name, ok := bizData["name"].(string); ok {
-			event.NewName = name
-		}
-		return event, nil
-
+		return &DeviceNameUpdateEvent{DeviceID: devID, ProductKey: productKey, NewName: name}, nil
 	case BizcodeDelete:
-		event := &DeviceDeleteEvent{
-			DeviceID:   devID,
-			ProductKey: productKey,
+		var uid string
+		if data.BizData != nil {
+			uid = dereference(data.BizData.Uid)
 		}
-		if uid, ok := bizData["uid"].(string); ok {
-			event.UID = uid
-		}
-		return event, nil
-
+		return &DeviceDeleteEvent{DeviceID: devID, ProductKey: productKey, UID: uid}, nil
 	default:
-		// Return generic management event for unknown bizCodes
-		return &DeviceManagementEvent{
-			DeviceID:   devID,
-			ProductKey: productKey,
-			BizCode:    bizCode,
-			BizData:    bizData,
-		}, nil
+		return &DeviceManagementEvent{DeviceID: devID, ProductKey: productKey, BizCode: bizCode, BizData: bizData}, nil
 	}
 }
 
@@ -356,14 +334,12 @@ type EventListener func(event Event)
 
 // ProcessMQTTMessage processes a raw MQTT message and calls the appropriate listeners
 func ProcessMQTTMessage(rawMessage string, listeners []EventListener) error {
-	// Parse JSON
-	var msgData map[string]interface{}
-	if err := json.Unmarshal([]byte(rawMessage), &msgData); err != nil {
+	var message wire.RawSharingMessage
+	if err := json.Unmarshal([]byte(rawMessage), &message); err != nil {
 		return fmt.Errorf("failed to parse MQTT message JSON: %w", err)
 	}
 
-	// Parse into event
-	event, err := ParseEvent(msgData)
+	event, err := parseRawSharingMessage(message)
 	if err != nil {
 		return fmt.Errorf("failed to parse event: %w", err)
 	}

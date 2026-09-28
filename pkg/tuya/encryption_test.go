@@ -119,7 +119,7 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"success":true,"code":200,"msg":"ok"}`))
+		_, _ = w.Write([]byte(`{"success":true,"code":200,"msg":"ok","result":{"marker":"synthetic"},"providerField":"retained"}`))
 	}))
 	defer server.Close()
 
@@ -134,8 +134,13 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	ctx := context.Background()
 	opReq := testOperationRequest{}
 
-	if _, err := client.EncryptedClient.Post(ctx, path, nil, body, opReq); err != nil {
+	response, err := client.EncryptedClient.Post(ctx, path, nil, body, opReq)
+	if err != nil {
 		t.Fatalf("makeRequest returned error: %v", err)
+	}
+	result, ok := response.Body["result"].(map[string]interface{})
+	if !ok || result["marker"] != "synthetic" || response.Body["providerField"] != "retained" {
+		t.Fatalf("open transport response fields were not retained: %#v", response.Body)
 	}
 
 	select {
@@ -157,6 +162,15 @@ func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
 	_, err := session.EncryptedClient.Get(context.Background(), "/synthetic", nil, testOperationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "failed to create request") {
 		t.Fatalf("request error = %v, want URL construction error", err)
+	}
+}
+
+func TestWireStringMapRejectsNonStringFields(t *testing.T) {
+	_, err := wireStringMap(struct {
+		Count int `json:"X-count"`
+	}{Count: 1})
+	if err == nil {
+		t.Fatal("wireStringMap() accepted a non-string header value")
 	}
 }
 

@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // EncryptedClient provides access to Tuya Customer API operations with encryption of the payload and response.
@@ -93,8 +95,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 
 	// Encrypt params and body
 	var queryEncdata, bodyEncdata string
-	var finalParams map[string]interface{}
-	var finalBody map[string]interface{}
+	var finalBody []byte
 
 	if len(params) > 0 {
 		queryJSON := formToJSON(params)
@@ -103,9 +104,6 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 			return nil, fmt.Errorf("failed to encrypt params: %w", err)
 		}
 		queryEncdata = string(encrypted)
-		finalParams = map[string]interface{}{
-			"encdata": queryEncdata,
-		}
 	}
 
 	if len(body) > 0 {
@@ -115,18 +113,12 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 			return nil, fmt.Errorf("failed to encrypt body: %w", err)
 		}
 		bodyEncdata = string(encrypted)
-		finalBody = map[string]interface{}{
-			"encdata": bodyEncdata,
+		finalBody, err = json.Marshal(wire.EncryptedDataEnvelope{
+			Encdata: bodyEncdata,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal encrypted body envelope: %w", err)
 		}
-	}
-
-	// Create headers
-	t := time.Now().UnixNano() / int64(time.Millisecond)
-	headers := map[string]string{
-		"X-appKey":    c.Client.ClientID,
-		"X-requestId": rid,
-		"X-sid":       sid,
-		"X-time":      strconv.FormatInt(t, 10),
 	}
 
 	var accessToken string
@@ -140,13 +132,27 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		}
 	}
 
-	if accessToken != "" {
-		headers["X-token"] = accessToken
+	// Build header values using the generated model so names and fields stay
+	// aligned with the transport schema.
+	requestHeaders := wire.EncryptedRequestHeaders{
+		XAppKey:    c.Client.ClientID,
+		XRequestId: rid,
+		XSid:       sid,
+		XTime:      strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10),
+		XToken:     accessToken,
+	}
+	headers, err := wireStringMap(requestHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request headers: %w", err)
 	}
 
 	// Generate signature
 	sign := restfulSign(hashKey, queryEncdata, bodyEncdata, headers)
-	headers["X-sign"] = sign
+	requestHeaders.XSign = sign
+	headers, err = wireStringMap(requestHeaders)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request headers: %w", err)
+	}
 
 	// Build URL
 	url := c.Client.CloudAPIURL + path
@@ -154,11 +160,7 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	// Create HTTP request
 	var reqBody io.Reader
 	if finalBody != nil {
-		bodyBytes, err := json.Marshal(finalBody)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal body: %w", err)
-		}
-		reqBody = bytes.NewBuffer(bodyBytes)
+		reqBody = bytes.NewBuffer(finalBody)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
@@ -166,9 +168,17 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	q := req.URL.Query()
-	if finalParams != nil {
-		// Convert params to URL query string
-		q.Add("encdata", queryEncdata)
+	if queryEncdata != "" {
+		queryEnvelope := wire.EncryptedDataEnvelope{Encdata: queryEncdata}
+		encodedParams, err := wireQueryValues(queryEnvelope)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode encrypted query envelope: %w", err)
+		}
+		for key, values := range encodedParams {
+			for _, value := range values {
+				q.Add(key, value)
+			}
+		}
 	}
 
 	req.URL.RawQuery = q.Encode()
@@ -200,23 +210,28 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		return nil, fmt.Errorf("response error: code=%d, content=%s", resp.StatusCode, string(respBody))
 	}
 
-	// Parse response
-	var responseData map[string]interface{}
-	if err := json.Unmarshal(respBody, &responseData); err != nil {
+	// Parse the encrypted transport envelope before handing the decrypted result
+	// to operation-specific generated models.
+	var transportResponse wire.EncryptedHTTPResponseEnvelope
+	if err := json.Unmarshal(respBody, &transportResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	// Check success
-	success, _ := responseData["success"].(bool)
+	success := dereference(transportResponse.Success)
 	if !success {
-		code, _ := responseData["code"].(string)
-		msg, _ := responseData["msg"].(string)
+		code, _ := transportResponse.Code.(string)
+		msg, _ := transportResponse.Msg.(string)
 		// map[string]interface {} ["code": "1010", "msg": "token is expired", "t": 1753502581085, "tid": "1231", "success": false, ]
 		return nil, fmt.Errorf("network error: (%s) %s", code, msg)
 	}
+	responseData, err := convertWireValue[map[string]interface{}](transportResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to map transport response: %w", err)
+	}
 
 	// Decrypt result
-	if encResult, ok := responseData["result"].(string); ok {
+	if encResult, ok := transportResponse.Result.(string); ok {
 		decrypted, err := aesGCMDecrypt(encResult, secret)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt response: %w", err)
@@ -239,14 +254,14 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		Success:    success,
 	}
 
-	if code, ok := responseData["code"].(float64); ok {
+	if code, ok := transportResponse.Code.(float64); ok {
 		response.Code = int(code)
 	}
-	if msg, ok := responseData["msg"].(string); ok {
+	if msg, ok := transportResponse.Msg.(string); ok {
 		response.Message = msg
 	}
-	if t, ok := responseData["t"].(float64); ok {
-		response.Time = int64(t)
+	if transportResponse.T != nil {
+		response.Time = *transportResponse.T
 	}
 
 	return response, nil

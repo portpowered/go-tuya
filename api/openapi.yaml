@@ -6,7 +6,16 @@ info:
     are listed in Tuya Device Management. Operations tagged implementation-derived describe private app/mobile
     routes observed in go-tuya and are not provider-verified. Request and response objects stay open where
     the public reference or current implementation does not establish a complete schema. MQTT traffic
-    is a separate protocol; the HTTP route that obtains MQTT credentials is included.
+    is a separate protocol; the HTTP route that obtains MQTT credentials is included. EncryptedClient wraps
+    HTTP request bodies and query data, signs requests with the headers, and decrypts the outer response
+    envelope described below.
+  x-go-tuya-encrypted-transport:
+    request-envelope:
+      $ref: '#/components/schemas/EncryptedDataEnvelope'
+    request-headers:
+      $ref: '#/components/schemas/EncryptedRequestHeaders'
+    response-envelope:
+      $ref: '#/components/schemas/EncryptedHTTPResponseEnvelope'
 paths:
   /v1.0/devices/{device_id}:
     get:
@@ -2034,10 +2043,144 @@ components:
           - 20
           description: Legacy device report (4) or management event (20) handled by this client.
         data:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/RawSharingMessageData'
         t:
           type: integer
           format: int64
+      additionalProperties: true
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessageData:
+      type: object
+      description: Implementation-derived fields shared across the two MQTT data variants; unrecognized fields remain open.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+        bizCode:
+          type: string
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 4 device reports.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceStatusChange:
+      type: object
+      description: Implementation-derived status item in an MQTT protocol 4 report.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+        t:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 20 management events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        productKey:
+          type: string
+        bizCode:
+          type: string
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementBizData:
+      type: object
+      description: Implementation-derived, extensible business payload for MQTT management events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        time:
+          type: integer
+          format: int64
+        name:
+          type: string
+        uid:
+          type: string
+      x-go-tuya-evidence: implementation-derived
+    EncryptedDataEnvelope:
+      type: object
+      description: Implementation-derived encrypted HTTP request wrapper used for JSON bodies and query data.
+      required:
+      - encdata
+      properties:
+        encdata:
+          type: string
+          description: Base64-encoded nonce and AES-GCM ciphertext.
+      additionalProperties: false
+      x-go-tuya-evidence: implementation-derived
+    EncryptedRequestHeaders:
+      type: object
+      description: Implementation-derived authentication and signing headers emitted by EncryptedClient.
+      required:
+      - X-appKey
+      - X-requestId
+      - X-sid
+      - X-time
+      - X-token
+      - X-sign
+      properties:
+        X-appKey:
+          type: string
+        X-requestId:
+          type: string
+        X-sid:
+          type: string
+        X-time:
+          type: string
+        X-token:
+          type: string
+        X-sign:
+          type: string
+      additionalProperties: false
+      x-go-tuya-evidence: implementation-derived
+    EncryptedHTTPResponseEnvelope:
+      type: object
+      description: Implementation-derived outer response envelope received before result decryption.
+      properties:
+        code: {}
+        msg: {}
+        success:
+          type: boolean
+        result: {}
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
       additionalProperties: true
       x-go-tuya-evidence: implementation-derived

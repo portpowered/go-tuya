@@ -432,21 +432,12 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		log.Printf("Failed to parse message JSON: %v", err)
 		return
 	}
-	messageData := make(map[string]interface{}, len(sharingMessage.AdditionalProperties)+3)
-	for key, value := range sharingMessage.AdditionalProperties {
-		messageData[key] = value
-	}
-	messageData["protocol"] = float64(sharingMessage.Protocol)
-	messageData["data"] = sharingMessage.Data
-	if sharingMessage.T != nil {
-		messageData["t"] = *sharingMessage.T
-	}
 
 	// Handle general message listeners
 	state.listenersMux.RLock()
 	defer state.listenersMux.RUnlock()
 	if listeners, exists := state.messageListeners[topic]; exists {
-		evt, err := ParseEvent(messageData)
+		evt, err := parseRawSharingMessage(sharingMessage)
 		if err != nil {
 			log.Printf("Failed to parse device state change event JSON: %v", err)
 			return
@@ -460,7 +451,7 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	deviceID := state.extractDeviceIDFromTopic(topic)
 	if deviceID != "" {
 		if listeners, exists := state.deviceListeners[deviceID]; exists {
-			evt, err := ParseEvent(messageData)
+			evt, err := parseRawSharingMessage(sharingMessage)
 			if err != nil {
 				log.Printf("Failed to parse device state change event JSON: %v", err)
 				return

@@ -72,3 +72,23 @@ func wireQueryValues(value any) (url.Values, error) {
 	}
 	return query, nil
 }
+
+func wireStringMap(value any) (map[string]string, error) {
+	fields, err := wireRequestMap(value)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(fields))
+	for name, field := range fields {
+		raw, ok := field.(json.RawMessage)
+		if !ok {
+			return nil, fmt.Errorf("wire field %q is not JSON encoded", name)
+		}
+		var text string
+		if err := json.Unmarshal(raw, &text); err != nil {
+			return nil, fmt.Errorf("wire field %q is not a string: %w", name, err)
+		}
+		result[name] = text
+	}
+	return result, nil
+}

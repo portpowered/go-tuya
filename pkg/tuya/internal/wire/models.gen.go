@@ -382,6 +382,33 @@ type DeviceUsersEnvelope struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// EncryptedDataEnvelope Implementation-derived encrypted HTTP request wrapper used for JSON bodies and query data.
+type EncryptedDataEnvelope struct {
+	// Encdata Base64-encoded nonce and AES-GCM ciphertext.
+	Encdata string `json:"encdata"`
+}
+
+// EncryptedHTTPResponseEnvelope Implementation-derived outer response envelope received before result decryption.
+type EncryptedHTTPResponseEnvelope struct {
+	Code                 interface{}            `json:"code,omitempty"`
+	Msg                  interface{}            `json:"msg,omitempty"`
+	Result               interface{}            `json:"result,omitempty"`
+	Success              *bool                  `json:"success,omitempty"`
+	T                    *int64                 `json:"t,omitempty"`
+	Tid                  *string                `json:"tid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// EncryptedRequestHeaders Implementation-derived authentication and signing headers emitted by EncryptedClient.
+type EncryptedRequestHeaders struct {
+	XAppKey    string `json:"X-appKey"`
+	XRequestId string `json:"X-requestId"`
+	XSid       string `json:"X-sid"`
+	XSign      string `json:"X-sign"`
+	XTime      string `json:"X-time"`
+	XToken     string `json:"X-token"`
+}
+
 // FactoryInfoRecord Factory information fields represented by the library.
 type FactoryInfoRecord struct {
 	Id                   *string                `json:"id,omitempty"`
@@ -651,9 +678,48 @@ type RTCSessionResult struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// RawDeviceManagementBizData Implementation-derived, extensible business payload for MQTT management events.
+type RawDeviceManagementBizData struct {
+	DevId                *string                `json:"devId,omitempty"`
+	Name                 *string                `json:"name,omitempty"`
+	Time                 *int64                 `json:"time,omitempty"`
+	Uid                  *string                `json:"uid,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// RawDeviceManagementData Implementation-derived data payload for MQTT protocol 20 management events.
+type RawDeviceManagementData struct {
+	BizCode *string `json:"bizCode,omitempty"`
+
+	// BizData Implementation-derived, extensible business payload for MQTT management events.
+	BizData              *RawDeviceManagementBizData `json:"bizData,omitempty"`
+	DevId                *string                     `json:"devId,omitempty"`
+	ProductKey           *string                     `json:"productKey,omitempty"`
+	Ts                   *int64                      `json:"ts,omitempty"`
+	AdditionalProperties map[string]interface{}      `json:"-"`
+}
+
+// RawDeviceReportData Implementation-derived data payload for MQTT protocol 4 device reports.
+type RawDeviceReportData struct {
+	DataId               *string                  `json:"dataId,omitempty"`
+	DevId                *string                  `json:"devId,omitempty"`
+	ProductKey           *string                  `json:"productKey,omitempty"`
+	Status               *[]RawDeviceStatusChange `json:"status,omitempty"`
+	AdditionalProperties map[string]interface{}   `json:"-"`
+}
+
+// RawDeviceStatusChange Implementation-derived status item in an MQTT protocol 4 report.
+type RawDeviceStatusChange struct {
+	Code                 *string                `json:"code,omitempty"`
+	T                    *int64                 `json:"t,omitempty"`
+	Value                interface{}            `json:"value,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // RawSharingMessage Implementation-derived MQTT message envelope consumed by pkg/tuya. It is aligned with api/mqtt.asyncapi.yaml and is not a provider-verified payload schema.
 type RawSharingMessage struct {
-	Data map[string]interface{} `json:"data"`
+	// Data Implementation-derived fields shared across the two MQTT data variants; unrecognized fields remain open.
+	Data RawSharingMessageData `json:"data"`
 
 	// Protocol Legacy device report (4) or management event (20) handled by this client.
 	Protocol             RawSharingMessageProtocol `json:"protocol"`
@@ -663,6 +729,20 @@ type RawSharingMessage struct {
 
 // RawSharingMessageProtocol Legacy device report (4) or management event (20) handled by this client.
 type RawSharingMessageProtocol int
+
+// RawSharingMessageData Implementation-derived fields shared across the two MQTT data variants; unrecognized fields remain open.
+type RawSharingMessageData struct {
+	BizCode *string `json:"bizCode,omitempty"`
+
+	// BizData Implementation-derived, extensible business payload for MQTT management events.
+	BizData              *RawDeviceManagementBizData `json:"bizData,omitempty"`
+	DataId               *string                     `json:"dataId,omitempty"`
+	DevId                *string                     `json:"devId,omitempty"`
+	ProductKey           *string                     `json:"productKey,omitempty"`
+	Status               *[]RawDeviceStatusChange    `json:"status,omitempty"`
+	Ts                   *int64                      `json:"ts,omitempty"`
+	AdditionalProperties map[string]interface{}      `json:"-"`
+}
 
 // RefreshTokenEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
 type RefreshTokenEnvelope struct {
@@ -3701,6 +3781,143 @@ func (a DeviceUsersEnvelope) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for EncryptedHTTPResponseEnvelope. Returns the specified
+// element and whether it was found
+func (a EncryptedHTTPResponseEnvelope) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for EncryptedHTTPResponseEnvelope
+func (a *EncryptedHTTPResponseEnvelope) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for EncryptedHTTPResponseEnvelope to handle AdditionalProperties
+func (a *EncryptedHTTPResponseEnvelope) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["msg"]; found {
+		err = json.Unmarshal(raw, &a.Msg)
+		if err != nil {
+			return fmt.Errorf("error reading 'msg': %w", err)
+		}
+		delete(object, "msg")
+	}
+
+	if raw, found := object["result"]; found {
+		err = json.Unmarshal(raw, &a.Result)
+		if err != nil {
+			return fmt.Errorf("error reading 'result': %w", err)
+		}
+		delete(object, "result")
+	}
+
+	if raw, found := object["success"]; found {
+		err = json.Unmarshal(raw, &a.Success)
+		if err != nil {
+			return fmt.Errorf("error reading 'success': %w", err)
+		}
+		delete(object, "success")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["tid"]; found {
+		err = json.Unmarshal(raw, &a.Tid)
+		if err != nil {
+			return fmt.Errorf("error reading 'tid': %w", err)
+		}
+		delete(object, "tid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for EncryptedHTTPResponseEnvelope to handle AdditionalProperties
+func (a EncryptedHTTPResponseEnvelope) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["code"], err = json.Marshal(a.Code)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'code': %w", err)
+	}
+
+	object["msg"], err = json.Marshal(a.Msg)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'msg': %w", err)
+	}
+
+	object["result"], err = json.Marshal(a.Result)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'result': %w", err)
+	}
+
+	if a.Success != nil {
+		object["success"], err = json.Marshal(a.Success)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'success': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	if a.Tid != nil {
+		object["tid"], err = json.Marshal(a.Tid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for FactoryInfoRecord. Returns the specified
 // element and whether it was found
 func (a FactoryInfoRecord) Get(fieldName string) (value interface{}, found bool) {
@@ -5992,6 +6209,456 @@ func (a RTCSessionResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for RawDeviceManagementBizData. Returns the specified
+// element and whether it was found
+func (a RawDeviceManagementBizData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawDeviceManagementBizData
+func (a *RawDeviceManagementBizData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawDeviceManagementBizData to handle AdditionalProperties
+func (a *RawDeviceManagementBizData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["devId"]; found {
+		err = json.Unmarshal(raw, &a.DevId)
+		if err != nil {
+			return fmt.Errorf("error reading 'devId': %w", err)
+		}
+		delete(object, "devId")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["time"]; found {
+		err = json.Unmarshal(raw, &a.Time)
+		if err != nil {
+			return fmt.Errorf("error reading 'time': %w", err)
+		}
+		delete(object, "time")
+	}
+
+	if raw, found := object["uid"]; found {
+		err = json.Unmarshal(raw, &a.Uid)
+		if err != nil {
+			return fmt.Errorf("error reading 'uid': %w", err)
+		}
+		delete(object, "uid")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawDeviceManagementBizData to handle AdditionalProperties
+func (a RawDeviceManagementBizData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.DevId != nil {
+		object["devId"], err = json.Marshal(a.DevId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'devId': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.Time != nil {
+		object["time"], err = json.Marshal(a.Time)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'time': %w", err)
+		}
+	}
+
+	if a.Uid != nil {
+		object["uid"], err = json.Marshal(a.Uid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'uid': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RawDeviceManagementData. Returns the specified
+// element and whether it was found
+func (a RawDeviceManagementData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawDeviceManagementData
+func (a *RawDeviceManagementData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawDeviceManagementData to handle AdditionalProperties
+func (a *RawDeviceManagementData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["bizCode"]; found {
+		err = json.Unmarshal(raw, &a.BizCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'bizCode': %w", err)
+		}
+		delete(object, "bizCode")
+	}
+
+	if raw, found := object["bizData"]; found {
+		err = json.Unmarshal(raw, &a.BizData)
+		if err != nil {
+			return fmt.Errorf("error reading 'bizData': %w", err)
+		}
+		delete(object, "bizData")
+	}
+
+	if raw, found := object["devId"]; found {
+		err = json.Unmarshal(raw, &a.DevId)
+		if err != nil {
+			return fmt.Errorf("error reading 'devId': %w", err)
+		}
+		delete(object, "devId")
+	}
+
+	if raw, found := object["productKey"]; found {
+		err = json.Unmarshal(raw, &a.ProductKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'productKey': %w", err)
+		}
+		delete(object, "productKey")
+	}
+
+	if raw, found := object["ts"]; found {
+		err = json.Unmarshal(raw, &a.Ts)
+		if err != nil {
+			return fmt.Errorf("error reading 'ts': %w", err)
+		}
+		delete(object, "ts")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawDeviceManagementData to handle AdditionalProperties
+func (a RawDeviceManagementData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.BizCode != nil {
+		object["bizCode"], err = json.Marshal(a.BizCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bizCode': %w", err)
+		}
+	}
+
+	if a.BizData != nil {
+		object["bizData"], err = json.Marshal(a.BizData)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bizData': %w", err)
+		}
+	}
+
+	if a.DevId != nil {
+		object["devId"], err = json.Marshal(a.DevId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'devId': %w", err)
+		}
+	}
+
+	if a.ProductKey != nil {
+		object["productKey"], err = json.Marshal(a.ProductKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'productKey': %w", err)
+		}
+	}
+
+	if a.Ts != nil {
+		object["ts"], err = json.Marshal(a.Ts)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ts': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RawDeviceReportData. Returns the specified
+// element and whether it was found
+func (a RawDeviceReportData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawDeviceReportData
+func (a *RawDeviceReportData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawDeviceReportData to handle AdditionalProperties
+func (a *RawDeviceReportData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["dataId"]; found {
+		err = json.Unmarshal(raw, &a.DataId)
+		if err != nil {
+			return fmt.Errorf("error reading 'dataId': %w", err)
+		}
+		delete(object, "dataId")
+	}
+
+	if raw, found := object["devId"]; found {
+		err = json.Unmarshal(raw, &a.DevId)
+		if err != nil {
+			return fmt.Errorf("error reading 'devId': %w", err)
+		}
+		delete(object, "devId")
+	}
+
+	if raw, found := object["productKey"]; found {
+		err = json.Unmarshal(raw, &a.ProductKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'productKey': %w", err)
+		}
+		delete(object, "productKey")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawDeviceReportData to handle AdditionalProperties
+func (a RawDeviceReportData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.DataId != nil {
+		object["dataId"], err = json.Marshal(a.DataId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'dataId': %w", err)
+		}
+	}
+
+	if a.DevId != nil {
+		object["devId"], err = json.Marshal(a.DevId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'devId': %w", err)
+		}
+	}
+
+	if a.ProductKey != nil {
+		object["productKey"], err = json.Marshal(a.ProductKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'productKey': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RawDeviceStatusChange. Returns the specified
+// element and whether it was found
+func (a RawDeviceStatusChange) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawDeviceStatusChange
+func (a *RawDeviceStatusChange) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawDeviceStatusChange to handle AdditionalProperties
+func (a *RawDeviceStatusChange) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["code"]; found {
+		err = json.Unmarshal(raw, &a.Code)
+		if err != nil {
+			return fmt.Errorf("error reading 'code': %w", err)
+		}
+		delete(object, "code")
+	}
+
+	if raw, found := object["t"]; found {
+		err = json.Unmarshal(raw, &a.T)
+		if err != nil {
+			return fmt.Errorf("error reading 't': %w", err)
+		}
+		delete(object, "t")
+	}
+
+	if raw, found := object["value"]; found {
+		err = json.Unmarshal(raw, &a.Value)
+		if err != nil {
+			return fmt.Errorf("error reading 'value': %w", err)
+		}
+		delete(object, "value")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawDeviceStatusChange to handle AdditionalProperties
+func (a RawDeviceStatusChange) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Code != nil {
+		object["code"], err = json.Marshal(a.Code)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'code': %w", err)
+		}
+	}
+
+	if a.T != nil {
+		object["t"], err = json.Marshal(a.T)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	object["value"], err = json.Marshal(a.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'value': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for RawSharingMessage. Returns the specified
 // element and whether it was found
 func (a RawSharingMessage) Get(fieldName string) (value interface{}, found bool) {
@@ -6060,11 +6727,9 @@ func (a RawSharingMessage) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
-	if a.Data != nil {
-		object["data"], err = json.Marshal(a.Data)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'data': %w", err)
-		}
+	object["data"], err = json.Marshal(a.Data)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'data': %w", err)
 	}
 
 	object["protocol"], err = json.Marshal(a.Protocol)
@@ -6076,6 +6741,164 @@ func (a RawSharingMessage) MarshalJSON() ([]byte, error) {
 		object["t"], err = json.Marshal(a.T)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 't': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for RawSharingMessageData. Returns the specified
+// element and whether it was found
+func (a RawSharingMessageData) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for RawSharingMessageData
+func (a *RawSharingMessageData) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for RawSharingMessageData to handle AdditionalProperties
+func (a *RawSharingMessageData) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["bizCode"]; found {
+		err = json.Unmarshal(raw, &a.BizCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'bizCode': %w", err)
+		}
+		delete(object, "bizCode")
+	}
+
+	if raw, found := object["bizData"]; found {
+		err = json.Unmarshal(raw, &a.BizData)
+		if err != nil {
+			return fmt.Errorf("error reading 'bizData': %w", err)
+		}
+		delete(object, "bizData")
+	}
+
+	if raw, found := object["dataId"]; found {
+		err = json.Unmarshal(raw, &a.DataId)
+		if err != nil {
+			return fmt.Errorf("error reading 'dataId': %w", err)
+		}
+		delete(object, "dataId")
+	}
+
+	if raw, found := object["devId"]; found {
+		err = json.Unmarshal(raw, &a.DevId)
+		if err != nil {
+			return fmt.Errorf("error reading 'devId': %w", err)
+		}
+		delete(object, "devId")
+	}
+
+	if raw, found := object["productKey"]; found {
+		err = json.Unmarshal(raw, &a.ProductKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'productKey': %w", err)
+		}
+		delete(object, "productKey")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["ts"]; found {
+		err = json.Unmarshal(raw, &a.Ts)
+		if err != nil {
+			return fmt.Errorf("error reading 'ts': %w", err)
+		}
+		delete(object, "ts")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for RawSharingMessageData to handle AdditionalProperties
+func (a RawSharingMessageData) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.BizCode != nil {
+		object["bizCode"], err = json.Marshal(a.BizCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bizCode': %w", err)
+		}
+	}
+
+	if a.BizData != nil {
+		object["bizData"], err = json.Marshal(a.BizData)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bizData': %w", err)
+		}
+	}
+
+	if a.DataId != nil {
+		object["dataId"], err = json.Marshal(a.DataId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'dataId': %w", err)
+		}
+	}
+
+	if a.DevId != nil {
+		object["devId"], err = json.Marshal(a.DevId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'devId': %w", err)
+		}
+	}
+
+	if a.ProductKey != nil {
+		object["productKey"], err = json.Marshal(a.ProductKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'productKey': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.Ts != nil {
+		object["ts"], err = json.Marshal(a.Ts)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ts': %w", err)
 		}
 	}
 
