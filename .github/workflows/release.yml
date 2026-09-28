@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+      PUBLIC_MODULE: github.com/portpowered/go-tuya
+      PUBLIC_PACKAGES: tuya
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check release module configuration
+        run: test "$(go list -m)" = "$PUBLIC_MODULE"
+      - name: Check public API compatibility
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: go run ./tools/compatibility -policy release -base previous-release -version "$VERSION" -module "$PUBLIC_MODULE" -packages "$PUBLIC_PACKAGES"
+      - name: Build
+        run: go build ./...
+      - name: Test with race detector
+        run: go test -race ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Replay checks
+        run: make replay
+      - name: Verify tagged module from a fresh consumer through the public proxy
+        env:
+          VERSION: ${{ github.ref_name }}
+          GOPROXY: https://proxy.golang.org
+        shell: bash
+        run: |
+          check_dir="$(mktemp -d)"
+          trap 'rm -rf "$check_dir"' EXIT
+          cd "$check_dir"
+          go mod init example.com/tuya-module-check
+          module_ready=false
+          for attempt in {1..12}; do
+            if go get "${PUBLIC_MODULE}@${VERSION}"; then
+              module_ready=true
+              break
+            fi
+            echo "Module not available through the Go module proxy yet (attempt ${attempt}/12)"
+            sleep 10
+          done
+          if [ "$module_ready" != true ]; then
+            echo "Could not fetch the tagged module after twelve attempts."
+            exit 1
+          fi
+          resolved_module="$(go list -m -f '{{.Path}}@{{.Version}}' "$PUBLIC_MODULE")"
+          expected_module="${PUBLIC_MODULE}@${VERSION}"
+          if [ "$resolved_module" != "$expected_module" ]; then
+            echo "Resolved $resolved_module, expected $expected_module."
+            exit 1
+          fi
+          cat > main.go <<EOF
+          package main
+
+          import "${PUBLIC_MODULE}/tuya"
+
+          var _ tuya.Client = (*tuya.ClientImpl)(nil)
+          var _ func(*tuya.ClientConfig) *tuya.ClientImpl = tuya.NewClient
+
+          func main() {}
+          EOF
+          go mod tidy
+          go test ./...
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish GitHub release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ github.ref_name }}
+        run: gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes
