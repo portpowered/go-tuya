@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+      - name: Build
+        run: go build ./...
+      - name: Test with race detector and coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Check formatting
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l $(find . -type f -name '*.go' -not -path './.git/*'))"
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted Go files:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Check module metadata
+        shell: bash
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Build authentication example
+        working-directory: examples/auth
+        run: go test ./...
+      - name: Check authentication example module metadata
+        working-directory: examples/auth
+        shell: bash
+        run: |
+          go mod tidy
+          git -C ../.. diff --exit-code -- examples/auth/go.mod examples/auth/go.sum
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          fail_ci_if_error: false

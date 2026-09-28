@@ -1,0 +1,29 @@
+
+# See the dedicated "version" documentation section.
+version: "2"
+linters:
+  enable:
+    - nakedret
+    - misspell
+    - ineffassign
+    - ginkgolinter
+    - goconst
+    - errcheck
+    - dupl
+    - unparam
+    - revive
+    - staticcheck
+    - unused
+    - unconvert
+    - gocyclo
+    - gosec
+  exclusions:
+    paths:
+      - ".*_test\\.go$"
+
+formatters:
+  enable:
+    - goimports
+run:
+  timeout: 5m
+  

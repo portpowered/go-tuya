@@ -1,0 +1,122 @@
+---
+description: Guideline for the architecture of the go-tuya library
+alwaysApply: true
+---
+# Go-Tuya Library Architecture
+
+## Overview
+The go-tuya library is a Go client for interacting with Tuya smart devices via the Tuya Device Sharing SDK. It communicates to the tuya cloud to control the devices. It provides a comprehensive interface for device management, authentication, and real-time communication.
+
+## Core Architecture Components
+
+### Main Client Structure
+The primary entry point is [tuya/client.go](mdc:tuya/client.go) which implements the `Client` interface defined in [tuya/api.go](mdc:tuya/api.go). The client provides:
+
+- **Authentication Services**: QR code-based login flow
+- **Device Management**: Control and query smart devices
+- **Home Management**: Manage smart home configurations
+- **Scene Management**: Control automation scenes
+- **Message Queue**: Real-time device event handling
+
+### Service Layer Architecture
+The client is organized into specialized services:
+- `DevicesService`: Device operations and control
+- `HomeService`: Home management and configuration
+- `UserService`: User authentication and profile management
+- `SceneService`: Scene automation and triggers
+
+### Regional Support
+The library supports multiple Tuya regions defined in [tuya/constants.go](mdc:tuya/constants.go):
+- China (CN): `https://openapi.tuyacn.com`
+- United States (US): `https://openapi.tuyaus.com`
+- Europe (EU): `https://openapi.tuyaeu.com`
+- India (IN): `https://openapi.tuyain.com`
+
+## Customer experience
+
+Customers use the library by logging in using the qr code, and then using the access token to query devices, control them, and listen for events.
+
+See the `examples/` directory for examples of how to login and use the library.
+
+## Authentication & Authorization Schema
+
+### QR Code-Based Authentication Flow
+The library implements Tuya's OAuth2-style QR code authentication:
+
+1. **QR Code Generation**: `GenerateQrCodeForLogin()` creates a QR code token
+2. **User Scanning**: User scans QR code with Tuya Smart app
+3. **Token Validation**: `ValidateLoginCode()` verifies the scanned token
+4. **Access Token**: Returns encrypted access and refresh tokens
+
+### Authentication Components
+- **Client ID**: Hardcoded, though can technically be replaced. 
+- **Schema**: Uses `haauthorize` authorization schema, which is the default schema for the Home assistant integrations. 
+- **Login URI**: `apigw.iotbing.com` for authentication endpoints, this is the same for all regions.
+
+### Token Management
+- **Access Token**: Short-lived token for API requests
+- **Refresh Token**: Long-lived token for obtaining new access tokens
+- **Automatic Refresh**: Tokens are automatically refreshed when expired
+- **Token Listener**: Callback interface for token updates
+
+## Data Encryption Schema
+
+### AES-GCM Encryption
+All API communications use AES-GCM encryption implemented in [tuya/encryption.go](mdc:tuya/encryption.go):
+
+### Encryption Process
+1. **Secret Generation**: Creates encryption key using HMAC-SHA256
+2. **Nonce Generation**: Random 12-byte nonce for each request
+3. **Payload Encryption**: Encrypts request parameters and body
+4. **Base64 Encoding**: Encodes encrypted data for transmission
+
+### Key Components
+- **Secret Key**: Generated from request ID, session ID, and hash key
+- **Hash Key**: MD5 hash of request ID + refresh token
+- **Encryption Method**: AES-GCM with 256-bit key
+- **Encoding**: Base64 for transport layer
+
+### Request Signing
+- **HMAC-SHA256**: Signs request headers and encrypted data
+- **Header Signing**: Includes X-appKey, X-requestId, X-sid, X-time, X-token
+- **Signature Verification**: Ensures request integrity
+
+## Message Eventing System
+
+### Message Queue Architecture
+The library implements a message queue system for real-time device events, via an MQTT broker. 
+Each device has their own topic, and the library will subscribe to the topics and listen for events for each device.
+
+### Message Queue Operations
+- `Start()`: Initialize message queue
+- `Stop()`: Shutdown message queue
+- `AddMessageListener()`: Register event handler
+- `RemoveMessageListener()`: Unregister event handler
+- `AddDeviceListener()`: Register device-specific handler
+- `RemoveDeviceListener()`: Unregister device-specific handler
+
+## Device Management
+
+### Device Operations
+- **Control Commands**: Turn on/off, set brightness, color, etc.
+- **Status Queries**: Get current device state
+- **Configuration**: Set device aliases and properties
+- **Streaming**: Video stream allocation for camera devices
+
+## Error Handling & Resilience
+
+### Error Types
+- **Authentication Errors**: Token expiration, invalid credentials
+- **Network Errors**: Connection failures, timeouts
+- **Encryption Errors**: Decryption failures, invalid signatures
+- **Device Errors**: Device offline, unsupported operations
+
+### Retry Mechanisms
+- **Token Refresh**: Automatic token renewal
+- **Request Retries**: Exponential backoff for failed requests
+- **Connection Recovery**: Automatic reconnection for message queue
+
+## Function signatures
+
+The client is instantiated with a config, and then the client instantiates a bunch of services which reference the primary client. 
+The services use the instance of the client to do various operations. 

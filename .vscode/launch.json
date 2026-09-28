@@ -1,0 +1,48 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        // {
+        //     "name": "Launch integration test",
+        //     "type": "go",
+        //     "request": "launch",
+        //     "mode": "test",
+        //     "program": "${workspaceFolder}/tuya",
+        //     "args": [
+        //         "-test.run",
+        //         "TestIntegration_DeviceManagementWorkflow",
+        //         "-integration"
+        //     ]
+        // },
+        {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${file}"
+        },
+        {
+            "name": "Launch file2",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            
+            "program": "${file}",
+            "env": {
+                "TUYA_AUTH_TOKEN": "368c334cf7310b75d46e48fa44bc3612",
+                "TUYA_REFRESH_TOKEN": "eb0c20e877ce0340788e7f6144442258",
+                "TUYA_AUTH_TOKEN_EXPIRED": "1762321619534",
+                "TUYA_DEVICE_ID": "eb3913c3f7ac28f80a6flc"
+            }   
+        },
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}"
+        }
+    ]
+}
