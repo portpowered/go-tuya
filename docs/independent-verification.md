@@ -1,5 +1,29 @@
 # Independent standards verification: go-tuya
 
+## Renewed review at `efde7aef0988ef3a068cf383aaca29e318bece0c`
+
+The prior itemized table below is the historical 14-item review for
+`v0.3.1`. The shared template now has item 15. An independent reviewer
+rechecked each finding from the [paired-replay review](paired-replay-review.md)
+against the new synthetic HTTP and MQTT transcripts. **Item 15 is verified:**
+all 28 OpenAPI operations have stored request/response pairs; the HTTP
+matchers validate encrypted meaning and HMAC, and reject mismatches,
+duplicates and unconsumed requests. MQTT replay now executes actual queue
+startup through the paired config HTTP request, injected factory,
+`mqtt.Client.Connect`, subscription, message callbacks, unsubscribe and
+disconnect. Fresh targeted race tests, `make replay`, `make lint`, `make
+check`, and `make coverage` passed at `efde7ae`; coverage was 82.6%
+(1,308/1,583 non-generated statements).
+
+Items 1–13 retain the prior source verdicts below because the changes since
+the reviewed release affect tests, fixtures, and their guidance. The new
+fixture provenance is synthetic, with no account-capture claim. **Item 14 is
+open:** `v0.3.1` passed its exact-tag gates before the new item-15 suite
+existed. A new final tag must run generation/drift, route/channel, coverage,
+replay, race, compatibility, public-consumer and documentation gates, and the
+reviewer must recheck all 15 items at that final commit before renewing the
+independent signoff.
+
 Reviewer: independent Codex reviewer (not an implementer of the Tuya migration)
 
 Reviewed implementation commit: `1123ac3088a8b535267997330d7187f565cc162b` (2026-09-28).

@@ -2,6 +2,7 @@
 
 Initial reviewed commit: `c92663521c7cd28b1ce7bdea552221c1f3e6aee4`.
 Re-audited implementation commit: `8475077fa4178c7111771a2422055ac5fa7805b7`.
+Final item-15 implementation re-audit: `efde7aef0988ef3a068cf383aaca29e318bece0c`.
 Standard: item 15 of `go-third-party-template/docs/library-standards.md`, with
 the fixture-provenance detail in its `docs/verification.md`. This review was
 performed independently of the implementation. The earlier 14-item report
@@ -9,8 +10,8 @@ predates item 15.
 
 | Item | Verdict | Evidence |
 | --- | --- | --- |
-| 15. Paired replay | **Open at `8475077`** | The HTTP inventory and matcher gaps below were fixed. The MQTT transcript bypasses the production connection path, so the broker connection exchange is not replayed. See the re-audit below. |
-| 14. Independent verification | **Open** | The previous signoff cannot carry forward while item 15 is open. Recheck all checklist items at the eventual final commit. |
+| 15. Paired replay | **Verified at `efde7ae`** | All 28 HTTP operations have consumed synthetic pairs. The MQTT transcript now runs through the real queue startup, paired config HTTP exchange, injected factory and `Connect`, then ordered subscriptions, events, callbacks, unsubscribe, and disconnect. |
+| 14. Independent verification | **Open** | The `v0.3.1` exact-tag release predates item 15. Recheck all checklist items and the release gates on the final tagged commit before renewing signoff. |
 
 ## Initial findings at `c926635`
 
@@ -87,7 +88,33 @@ passed; the non-generated package coverage was 82.4% (1,304/1,583). Fresh
 `-count=1 -race` runs of the HTTP inventory, matcher-negative, and MQTT
 transcript tests passed. These results do not close the connection-edge gap.
 
-**Signoff:** item 15 and renewed item 14 remain unchecked. Once MQTT
+**At `8475077`:** item 15 and renewed item 14 remained unchecked. Once MQTT
 establishment is replayed through the actual injected factory/`Connect`
 path, independently recheck the fix and every checklist item at the final
 commit.
+
+## Final item-15 re-audit at `efde7ae`
+
+The remaining MQTT finding is **resolved**. The revised
+`TestSyntheticMQTTPairedTranscript` calls `MessageQueue.Start` without
+overriding `state.connect`, so it executes `connectMQTT`. Its injected HTTP
+transport matches the stored `getMessageQueueConfig` pair before returning
+the response. It validates method, origin, escaped path, empty query,
+relevant headers, decrypted request body, and recomputed signature. The
+MQTT factory checks the broker URL, client ID, username, password, and
+handlers derived from that response. Its client `Connect` records the next
+transcript step and invokes the installed on-connect handler. The transcript
+then consumes owner/device subscriptions, two inbound messages and their
+public callbacks, unsubscribe, and disconnect in order. Wrong, duplicate,
+and unconsumed steps fail. The separate 28-operation HTTP inventory and
+matcher-negative tests remain passing.
+
+Fresh `-count=1 -race` runs of the MQTT transcript and HTTP replay/inventory
+tests passed. `make replay`, `make lint`, `make check`, and `make coverage`
+passed; non-generated package coverage was 82.6% (1,308/1,583).
+
+**Item 15 signoff: verified at `efde7ae`.** Item 14 remains open because
+the published `v0.3.1` exact-tag workflow predates the new replay suite.
+The next tagged release must run the current generation, route/channel,
+coverage, replay, race, compatibility, public-consumer and documentation
+gates, followed by a full 15-item independent review at that final commit.
