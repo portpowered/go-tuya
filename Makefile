@@ -2,7 +2,7 @@ GO ?= go
 export GOWORK := off
 
 .DEFAULT_GOAL := check
-.PHONY: check build test lint fmt
+.PHONY: check build test lint fmt replay
 
 check: lint build test
 
@@ -17,3 +17,6 @@ lint:
 
 fmt:
 	$(GO) fmt ./...
+
+replay:
+	$(GO) test -race -coverpkg=./tuya -cover ./tests/replay

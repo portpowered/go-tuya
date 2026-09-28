@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/portpowered/go-tuya/tuya/internal/wire"
 )
 
 // DevicesService provides methods for managing smart devices
@@ -76,6 +78,59 @@ func mapResults(results []DeviceResponseResultElement) []Device {
 		}
 	}
 	return devices
+}
+
+func mapGeneratedDeviceRecords(records []wire.DeviceRecord) []Device {
+	devices := make([]Device, len(records))
+	for i, record := range records {
+		devices[i] = Device{
+			ID:           dereference(record.Id),
+			LocalKey:     dereference(record.LocalKey),
+			Name:         dereference(record.Name),
+			Category:     dereference(record.Category),
+			ProductID:    dereference(record.ProductId),
+			ProductName:  dereference(record.ProductName),
+			SubCategory:  additionalString(record.AdditionalProperties, "subCategory"),
+			Icon:         dereference(record.Icon),
+			IP:           dereference(record.Ip),
+			Lat:          additionalString(record.AdditionalProperties, "lat"),
+			Lon:          additionalString(record.AdditionalProperties, "lon"),
+			Model:        dereference(record.Model),
+			TimeZone:     dereference(record.TimeZone),
+			ActiveTime:   dereference(record.ActiveTime),
+			CreateTime:   dereference(record.CreateTime),
+			UpdateTime:   dereference(record.UpdateTime),
+			Online:       dereference(record.Online),
+			Status:       mapGeneratedDeviceStatus(record.Status),
+			Capabilities: nil,
+		}
+	}
+	return devices
+}
+
+func mapGeneratedDeviceStatus(statuses *[]wire.DeviceStatus) []Status {
+	if statuses == nil {
+		return nil
+	}
+
+	result := make([]Status, len(*statuses))
+	for i, status := range *statuses {
+		result[i] = Status{Code: dereference(status.Code), Value: status.Value}
+	}
+	return result
+}
+
+func additionalString(properties map[string]interface{}, name string) string {
+	value, _ := properties[name].(string)
+	return value
+}
+
+func dereference[T any](value *T) T {
+	if value == nil {
+		var zero T
+		return zero
+	}
+	return *value
 }
 
 // DeviceResponseResult represents the response structure for device queries
@@ -210,12 +265,6 @@ func serialize[K any](resp *EncryptedAPIResponse) (K, error) {
 	return tuyaResponse.Result, nil
 }
 
-type deviceListResult struct {
-	Devices []DeviceResponseResultElement `json:"devices"`
-	Total   int64                         `json:"total"`
-	LastID  string                        `json:"last_id"`
-}
-
 func buildDeviceUserBody(nickName string, sex int, birthday *int64, height, weight *int, contact string) map[string]interface{} {
 	body := map[string]interface{}{
 		"nick_name": nickName,
@@ -338,15 +387,29 @@ func (c *DevicesService) QueryDevices(ctx context.Context, req QueryDevicesReque
 		return QueryDevicesResponse{}, err
 	}
 
-	tuyaResponse, err := serialize[deviceListResult](resp)
+	tuyaResponse, err := serialize[wire.DeviceListResult](resp)
 	if err != nil {
 		return QueryDevicesResponse{}, err
 	}
 
+	var responseDevices []wire.DeviceRecord
+	if tuyaResponse.Devices != nil {
+		responseDevices = *tuyaResponse.Devices
+	}
+
+	var total int64
+	if tuyaResponse.Total != nil {
+		total = *tuyaResponse.Total
+	}
+	var lastID string
+	if tuyaResponse.LastId != nil {
+		lastID = *tuyaResponse.LastId
+	}
+
 	return QueryDevicesResponse{
-		Devices: mapResults(tuyaResponse.Devices),
-		Total:   tuyaResponse.Total,
-		LastID:  tuyaResponse.LastID,
+		Devices: mapGeneratedDeviceRecords(responseDevices),
+		Total:   total,
+		LastID:  lastID,
 	}, nil
 }
 

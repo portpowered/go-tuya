@@ -10,4 +10,6 @@ install instructions.
 - [Message queue events](events.md)
 - [Testing and fixture provenance](testing.md)
 - [Tuya provider notes](TUYA.md)
+- [API schema and generated wire models](schema.md)
+- [Published API reference and customer guides](https://portpowered.github.io/go-tuya/)
 - [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)

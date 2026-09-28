@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "tid": "synthetic-transaction-validation",
+  "t": 1700000001000,
+  "result": {
+    "access_token": "synthetic-access-token",
+    "refresh_token": "synthetic-refresh-token",
+    "expire_time": 3600,
+    "terminal_id": "synthetic-terminal-01",
+    "uid": "synthetic-user-01",
+    "username": "synthetic-user",
+    "endpoint": "https://api.example.invalid"
+  }
+}

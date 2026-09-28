@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: Tuya Cloud Device List API (documented subset)
+  version: 1.0.0
+  description: >-
+    This schema records only the documented GET /v1.0/devices operation. Tuya's
+    Cloud Services API reference documents this route, its query parameters,
+    the result pagination fields, and a sample device record at
+    https://developer.tuya.com/en/docs/cloud/7ccd629a6c?id=Kconjb15xpvd3.
+    The page does not define every response field's requiredness or the full
+    device record shape, so those remain optional and extensible here. The
+    go-tuya client invokes this path through its Device Sharing encrypted
+    transport; this schema does not describe or verify that authentication,
+    signing, or encryption layer. Other /v1.0/m/... routes used by the client
+    are outside this schema because no matching provider wire specifications
+    are available.
+paths:
+  /v1.0/devices:
+    get:
+      operationId: getDeviceList
+      summary: Get a device list
+      description: >-
+        Tuya documents this operation for listing devices and their status by
+        application, product, or device ID. This schema reflects the route and
+        logical query/result fields in the linked Tuya reference. The JSON
+        example on that page omits the surrounding response metadata and does
+        not define field optionality for each device. This operation's path
+        matches go-tuya's QueryDevices method; the client's custom Device
+        Sharing transport is not described here.
+      tags:
+        - Devices
+      parameters:
+        - name: device_ids
+          in: query
+          required: false
+          description: Comma-separated device IDs.
+          schema:
+            type: string
+        - name: product_id
+          in: query
+          required: false
+          description: Product ID filter.
+          schema:
+            type: string
+        - name: schema
+          in: query
+          required: false
+          description: Unique application identifier.
+          schema:
+            type: string
+        - name: last_id
+          in: query
+          required: false
+          description: Last query ID for device pagination.
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          required: true
+          description: Number of entries returned per page.
+          schema:
+            type: integer
+        - name: page_no
+          in: query
+          required: true
+          description: Current page number.
+          schema:
+            type: integer
+        - name: start_time
+          in: query
+          required: false
+          description: Start time for the query, as a 10-digit timestamp.
+          schema:
+            type: integer
+            format: int64
+        - name: end_time
+          in: query
+          required: false
+          description: End time for the query, as a 10-digit timestamp.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Device-list result described by Tuya's reference.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListEnvelope'
+        default:
+          description: >-
+            Tuya documents operation error codes separately but does not define
+            an error response body on this page.
+components:
+  schemas:
+    DeviceListEnvelope:
+      type: object
+      description: >-
+        The reference identifies the result member as BaseDeviceInfoRes. The
+        sample omits envelope metadata; unspecified fields are left open.
+      properties:
+        result:
+          $ref: '#/components/schemas/DeviceListResult'
+      additionalProperties: true
+    DeviceListResult:
+      type: object
+      description: >-
+        Tuya documents total, devices, and last_id as the result fields. The
+        reference does not state which are required in every response.
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of entries.
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+        last_id:
+          type: string
+          description: Last query ID for device pagination.
+      additionalProperties: true
+    DeviceRecord:
+      type: object
+      description: >-
+        Fields below appear in Tuya's official example response for this
+        operation. The reference does not define requiredness or an exhaustive
+        field set. Additional properties are retained for forward compatibility.
+      properties:
+        id:
+          type: string
+          description: Device identifier in the example response.
+        uuid:
+          type: string
+          description: Device UUID in the example response.
+        name:
+          type: string
+          description: Device name in the example response.
+        owner_id:
+          type: string
+          description: Device owner identifier in the example response.
+        uid:
+          type: string
+          description: User identifier in the example response.
+        product_id:
+          type: string
+          description: Product identifier in the example response.
+        product_name:
+          type: string
+          description: Product name in the example response.
+        category:
+          type: string
+          description: Product category in the example response.
+        icon:
+          type: string
+          description: Device icon path in the example response.
+        ip:
+          type: string
+          description: IP address in the example response.
+        local_key:
+          type: string
+          description: >-
+            Local key field shown in Tuya's example. Treat values as secrets
+            and never log or publish them.
+        online:
+          type: boolean
+          description: Online state in the example response.
+        sub:
+          type: boolean
+          description: Whether the device is a sub-device in the example response.
+        biz_type:
+          type: integer
+          description: Business type value in the example response.
+        active_time:
+          type: integer
+          format: int64
+          description: Activation timestamp value in the example response.
+        create_time:
+          type: integer
+          format: int64
+          description: Creation timestamp value in the example response.
+        update_time:
+          type: integer
+          format: int64
+          description: Update timestamp value in the example response.
+        time_zone:
+          type: string
+          description: Time zone string in the example response.
+        model:
+          type: string
+          description: Product model in the example response.
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatus'
+      additionalProperties: true
+    DeviceStatus:
+      type: object
+      description: >-
+        A status entry in Tuya's example response. The example uses a string
+        value; the reference does not constrain the value type, so it remains
+        an unconstrained JSON value.
+      properties:
+        code:
+          type: string
+          description: Status code in the example response.
+        value: {}
+      additionalProperties: true

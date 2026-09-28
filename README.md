@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/portpowered/go-tuya?display_name=tag)](https://github.com/portpowered/go-tuya/releases/latest)
 [![Go Reference](https://pkg.go.dev/badge/github.com/portpowered/go-tuya/tuya.svg)](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
 [![License](https://img.shields.io/github/license/portpowered/go-tuya)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-guides-blue)](docs/)
+[![Documentation](https://img.shields.io/badge/docs-guides-blue)](https://portpowered.github.io/go-tuya/)
 
 A Go client for the Tuya Device Sharing API. The public package exposes QR-code
 authentication, regional cloud requests, home and device operations, command
@@ -153,6 +153,7 @@ running it.
 - [Device queries and commands](docs/device-control.md)
 - [Message queue events](docs/events.md)
 - [Tuya protocol notes](docs/TUYA.md)
+- [Published API reference and customer guides](https://portpowered.github.io/go-tuya/)
 - [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
 
 ## License

@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "t": 1700000003000,
+  "result": [
+    {
+      "id": "synthetic-device-01",
+      "uuid": "synthetic-device-uuid-01",
+      "name": "Synthetic Lamp",
+      "owner_id": "synthetic-user-01",
+      "uid": "synthetic-user-01",
+      "product_id": "synthetic-product-01",
+      "product_name": "Synthetic Light",
+      "subCategory": "light",
+      "category": "dj",
+      "icon": "https://example.invalid/synthetic-device.png",
+      "ip": "192.0.2.10",
+      "online": true,
+      "sub": false,
+      "biz_type": 0,
+      "active_time": 1700000000000,
+      "create_time": 1690000000000,
+      "update_time": 1700000000000,
+      "time_zone": "UTC",
+      "lat": "0",
+      "lon": "0",
+      "status": [
+        { "code": "switch_1", "value": true },
+        { "code": "bright_value", "value": 500 }
+      ]
+    }
+  ]
+}

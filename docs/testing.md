@@ -2,17 +2,28 @@
 
 ## Offline checks
 
-Run from the repository root:
+Run the library checks from the repository root:
 
 ```sh
 make lint
 make check
 ```
 
-The unit tests use `httptest` and hand-authored event messages. Those examples
-are synthetic and do not demonstrate verified live Tuya behavior. The
-repository contains no captured provider responses or private account/device
-fixtures.
+Run the replay suite separately when measuring offline API replay coverage:
+
+```sh
+make replay
+```
+
+The replay tests inject an `http.RoundTripper` and serve response bodies from
+`tests/replay/fixtures`. They cover QR login and validation, then an authenticated
+read-only home, device-list, and device-status flow, a paginated global device
+list, and an API error.
+Every response file is marked `.synthetic.json` and has a neighboring
+`PROVENANCE.md`. These are hand-authored examples for testing the current client;
+they are not Tuya captures and do not verify private vendor routes or response
+schemas. `make replay` reports coverage for `tuya` code reached by the replay
+suite. The broader `make check` and replay coverage are separate measurements.
 
 The authentication example is a separate Go module because it uses a terminal
 QR renderer. Compile it with:
@@ -41,8 +52,9 @@ unredacted test output. The live test is not run in pull-request CI.
 
 ## Evidence limits
 
-The package currently has no replay fixture corpus or replay coverage command.
-Before describing a live response as captured evidence, sanitize it, record its
-source and collection date in UTC, add a neighboring provenance note, and keep
-it separate from synthetic examples. Remove tokens, cookies, personal data,
-account identifiers, and device identifiers before adding any capture.
+The repository has synthetic replay fixtures, but no captured provider responses
+or private account/device fixtures. Before describing a live response as captured
+evidence, sanitize it, record its source and collection date in UTC in a
+neighboring provenance note, and keep it separate from synthetic examples.
+Remove tokens, cookies, personal data, account identifiers, and device
+identifiers before adding any capture.

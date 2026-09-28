@@ -1,0 +1,44 @@
+---
+title: Query devices
+description: List devices using the documented Tuya GET /v1.0/devices route.
+---
+
+# Query devices
+
+Tuya documents [`GET /v1.0/devices`](https://developer.tuya.com/en/docs/cloud/7ccd629a6c?id=Kconjb15xpvd3)
+for listing devices and status by application, product, or device ID. Its
+reference requires `page_no` and `page_size`, and describes optional filters
+for `device_ids`, `product_id`, `schema`, `last_id`, `start_time`, and
+`end_time`. It describes `result.total`, `result.devices`, and `result.last_id`.
+
+The library method with this matching path is `DevicesService.QueryDevices`:
+
+```go
+devices, err := client.DevicesService.QueryDevices(ctx, tuya.QueryDevicesRequest{
+    PageNo:   1,
+    PageSize: 20,
+    Schema:   appSchema,
+})
+if err != nil {
+    return err
+}
+
+fmt.Printf("Received %d of %d devices\n", len(devices.Devices), devices.Total)
+```
+
+Use `QueryDevicesRequest` to provide the required pagination values and any
+optional filters. The response exposes `Devices`, `Total`, and `LastID`; device
+properties can include sensitive fields such as `LocalKey`, so avoid logging
+whole response values. The Tuya reference types `start_time` and `end_time` as
+`Long` timestamps, while this library's public request currently exposes those
+two fields as strings. Pass decimal timestamp strings when using them. The
+request goes through the library's custom encrypted parameter path, whose
+provider wire representation has not been verified.
+
+Consult the generated API reference for the documented logical query and
+result fields.
+
+This route match does not verify the library's Device Sharing request signing,
+encryption, or response behavior. The OpenAPI document intentionally omits
+those details. Other client operations using `/v1.0/m/...` are not covered by
+the route reference.

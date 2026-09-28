@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "t": 1700000004000,
+  "result": {
+    "category": "dj",
+    "dpStatusRelationDTOS": [
+      {
+        "dpCode": "switch_1",
+        "dpId": 1,
+        "statusCode": "bool",
+        "supportLocal": true,
+        "valueConvert": "bool",
+        "valueType": "bool"
+      }
+    ]
+  }
+}

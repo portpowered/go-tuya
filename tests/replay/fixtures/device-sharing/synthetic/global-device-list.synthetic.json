@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "t": 1700000004000,
+  "result": {
+    "devices": [
+      {
+        "id": "synthetic-query-device-01",
+        "uuid": "synthetic-query-device-uuid-01",
+        "name": "Synthetic Device List Lamp",
+        "owner_id": "synthetic-owner-01",
+        "uid": "synthetic-user-01",
+        "product_id": "synthetic-product-01",
+        "product_name": "Synthetic Product",
+        "subCategory": "synthetic-light",
+        "category": "dj",
+        "icon": "https://example.invalid/synthetic-query-device.png",
+        "ip": "192.0.2.15",
+        "local_key": "synthetic-local-key-01",
+        "online": true,
+        "sub": false,
+        "biz_type": 1,
+        "active_time": 1700000000,
+        "create_time": 1690000000,
+        "update_time": 1700000001,
+        "time_zone": "UTC",
+        "lat": "37.0",
+        "lon": "-122.0",
+        "model": "Synthetic Model A",
+        "status": [
+          { "code": "switch_led", "value": true },
+          { "code": "brightness", "value": 42 }
+        ],
+        "future_field": "synthetic extension"
+      }
+    ],
+    "total": 1,
+    "last_id": "synthetic-list-cursor-01",
+    "future_result_field": { "supported": true }
+  }
+}

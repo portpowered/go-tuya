@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "tid": "synthetic-transaction-qr",
+  "t": 1700000000000,
+  "result": {
+    "qrcode": "synthetic-qr-code-001"
+  }
+}
