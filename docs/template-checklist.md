@@ -14,7 +14,7 @@ and verification guides. Sign-off records below are specific to this library.
 - [x] Inspect the exported API and compile a separate consumer example. **Signed off:** reviewed the exported `tuya` API and compiled `examples/auth`, a separate module importing the library through a local replacement.
 - [x] Run `make lint` and `make check`. **Signed off:** both commands passed after the migration changes.
 - [x] Review the new tree for credentials and private captures. **Signed off:** removed the embedded partially redacted device response and token-printing examples; a filename-and-line-only credential-pattern scan found no remaining non-synthetic values. Tests use synthetic mock values; no capture directory or private capture is present.
-- [x] Replace `main` history and remove old tags that retain the old commits. **Sign-off target:** publish this reviewed tree as a new root commit, delete v1.0.8 through v1.0.10, and verify remote refs. The publication audit must confirm this entry.
+- [x] Replace `main` history and remove old tags that retain the old commits. **Signed off:** a new root commit replaced `main`; v1.0.8 through v1.0.10 were deleted. A remote ref check found only the rewritten `main`, and its CI run passed.
 
 Unfinished items remain unchecked until verified. This file is a review record,
 not a claim that incomplete checklist items are complete.
