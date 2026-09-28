@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/portpowered/go-tuya/tuya"
+	"github.com/portpowered/go-tuya/pkg/tuya"
 )
 
 func main() {
@@ -19,12 +19,14 @@ func main() {
 		log.Fatal("set TUYA_AUTH_TOKEN, TUYA_REFRESH_TOKEN, and TUYA_AUTH_TOKEN_EXPIRED")
 	}
 
-	client := tuya.NewClient(&tuya.ClientConfig{
-		AuthInformation: &tuya.AuthInformation{
-			AccessToken:  accessToken,
-			RefreshToken: refreshToken,
-			ExpireTime:   expireTime,
-		},
+	base, err := tuya.NewClient()
+	if err != nil {
+		log.Fatal("could not configure the Tuya client")
+	}
+	client := base.NewSession(tuya.Tokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpireTime:   expireTime,
 	})
 	updated, err := client.AuthService.RefreshToken(context.Background(), tuya.RefreshTokenRequest{
 		RefreshToken: refreshToken,

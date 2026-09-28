@@ -33,28 +33,41 @@ redact URLs and errors before sharing diagnostics.
 
 ## Existing tokens and refresh
 
-Applications can initialize a client with existing credentials:
+Applications initialize a reusable client with options and create one session
+per account:
 
 ```go
-client := tuya.NewClient(&tuya.ClientConfig{
-    HTTPClient: &http.Client{Timeout: 30 * time.Second},
-    AuthInformation: &tuya.AuthInformation{
-        AccessToken:  accessToken,
-        RefreshToken: refreshToken,
-        ExpireTime:   expiryMilliseconds,
-    },
+base, err := tuya.NewClient(
+    tuya.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
+    tuya.WithRegion(tuya.TuyaRegionUS),
+)
+if err != nil {
+    return err
+}
+session := base.NewSession(tuya.Tokens{
+    AccessToken:  accessToken,
+    RefreshToken: refreshToken,
+    ExpireTime:   expiryMilliseconds,
 })
+defer session.Close(ctx)
+
+current := session.Tokens()
+_ = current // Read the credentials only when needed; never log or display them.
 ```
 
-The package returns refreshed token values but does not persist them or
-coordinate concurrent refresh calls. Serialize refreshes and write the new
-access/refresh token pair and expiration together. If persistence fails, do not
-assume the previous refresh token is still usable; the provider's refresh flow
-may rotate it. See the [safe example](../examples/token_refresh/token_refresh.go).
+Token refresh is an explicit operation. Requests never refresh tokens
+automatically. `AuthService.RefreshToken` returns rotated credentials without
+mutating the session; callers decide when to apply them with `Session.SetTokens`
+and persist the pair. Serialize refreshes and write the new access/refresh token
+pair and expiration together. If persistence fails, do not assume the previous
+refresh token is still usable; the provider's refresh flow may rotate it. See
+the [safe example](../examples/token_refresh/token_refresh.go).
 
 ## Errors and transport
 
 Authentication methods return ordinary Go errors. This version does not
-expose a stable error type for programmatic classification. Inject a configured
-`*http.Client` using `ClientConfig.HTTPClient` to set a timeout or custom
-transport. The default client has no timeout.
+expose a stable error type for programmatic classification. Use
+`WithHTTPClient` to set a timeout or `WithHTTPTransport` to inject a custom
+`http.RoundTripper`. This transport handles QR authentication and, by default,
+encrypted cloud requests and RTC signaling. The default HTTP client has no
+timeout.

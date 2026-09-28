@@ -25,7 +25,7 @@ import (
 // EncryptedClient provides access to Tuya Customer API operations with encryption of the payload and response.
 // The tuya API requires that payloads are encrypted with AES-GCM and the response is encrypted with AES-GCM.
 type EncryptedClient struct {
-	Client *ClientImpl
+	Client *Session
 }
 
 // Get performs an encrypted GET request
@@ -70,15 +70,15 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 		authContext = req.AuthorizationContext
 	}
 
-	// Use authorization context if provided, otherwise fall back to TokenProvider
+	tokens := c.Client.Tokens()
+	// Request-local authorization takes precedence; otherwise use the session's
+	// explicitly assigned credentials. Token retrieval never refreshes silently.
 	if authContext != nil && authContext.RefreshToken != "" {
 		token = authContext.RefreshToken
 	} else {
-		token, err = c.Client.TokenProvider.GetRefreshToken(ctx, GetRefreshTokenRequest{
-			Request: operationRequest.GetRequest(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get refresh token: %w", err)
+		token = tokens.RefreshToken
+		if token == "" {
+			return nil, fmt.Errorf("refresh token is required; set it on the session or request")
 		}
 	}
 
@@ -130,15 +130,13 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	}
 
 	var accessToken string
-	// Use authorization context if provided, otherwise fall back to TokenProvider
+	// Use an operation-specific access token or the session's current token.
 	if authContext != nil && authContext.AccessToken != "" {
 		accessToken = authContext.AccessToken
 	} else {
-		accessToken, err = c.Client.TokenProvider.GetAccessToken(ctx, GetAccessTokenRequest{
-			Request: operationRequest.GetRequest(),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get access token: %w", err)
+		accessToken = tokens.AccessToken
+		if accessToken == "" {
+			return nil, fmt.Errorf("access token is required; set it on the session or request")
 		}
 	}
 
@@ -164,6 +162,9 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
 	q := req.URL.Query()
 	if finalParams != nil {
 		// Convert params to URL query string
@@ -171,9 +172,6 @@ func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, 
 	}
 
 	req.URL.RawQuery = q.Encode()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
 
 	// Set headers
 	for key, value := range headers {

@@ -4,22 +4,10 @@ package tuya
 import (
 	"context"
 	"net/http"
+	"sync"
 )
 
 // This file contains the client interfaces for using the Tuya API client.
-
-// Client defines the interface for Tuya API operations.
-type Client interface {
-	// API to clean up the request session: note - what should we do with this,
-	// This function is necessary to terminate the client request
-	Unload(ctx context.Context, req UnloadRequest) (UnloadResponse, error)
-
-	// StartRTCStream initiates a WebRTC session with a Tuya camera device
-	StartRTCStream(ctx context.Context, req StartRTCStreamRequest) (*RTCStream, error)
-
-	// StopRTCStream stops a WebRTC stream by session ID
-	StopRTCStream(ctx context.Context, req StopRTCStreamRequest) error
-}
 
 // Auth defines the interface for Tuya authentication operations.
 type Auth interface {
@@ -70,34 +58,6 @@ type MessageQueue interface {
 	RefreshMQ(ctx context.Context, req RefreshMQRequest) (RefreshMQResponse, error)
 	AddMessageListener(ctx context.Context, req AddMessageListenerRequest) (AddMessageListenerResponse, error)
 	RemoveMessageListener(ctx context.Context, req RemoveMessageListenerRequest) (RemoveMessageListenerResponse, error)
-}
-
-// TokenProvider defines the interface for token management operations.
-type TokenProvider interface {
-	GetAccessToken(ctx context.Context, req GetAccessTokenRequest) (string, error)
-	GetRefreshToken(ctx context.Context, req GetRefreshTokenRequest) (string, error)
-	SetToken(accessToken string, refreshToken string, expireTime int64)
-	refreshAccessTokenIfNeeded(ctx context.Context) error
-}
-
-// GetAccessTokenRequest represents a request to get an access token.
-type GetAccessTokenRequest struct {
-	Request
-}
-
-// GetRequest returns the underlying Request for the GetAccessTokenRequest
-func (r *GetAccessTokenRequest) GetRequest() Request {
-	return r.Request
-}
-
-// GetRefreshTokenRequest represents a request to retrieve a refresh token
-type GetRefreshTokenRequest struct {
-	Request
-}
-
-// GetRequest returns the underlying Request for the GetRefreshTokenRequest
-func (r *GetRefreshTokenRequest) GetRequest() Request {
-	return r.Request
 }
 
 // Error represents the standard error interface for Tuya API errors
@@ -164,11 +124,11 @@ type SceneAction struct {
 	Commands map[string]interface{} `json:"commands"`
 }
 
-// ClientImpl implements the Client interface for Tuya API operations.
-type ClientImpl struct {
+// Session is an account-scoped API and connection lifecycle.
+type Session struct {
 	HTTPClient *http.Client
-
-	TokenProvider TokenProvider
+	tokenMu    sync.RWMutex
+	tokens     Tokens
 
 	// Generic Client configurations.
 	// Cloud API configurations.
@@ -187,11 +147,14 @@ type ClientImpl struct {
 	SceneService    *SceneService
 	// Used for message queue operations
 	MessageQueue *SharingMessageQueueImpl
+
+	mqttClientFactory MQTTClientFactory
+	rtcSignaling      RTCSignaling
 }
 
 // SharingMessageQueueImpl implements the MessageQueue interface.
 type SharingMessageQueueImpl struct {
-	Client *ClientImpl
+	Client *Session
 	State  *mqttState
 }
 
@@ -229,11 +192,14 @@ type OperationRequest interface {
 // Request represents the embedded request context that is used to perform the request
 type Request struct {
 	AuthorizationContext *AuthorizationContext
-	DoNotRefreshToken    bool
+	// DoNotRefreshToken is kept for source compatibility; token refresh is never
+	// performed implicitly by this package.
+	// Deprecated: call AuthService.RefreshToken explicitly.
+	DoNotRefreshToken bool
 }
 
-// AuthorizationContext represents request authorization context that can be used to perform the request overriding the internal token provider.
-// This is useful wherein you have multiple tokens and you want to use a specific one for a request.
+// AuthorizationContext supplies request-specific credentials that override
+// the credentials assigned to the containing Session.
 type AuthorizationContext struct {
 	AccessToken  string
 	RefreshToken string
@@ -1030,13 +996,11 @@ type RemoveMessageListenerResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Compile-time assertion to ensure that the Client and SharingMQ interfaces are implemented correctly.
-var _ Client = (*ClientImpl)(nil)
+// Compile-time assertions ensure service interfaces are implemented correctly.
 var _ Auth = (*AuthService)(nil)
 var _ Homes = (*HomeService)(nil)
 var _ Devices = (*DevicesService)(nil)
 var _ MessageQueue = (*SharingMessageQueueImpl)(nil)
-var _ TokenProvider = (*TokenProviderImpl)(nil)
 
 // Declare that the Request struct implements the OperationRequest interface.
 var _ OperationRequest = (*ValidateLoginCodeRequest)(nil)

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/portpowered/go-tuya/tuya"
+	"github.com/portpowered/go-tuya/pkg/tuya"
 )
 
 type replayKey struct {
@@ -75,30 +75,32 @@ func (transport *fixtureTransport) RoundTrip(request *http.Request) (*http.Respo
 	}, nil
 }
 
-func replayClient(transport *fixtureTransport) *tuya.ClientImpl {
-	clientID := "synthetic-client-id"
-	authenticationURL := "https://login.example.invalid"
-	cloudAPIURL := "https://api.example.invalid"
-	return tuya.NewClient(&tuya.ClientConfig{
-		HTTPClient:        &http.Client{Transport: transport},
-		ClientID:          &clientID,
-		AuthenticationURL: &authenticationURL,
-		CloudAPIURL:       &cloudAPIURL,
-	})
+func replayClient(transport *fixtureTransport) *tuya.Session {
+	client, err := tuya.NewClient(
+		tuya.WithHTTPTransport(transport),
+		tuya.WithClientID("synthetic-client-id"),
+		tuya.WithAuthenticationURL("https://login.example.invalid"),
+		tuya.WithCloudAPIURL("https://api.example.invalid"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	return client.NewSession(tuya.Tokens{})
 }
 
-func authenticatedReplayClient(transport *fixtureTransport) *tuya.ClientImpl {
-	clientID := "synthetic-client-id"
-	cloudAPIURL := "https://api.example.invalid"
-	return tuya.NewClient(&tuya.ClientConfig{
-		HTTPClient:  &http.Client{Transport: transport},
-		ClientID:    &clientID,
-		CloudAPIURL: &cloudAPIURL,
-		AuthInformation: &tuya.AuthInformation{
-			AccessToken:  "synthetic-access-token",
-			RefreshToken: "synthetic-refresh-token",
-			ExpireTime:   time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		},
+func authenticatedReplayClient(transport *fixtureTransport) *tuya.Session {
+	client, err := tuya.NewClient(
+		tuya.WithHTTPTransport(transport),
+		tuya.WithClientID("synthetic-client-id"),
+		tuya.WithCloudAPIURL("https://api.example.invalid"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	return client.NewSession(tuya.Tokens{
+		AccessToken:  "synthetic-access-token",
+		RefreshToken: "synthetic-refresh-token",
+		ExpireTime:   time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
 	})
 }
 

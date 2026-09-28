@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -122,15 +123,12 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := &ClientImpl{
+	client := &Session{
 		HTTPClient:  server.Client(),
 		CloudAPIURL: server.URL,
 		ClientID:    appKey,
 	}
-	client.TokenProvider = &fakeTokenProvider{
-		accessToken:  accessToken,
-		refreshToken: refreshToken,
-	}
+	client.SetTokens(Tokens{AccessToken: accessToken, RefreshToken: refreshToken})
 	client.EncryptedClient = &EncryptedClient{Client: client}
 
 	ctx := context.Background()
@@ -144,6 +142,21 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	case <-requestMade:
 	case <-time.After(2 * time.Second):
 		t.Fatalf("server handler was not invoked")
+	}
+}
+
+func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
+	session := &Session{
+		HTTPClient:  &http.Client{},
+		CloudAPIURL: "http://[invalid-ipv6",
+		ClientID:    "synthetic-client-id",
+	}
+	session.SetTokens(Tokens{AccessToken: "synthetic-access", RefreshToken: "synthetic-refresh"})
+	session.EncryptedClient = &EncryptedClient{Client: session}
+
+	_, err := session.EncryptedClient.Get(context.Background(), "/synthetic", nil, testOperationRequest{})
+	if err == nil || !strings.Contains(err.Error(), "failed to create request") {
+		t.Fatalf("request error = %v, want URL construction error", err)
 	}
 }
 
@@ -184,25 +197,6 @@ func decryptRequestPayload(t *testing.T, encdata, secret string) string {
 	}
 
 	return string(plaintext)
-}
-
-type fakeTokenProvider struct {
-	accessToken  string
-	refreshToken string
-}
-
-func (f *fakeTokenProvider) GetAccessToken(ctx context.Context, req GetAccessTokenRequest) (string, error) {
-	return f.accessToken, nil
-}
-
-func (f *fakeTokenProvider) GetRefreshToken(ctx context.Context, req GetRefreshTokenRequest) (string, error) {
-	return f.refreshToken, nil
-}
-
-func (f *fakeTokenProvider) SetToken(accessToken string, refreshToken string, expireTime int64) {}
-
-func (f *fakeTokenProvider) refreshAccessTokenIfNeeded(ctx context.Context) error {
-	return nil
 }
 
 type testOperationRequest struct {

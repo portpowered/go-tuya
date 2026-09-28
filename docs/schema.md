@@ -17,7 +17,7 @@ repository root, use Go 1.25 or later:
 
 ```sh
 go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 \
-  -config tuya/internal/wire/config.yaml api/openapi.yaml
+  -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
 ```
 
 The generated result model is consumed by `DevicesService.QueryDevices`. The

@@ -48,5 +48,6 @@ mock HTTP servers and do not exercise a Tuya account. See
 configuration; review the command and target before running it.
 
 The package does not implement local-network control. Region selection applies
-to the cloud API base URL and can be configured through
-`ClientConfig.CloudAPIURL`.
+to the cloud API base URL and can be configured with `WithRegion` or
+`WithCloudAPIURL` when constructing the reusable client. Create a per-account
+session with `Client.NewSession` before making requests.

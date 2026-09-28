@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestReleaseAllowsBreak(t *testing.T) {
 	t.Parallel()
@@ -36,11 +40,11 @@ func TestReleaseAllowsBreak(t *testing.T) {
 func TestParsePackages(t *testing.T) {
 	t.Parallel()
 
-	got, err := parsePackages("tuya")
+	got, err := parsePackages("pkg/tuya")
 	if err != nil {
 		t.Fatalf("parsePackages() error = %v", err)
 	}
-	if len(got) != 1 || got[0] != "tuya" {
+	if len(got) != 1 || got[0] != "pkg/tuya" {
 		t.Errorf("parsePackages() = %#v, want the public tuya package", got)
 	}
 }
@@ -48,8 +52,31 @@ func TestParsePackages(t *testing.T) {
 func TestFullPackagePath(t *testing.T) {
 	t.Parallel()
 
-	if got, want := fullPackagePath(defaultModulePath, "tuya"), "github.com/portpowered/go-tuya/tuya"; got != want {
+	if got, want := fullPackagePath(defaultModulePath, "pkg/tuya"), "github.com/portpowered/go-tuya/pkg/tuya"; got != want {
 		t.Errorf("fullPackagePath() = %q, want %q", got, want)
+	}
+}
+
+func TestBaselinePackagePathSupportsPackageDirectoryMove(t *testing.T) {
+	root := t.TempDir()
+	writePackageFile(t, filepath.Join(root, "tuya", "client.go"))
+	if got, want := baselinePackagePath(root, "pkg/tuya"), "tuya"; got != want {
+		t.Errorf("baselinePackagePath() = %q, want legacy package %q", got, want)
+	}
+
+	writePackageFile(t, filepath.Join(root, "pkg", "tuya", "client.go"))
+	if got, want := baselinePackagePath(root, "pkg/tuya"), "pkg/tuya"; got != want {
+		t.Errorf("baselinePackagePath() = %q, want current package %q", got, want)
+	}
+}
+
+func writePackageFile(t *testing.T, name string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(name), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(name, []byte("package sample\n"), 0600); err != nil {
+		t.Fatal(err)
 	}
 }
 

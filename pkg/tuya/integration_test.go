@@ -35,12 +35,14 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 	}
 
 	// Create client with real credentials
-	client := NewClient(&ClientConfig{
-		AuthInformation: &AuthInformation{
-			AccessToken:  os.Getenv("TUYA_AUTH_TOKEN"),
-			RefreshToken: os.Getenv("TUYA_REFRESH_TOKEN"),
-			ExpireTime:   expireTime,
-		},
+	base, err := NewClient()
+	if err != nil {
+		t.Fatalf("configure client: %v", err)
+	}
+	client := base.NewSession(Tokens{
+		AccessToken:  os.Getenv("TUYA_AUTH_TOKEN"),
+		RefreshToken: os.Getenv("TUYA_REFRESH_TOKEN"),
+		ExpireTime:   expireTime,
 	})
 
 	// Test 1: Query Homes

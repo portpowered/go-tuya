@@ -23,8 +23,12 @@ jobs:
           cache: true
       - name: Build
         run: go build ./...
-      - name: Test with race detector and coverage
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Test with race detector
+        run: go test -race ./...
+      - name: Profile library packages
+        run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out -covermode=atomic ./pkg/...
+      - name: Check non-generated library coverage
+        run: go run ./tools/coverage -profile coverage.out -min 80
       - name: Run replay checks with separate coverage output
         run: make replay
       - name: Vet

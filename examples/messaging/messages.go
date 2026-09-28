@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/portpowered/go-tuya/tuya"
+	"github.com/portpowered/go-tuya/pkg/tuya"
 )
 
 func main() {
@@ -22,12 +22,14 @@ func main() {
 	}
 
 	ctx := context.Background()
-	client := tuya.NewClient(&tuya.ClientConfig{
-		AuthInformation: &tuya.AuthInformation{
-			AccessToken:  accessToken,
-			RefreshToken: refreshToken,
-			ExpireTime:   expireTime,
-		},
+	base, err := tuya.NewClient()
+	if err != nil {
+		log.Fatal("could not configure the Tuya client")
+	}
+	client := base.NewSession(tuya.Tokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpireTime:   expireTime,
 	})
 	queueConfig, err := client.MessageQueue.GetMessageQueueConfig(ctx)
 	if err != nil {

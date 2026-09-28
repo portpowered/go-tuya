@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -70,6 +71,14 @@ type MessageQueueTopicSubscription struct {
 	Sub string `json:"sub"`
 }
 
+// MQTTClientFactory creates the MQTT edge client used by a session's message
+// queue. It can be replaced with a test double or custom Paho client.
+type MQTTClientFactory func(*mqtt.ClientOptions) mqtt.Client
+
+func newMQTTClient(options *mqtt.ClientOptions) mqtt.Client {
+	return mqtt.NewClient(options)
+}
+
 // ToMessageQueueConfig converts the API response to MessageQueueConfig
 func (r *MessageQueueConfigResponse) ToMessageQueueConfig() MessageQueueConfig {
 	return MessageQueueConfig{
@@ -94,7 +103,7 @@ type mqttState struct {
 	// MQTT client and configuration
 	mqttClient  mqtt.Client
 	mqConfig    MessageQueueConfig
-	isRunning   bool
+	isRunning   atomic.Bool
 	stopCh      chan struct{}
 	reconnectCh chan struct{}
 
@@ -115,7 +124,7 @@ func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStart
 	state.lifecycleMux.Lock()
 	defer state.lifecycleMux.Unlock()
 
-	if state.isRunning {
+	if state.isRunning.Load() {
 		return MessageQueueStartResponse{
 			Success: true,
 			Message: "Message queue already running",
@@ -125,7 +134,7 @@ func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStart
 	// Initialize internal state
 	state.stopCh = make(chan struct{})
 	state.reconnectCh = make(chan struct{}, 1)
-	state.isRunning = true
+	state.isRunning.Store(true)
 
 	// Start MQTT management goroutine
 	go state.runMQTTLoop(ctx, s)
@@ -142,14 +151,14 @@ func (s *SharingMessageQueueImpl) Stop(_ context.Context, _ MessageQueueStopRequ
 	state.lifecycleMux.Lock()
 	defer state.lifecycleMux.Unlock()
 
-	if !state.isRunning {
+	if !state.isRunning.Load() {
 		return MessageQueueStopResponse{
 			Success: true,
 			Message: "Message queue already stopped",
 		}, nil
 	}
 
-	state.isRunning = false
+	state.isRunning.Store(false)
 
 	// Signal stop to background goroutine
 	close(state.stopCh)
@@ -208,7 +217,7 @@ func (s *SharingMessageQueueImpl) RemoveMessageListener(_ context.Context, req R
 func (s *SharingMessageQueueImpl) RefreshMQ(_ context.Context, _ RefreshMQRequest) (RefreshMQResponse, error) {
 	state := s.State
 
-	if !state.isRunning {
+	if !state.isRunning.Load() {
 		return RefreshMQResponse{
 			Message: "Message queue is not running",
 		}, nil
@@ -353,7 +362,10 @@ func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueI
 		opts.SetTLSConfig(nil) // Use default TLS config
 	}
 
-	state.mqttClient = mqtt.NewClient(opts)
+	state.mqttClient = s.Client.mqttClientFactory(opts)
+	if state.mqttClient == nil {
+		return fmt.Errorf("MQTT client factory returned nil")
+	}
 
 	// Connect
 	token := state.mqttClient.Connect()
@@ -390,7 +402,7 @@ func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
 	log.Printf("MQTT connection lost: %v", err)
 
 	// Signal reconnection if still running
-	if state.isRunning {
+	if state.isRunning.Load() {
 		select {
 		case state.reconnectCh <- struct{}{}:
 		default:
@@ -460,5 +472,9 @@ func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) strin
 // extractDeviceIDFromTopic extracts device ID from topic string
 func (state *mqttState) extractDeviceIDFromTopic(topic string) string {
 	// the default topic format is "cloud/device/{devId}/in/24d2afb98121974b6505c40a3a980362"
-	return strings.Split(topic, "/")[2]
+	parts := strings.Split(topic, "/")
+	if len(parts) < 4 || parts[0] != "cloud" || parts[1] != "device" || parts[2] == "" || parts[3] != "in" {
+		return ""
+	}
+	return parts[2]
 }

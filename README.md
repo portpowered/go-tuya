@@ -4,7 +4,7 @@
 [![CI](https://github.com/portpowered/go-tuya/actions/workflows/go.yml/badge.svg)](https://github.com/portpowered/go-tuya/actions/workflows/go.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://portpowered.github.io/go-tuya/coverage.json)](https://portpowered.github.io/go-tuya/coverage.html)
 [![Release](https://img.shields.io/github/v/release/portpowered/go-tuya?display_name=tag)](https://github.com/portpowered/go-tuya/releases/latest)
-[![Go Reference](https://pkg.go.dev/badge/github.com/portpowered/go-tuya/tuya.svg)](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
+[![Go Reference](https://pkg.go.dev/badge/github.com/portpowered/go-tuya/pkg/tuya.svg)](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
 [![License](https://img.shields.io/github/license/portpowered/go-tuya)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-guides-blue)](https://portpowered.github.io/go-tuya/)
 
@@ -18,16 +18,17 @@ stream controls. Applications provide and securely store credentials.
 Requires Go 1.24 or later.
 
 ```sh
-go get github.com/portpowered/go-tuya@v0.1.0
+go get github.com/portpowered/go-tuya@v0.2.0
 ```
 
-`v0.1.0` is the first release from the cleaned history. Older version tags
-were removed during credential-history cleanup.
+`v0.1.0` was the first release from the cleaned history. The package shape and
+session API documented here are available in `v0.2.0`. Older version tags were
+removed during credential-history cleanup.
 
 Import the client package:
 
 ```go
-import "github.com/portpowered/go-tuya/tuya"
+import "github.com/portpowered/go-tuya/pkg/tuya"
 ```
 
 ## Supported surface
@@ -54,9 +55,9 @@ returned by the API before sending a command. The scene service and the
 
 ## Authentication and requests
 
-The library supports QR-code authentication and accepts existing tokens via
-`ClientConfig.AuthInformation`. This minimal example shows how to configure a
-client with tokens loaded by the application:
+`Client` stores reusable endpoint and transport configuration. Create a
+`Session` for each account to hold its tokens, services, message queue, and
+connection lifecycle. The application loads and stores credentials:
 
 ```go
 import (
@@ -65,20 +66,25 @@ import (
     "net/http"
     "time"
 
-    "github.com/portpowered/go-tuya/tuya"
+    "github.com/portpowered/go-tuya/pkg/tuya"
 )
 
 func listHomes(ctx context.Context, accessToken, refreshToken string, expiryMilliseconds int64) error {
-    client := tuya.NewClient(&tuya.ClientConfig{
-        HTTPClient: &http.Client{Timeout: 30 * time.Second},
-        AuthInformation: &tuya.AuthInformation{
-            AccessToken:  accessToken,
-            RefreshToken: refreshToken,
-            ExpireTime:   expiryMilliseconds,
-        },
+    base, err := tuya.NewClient(
+        tuya.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
+        tuya.WithRegion(tuya.TuyaRegionUS),
+    )
+    if err != nil {
+        return err
+    }
+    session := base.NewSession(tuya.Tokens{
+        AccessToken:  accessToken,
+        RefreshToken: refreshToken,
+        ExpireTime:   expiryMilliseconds,
     })
+    defer session.Close(ctx)
 
-    homes, err := client.HomeService.QueryHomes(ctx, tuya.QueryHomesRequest{})
+    homes, err := session.HomeService.QueryHomes(ctx, tuya.QueryHomesRequest{})
     if err != nil {
         return err
     }
@@ -87,17 +93,24 @@ func listHomes(ctx context.Context, accessToken, refreshToken string, expiryMill
 }
 ```
 
-Provide a custom `*http.Client` through `ClientConfig.HTTPClient` to set timeouts
-or a custom `Transport`. The client creates a default `http.Client` when none is
-provided; that default has no request timeout. The default cloud endpoint is
-the US region. Use `GetRegionEndpoint` and `ClientConfig.CloudAPIURL` to select
-another supported region. Authentication uses a separate URL configured with
-`ClientConfig.AuthenticationURL`.
+Use `WithHTTPClient` to provide timeouts or `WithHTTPTransport` to supply a
+custom `http.RoundTripper`, including a transport configured for HTTP/2. The
+default client has no request timeout. `WithRegion`, `WithCloudAPIURL`, and
+`WithAuthenticationURL` select endpoints; client options are validated when
+`NewClient` is called. The default cloud endpoint is the US region.
 
-`RefreshToken` returns replacement token data. Token refresh should be
-serialized by the application, and the new token pair should be stored
-atomically. Never print tokens or persist them in source-controlled files.
-See the [authentication guide](docs/authentication.md).
+HTTP transport injection also applies to the default HTTP-based RTC signaling.
+Use `WithMQTTClientFactory` to replace the MQTT network client, and
+`WithRTCSignaling` to replace Tuya's RTC signaling edge with a custom
+implementation such as a WebSocket client. RTC media peer connections are
+managed by the caller.
+
+Token handling is explicit: `Session.Tokens` returns the current token
+snapshot, `AuthService.RefreshToken` returns replacement credentials without
+changing the session, and `Session.SetTokens` applies credentials to subsequent
+requests. Serialize refreshes and persist the rotated access/refresh token pair
+atomically in application-managed storage. Never print tokens or persist them
+in source-controlled files. See the [authentication guide](docs/authentication.md).
 
 ## Errors
 
@@ -145,6 +158,7 @@ Run the checks from the module root:
 | Build | `make build` |
 | Vet | `make lint` |
 | Tests with race detector | `make test` |
+| Non-generated package coverage gate (80% minimum) | `make coverage` |
 | All checks | `make check` |
 | Format Go files | `make fmt` |
 
@@ -160,7 +174,7 @@ running it.
 - [Message queue events](docs/events.md)
 - [Tuya protocol notes](docs/TUYA.md)
 - [Published API reference and customer guides](https://portpowered.github.io/go-tuya/)
-- [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
+- [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
 
 ## License
 

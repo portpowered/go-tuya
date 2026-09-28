@@ -16,7 +16,7 @@ jobs:
       GOWORK: 'off'
       GOTOOLCHAIN: local
       PUBLIC_MODULE: github.com/portpowered/go-tuya
-      PUBLIC_PACKAGES: tuya
+      PUBLIC_PACKAGES: pkg/tuya
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,10 +71,10 @@ jobs:
           cat > main.go <<EOF
           package main
 
-          import "${PUBLIC_MODULE}/tuya"
+          import tuya "${PUBLIC_MODULE}/pkg/tuya"
 
-          var _ tuya.Client = (*tuya.ClientImpl)(nil)
-          var _ func(*tuya.ClientConfig) *tuya.ClientImpl = tuya.NewClient
+          var _ func(...tuya.Option) (*tuya.Client, error) = tuya.NewClient
+          var _ func(*tuya.Client, tuya.Tokens) *tuya.Session = (*tuya.Client).NewSession
 
           func main() {}
           EOF

@@ -14,4 +14,4 @@ root [README](../README.md) for the supported surface and install instructions.
 - [Tuya provider notes](TUYA.md)
 - [API schema and generated wire models](schema.md)
 - [Published API reference and customer guides](https://portpowered.github.io/go-tuya/)
-- [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
+- [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)

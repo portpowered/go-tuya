@@ -7,7 +7,13 @@ Run the library checks from the repository root:
 ```sh
 make lint
 make check
+make coverage
 ```
+
+`make coverage` measures statement coverage for non-generated Go files under
+`pkg/` and fails below 80%. New synthetic cases should bring the public
+library toward 90% without presenting synthetic data as provider captures.
+The same 80% floor runs in CI.
 
 Run the replay suite separately when measuring offline API replay coverage:
 
@@ -23,7 +29,7 @@ Every response file is marked `.synthetic.json` and has a neighboring
 `PROVENANCE.md`. These are hand-authored examples for testing the current client;
 they are not Tuya captures and do not verify private vendor routes or response
 schemas. `make replay` reports coverage for `tuya` code reached by the replay
-suite. The broader `make check` and replay coverage are separate measurements.
+suite. The library coverage gate and replay coverage are separate measurements.
 
 The authentication example is a separate Go module because it uses a terminal
 QR renderer. Compile it with:
@@ -43,7 +49,7 @@ builds when the `integration` tag is supplied:
 TUYA_AUTH_TOKEN="<access-token>" \
 TUYA_REFRESH_TOKEN="<refresh-token>" \
 TUYA_AUTH_TOKEN_EXPIRED="<expiry-milliseconds>" \
-go test -tags=integration ./tuya -run TestIntegration_DeviceManagementWorkflow
+go test -tags=integration ./pkg/tuya -run TestIntegration_DeviceManagementWorkflow
 ```
 
 When the tag is set but credentials are absent, the test skips. Use a test

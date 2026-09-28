@@ -10,23 +10,26 @@ import (
 	"time"
 )
 
-// setupRTCTestClient creates a ClientImpl with a mock HTTPS server and valid token
+// setupRTCTestClient creates a Session with a mock HTTPS server and valid token
 // provider for testing RTC operations through the EncryptedClient.
 // The mock server receives encrypted requests but returns plain JSON responses;
 // the EncryptedClient skips decryption when the "result" field is not a string.
-func setupRTCTestClient(handler http.HandlerFunc) (*ClientImpl, *httptest.Server) {
+func setupRTCTestClient(handler http.HandlerFunc) (*Session, *httptest.Server) {
 	server := httptest.NewTLSServer(handler)
 	cloudURL := server.URL
 	clientID := "test-client-id"
-	client := NewClient(&ClientConfig{
-		HTTPClient:  server.Client(),
-		CloudAPIURL: &cloudURL,
-		ClientID:    &clientID,
-		AuthInformation: &AuthInformation{
-			AccessToken:  "test-access-token",
-			RefreshToken: "test-refresh-token",
-			ExpireTime:   time.Now().Add(time.Hour).UnixMilli(),
-		},
+	base, err := NewClient(
+		WithHTTPClient(server.Client()),
+		WithCloudAPIURL(cloudURL),
+		WithClientID(clientID),
+	)
+	if err != nil {
+		panic(err)
+	}
+	client := base.NewSession(Tokens{
+		AccessToken:  "test-access-token",
+		RefreshToken: "test-refresh-token",
+		ExpireTime:   time.Now().Add(time.Hour).UnixMilli(),
 	})
 	return client, server
 }

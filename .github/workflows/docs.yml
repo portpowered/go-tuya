@@ -7,7 +7,7 @@ on:
     paths:
       - 'api/**'
       - 'docs/**'
-      - 'tuya/internal/wire/**'
+      - 'pkg/tuya/internal/wire/**'
       - '.github/workflows/docs.yml'
       - 'README.md'
   workflow_dispatch:
@@ -34,14 +34,14 @@ jobs:
           go-version: '1.25.0'
           cache: true
       - name: Generate Tuya API wire models
-        run: go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config tuya/internal/wire/config.yaml api/openapi.yaml
+        run: go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
       - name: Check generated models are current
         run: |
-          git ls-files --error-unmatch tuya/internal/wire/models.gen.go
-          git diff --exit-code -- tuya/internal/wire/models.gen.go
+          git ls-files --error-unmatch pkg/tuya/internal/wire/models.gen.go
+          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go
       - name: Test with coverage
         if: github.event_name != 'pull_request'
-        run: go test -race -coverprofile=coverage.out ./...
+        run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...
       - name: Build Fumadocs site
         uses: portpowered/api-docs-website-github-action@v0.3.0
         with:
@@ -54,9 +54,8 @@ jobs:
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
-          go tool cover -html=coverage.out -o site/coverage.html
-          coverage="$(go tool cover -func=coverage.out | awk '$1 == "total:" {print $3}')"
-          coverage="${coverage%\%}"
+          coverage="$(go run ./tools/coverage -profile coverage.out -min 0 -percent-only -filtered-profile coverage.filtered.out)"
+          go tool cover -html=coverage.filtered.out -o site/coverage.html
           if awk -v value="$coverage" 'BEGIN {exit !(value >= 90)}'; then
             color=brightgreen
           elif awk -v value="$coverage" 'BEGIN {exit !(value >= 75)}'; then

@@ -36,9 +36,9 @@ authentication parameters as secrets.
 ## Regions and unsupported surfaces
 
 The client defaults to the US cloud endpoint. `GetRegionEndpoint` lists the
-configured CN, US, EU, and India endpoints; callers can pass the selected URL
-through `ClientConfig.CloudAPIURL`. Authentication has its own configurable
-URL. This package does not implement local-network device control. Some
-declared service surfaces remain placeholders; consult the
-[Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
+configured CN, US, EU, and India endpoints; callers can use `WithRegion` or
+`WithCloudAPIURL` when constructing the reusable client. Authentication has
+its own URL, configurable with `WithAuthenticationURL`. This package does not
+implement local-network device control. Some declared service surfaces remain placeholders; consult the
+[Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
 and the supported-operation list in the root README before depending on them.

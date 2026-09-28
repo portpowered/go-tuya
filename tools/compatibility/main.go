@@ -15,7 +15,7 @@ import (
 
 const (
 	defaultModulePath        = "github.com/portpowered/go-tuya"
-	defaultPublicPackages    = "tuya"
+	defaultPublicPackages    = "pkg/tuya"
 	apiDiffTool              = "golang.org/x/exp/cmd/apidiff@v0.0.0-20260908205506-85c1c2202aba"
 	previousRelease          = "previous-release"
 	toolDirectoryPermissions = 0o755
@@ -144,12 +144,17 @@ func run() error {
 	changes := make([]incompatibleChange, 0)
 	for _, packageName := range packages {
 		packagePath := fullPackagePath(*modulePath, packageName)
+		baselinePackageName := baselinePackagePath(baseDir, packageName)
+		baselinePackagePath := fullPackagePath(*modulePath, baselinePackageName)
 		baseFileName := strings.ReplaceAll(packageName, "/", "-") + "-base.export"
 		currentFileName := strings.ReplaceAll(packageName, "/", "-") + "-current.export"
 		oldData := filepath.Join(tempDir, baseFileName)
 		newData := filepath.Join(tempDir, currentFileName)
-		if err := writeExportData(tool, baseDir, packagePath, oldData); err != nil {
-			return gateError{message: "read baseline API for " + packagePath, cause: err}
+		if err := writeExportData(tool, baseDir, baselinePackagePath, oldData); err != nil {
+			return gateError{message: "read baseline API for " + baselinePackagePath, cause: err}
+		}
+		if baselinePackageName != packageName {
+			fmt.Printf("Comparing moved public package %s with baseline package %s.\n", packageName, baselinePackageName)
 		}
 		if err := writeExportData(tool, root, packagePath, newData); err != nil {
 			return gateError{message: "read current API for " + packagePath, cause: err}
@@ -194,6 +199,37 @@ func run() error {
 	}
 	fmt.Printf("Release %s permits these incompatible changes: %s.\n", *releaseVersion, releaseMessage)
 	return nil
+}
+
+func baselinePackagePath(root, currentPackage string) string {
+	if packageDirHasGoSource(root, currentPackage) {
+		return currentPackage
+	}
+	if strings.HasPrefix(currentPackage, "pkg/") {
+		legacyPackage := strings.TrimPrefix(currentPackage, "pkg/")
+		if packageDirHasGoSource(root, legacyPackage) {
+			return legacyPackage
+		}
+	}
+	return currentPackage
+}
+
+func packageDirHasGoSource(root, packageName string) bool {
+	directory := root
+	if packageName != "." {
+		directory = filepath.Join(root, filepath.FromSlash(packageName))
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go") {
+			return true
+		}
+	}
+	return false
 }
 
 func parsePackages(value string) ([]string, error) {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/portpowered/go-tuya/tuya/internal/wire"
+	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
 // DevicesService provides methods for managing smart devices

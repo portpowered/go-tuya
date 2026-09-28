@@ -13,12 +13,14 @@ import (
 func setupAuthServiceWithMockServer(handler http.HandlerFunc) (*AuthService, *httptest.Server) {
 	server := httptest.NewTLSServer(handler)
 
-	client := &ClientImpl{
+	client := &Session{
 		HTTPClient:        server.Client(),
 		ClientID:          "test-client-id",
 		AuthenticationURL: server.URL,
 		CloudAPIURL:       server.URL,
 	}
+	client.EncryptedClient = &EncryptedClient{Client: client}
+	client.SetTokens(Tokens{AccessToken: "synthetic-access-token", RefreshToken: "synthetic-refresh-token"})
 
 	authService := &AuthService{client: client}
 	return authService, server
@@ -371,6 +373,59 @@ func TestAuthService_ValidateLoginCode_HTTPError(t *testing.T) {
 	// Should handle HTTP error gracefully
 	if err == nil {
 		t.Fatal("Expected error for HTTP 500, got nil")
+	}
+}
+
+func TestAuthService_RefreshTokenReturnsRotatedTokensWithoutChangingSession(t *testing.T) {
+	var requestPath string
+	var requestAccessToken string
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		requestAccessToken = r.Header.Get("X-token")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"t":       1700000000000,
+			"result": map[string]interface{}{
+				"expireTime":   7200,
+				"uid":          "synthetic-user-id",
+				"accessToken":  "synthetic-rotated-access",
+				"refreshToken": "synthetic-rotated-refresh",
+			},
+		})
+	}
+
+	service, server := setupAuthServiceWithMockServer(handler)
+	defer server.Close()
+	oldTokens := Tokens{
+		AccessToken:  "synthetic-current-access",
+		RefreshToken: "synthetic-current-refresh",
+		ExpireTime:   1700000000000,
+	}
+	service.client.SetTokens(oldTokens)
+
+	got, err := service.RefreshToken(context.Background(), RefreshTokenRequest{RefreshToken: "synthetic-explicit-refresh"})
+	if err != nil {
+		t.Fatalf("RefreshToken() error = %v", err)
+	}
+	if requestPath != "/v1.0/m/token/synthetic-explicit-refresh" {
+		t.Errorf("refresh path = %q", requestPath)
+	}
+	if requestAccessToken != oldTokens.AccessToken {
+		t.Errorf("request access token = %q, want explicit current session token", requestAccessToken)
+	}
+	want := RefreshTokenResponse{
+		AccessToken:  "synthetic-rotated-access",
+		RefreshToken: "synthetic-rotated-refresh",
+		ExpireTime:   1700000000000 + 7200*1000,
+		UID:          "synthetic-user-id",
+		T:            1700000000000,
+	}
+	if got != want {
+		t.Errorf("RefreshToken() = %+v, want %+v", got, want)
+	}
+	if current := service.client.Tokens(); current != oldTokens {
+		t.Errorf("RefreshToken() changed session tokens to %+v; callers must apply replacements explicitly", current)
 	}
 }
 

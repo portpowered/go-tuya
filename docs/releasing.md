@@ -20,10 +20,12 @@ first clean-history release is `v0.1.0`; checklist item 3 records the live
 badge and Go Reference verification separately.
 
 The module path is `github.com/portpowered/go-tuya`. The public client package
-is `github.com/portpowered/go-tuya/tuya`, so the release workflow compares
-package `tuya`. The first tag had no prior stable release, so the API
-compatibility tool reported that it had no baseline. Later tags compare the
-public package with the prior stable tag.
+is `github.com/portpowered/go-tuya/pkg/tuya`. The first tag had no prior stable
+release, so the API compatibility tool reported that it had no baseline. For
+the `v0.2.0` package move, the compatibility check compares `pkg/tuya` with the
+legacy `tuya` package in `v0.1.0`; it allows the resulting API break because
+the v0 minor version increased. Later tags compare the public package with the
+same path in the prior stable tag.
 
 ## Tag and verify
 
@@ -53,5 +55,5 @@ GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@v0.1.0
 ```
 
 Then compile a consumer importing
-`github.com/portpowered/go-tuya/tuya`. Replace `v0.1.0` with the version that
+`github.com/portpowered/go-tuya/pkg/tuya`. Replace `v0.1.0` with the version that
 was released.

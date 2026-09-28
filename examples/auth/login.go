@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/portpowered/go-tuya/tuya"
+	"github.com/portpowered/go-tuya/pkg/tuya"
 	"github.com/yeqown/go-qrcode/v2"
 	"github.com/yeqown/go-qrcode/writer/terminal"
 )
@@ -19,7 +19,11 @@ func main() {
 	}
 
 	ctx := context.Background()
-	client := tuya.NewClient(nil)
+	base, err := tuya.NewClient()
+	if err != nil {
+		log.Fatal("could not configure the Tuya client")
+	}
+	client := base.NewSession(tuya.Tokens{})
 	login, err := client.AuthService.GenerateQrCodeForLogin(ctx, tuya.LoginRequest{
 		AccessCode: accessCode,
 		Schema:     tuya.AuthenticationSchema,

@@ -19,8 +19,12 @@ type AuthService service
 // ,\"success\":true,
 // \"result\":\"1"}"
 func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (RefreshTokenResponse, error) {
-	// We don't want to refresh the token here.
-	req.DoNotRefreshToken = true
+	// This is an explicit caller-requested exchange. Sign it with the supplied
+	// refresh token and the session's current access token; do not refresh first.
+	req.AuthorizationContext = &AuthorizationContext{
+		AccessToken:  c.client.Tokens().AccessToken,
+		RefreshToken: req.RefreshToken,
+	}
 
 	response, err := c.client.EncryptedClient.Get(ctx, fmt.Sprintf("/v1.0/m/token/%s", req.RefreshToken), nil, &req)
 	if err != nil {

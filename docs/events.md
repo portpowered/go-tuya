@@ -40,3 +40,7 @@ It does not establish the provider's complete event catalog or guarantee that
 all accounts and devices publish each event. The caller should stop the queue
 when its listener lifetime ends and should handle callback concurrency in its
 own application.
+
+Queue connection and listener state belongs to the account's `Session`. Reuse
+the session's `MessageQueue` for that account and call `Session.Close` when its
+lifetime ends.
