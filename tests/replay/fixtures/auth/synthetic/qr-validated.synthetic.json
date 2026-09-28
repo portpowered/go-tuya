@@ -1,14 +1,43 @@
 {
-  "success": true,
-  "tid": "synthetic-transaction-validation",
-  "t": 1700000001000,
-  "result": {
-    "access_token": "synthetic-access-token",
-    "refresh_token": "synthetic-refresh-token",
-    "expire_time": 3600,
-    "terminal_id": "synthetic-terminal-01",
-    "uid": "synthetic-user-01",
-    "username": "synthetic-user",
-    "endpoint": "https://api.example.invalid"
+  "request": {
+    "method": "GET",
+    "origin": "https://login.example.invalid",
+    "path": "/v1.0/m/life/home-assistant/qrcode/tokens/synthetic-qr-code-001",
+    "query": {
+      "clientid": [
+        "synthetic-client-id"
+      ],
+      "usercode": [
+        "synthetic-user-code"
+      ]
+    },
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": {
+      "success": true,
+      "tid": "synthetic-transaction-validation",
+      "t": 1700000001000,
+      "result": {
+        "access_token": "synthetic-access-token",
+        "refresh_token": "synthetic-refresh-token",
+        "expire_time": 3600,
+        "terminal_id": "synthetic-terminal-01",
+        "uid": "synthetic-user-01",
+        "username": "synthetic-user",
+        "endpoint": "https://api.example.invalid"
+      }
+    }
   }
 }

@@ -1,17 +1,51 @@
 {
-  "success": true,
-  "t": 1700000004000,
-  "result": {
-    "category": "dj",
-    "dpStatusRelationDTOS": [
-      {
-        "dpCode": "switch_1",
-        "dpId": 1,
-        "statusCode": "bool",
-        "supportLocal": true,
-        "valueConvert": "bool",
-        "valueType": "bool"
+  "request": {
+    "method": "GET",
+    "origin": "https://api.example.invalid",
+    "path": "/v1.0/m/life/devices/synthetic-device-01/status",
+    "query": {},
+    "headers": {
+      "X-appKey": [
+        "synthetic-client-id"
+      ],
+      "X-requestId": [
+        "<nonempty>"
+      ],
+      "X-sign": [
+        "<nonempty>"
+      ],
+      "X-time": [
+        "<unix-millis>"
+      ],
+      "X-token": [
+        "synthetic-access-token"
+      ]
+    },
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": {
+      "success": true,
+      "t": 1700000004000,
+      "result": {
+        "category": "dj",
+        "dpStatusRelationDTOS": [
+          {
+            "dpCode": "switch_1",
+            "dpId": 1,
+            "statusCode": "bool",
+            "supportLocal": true,
+            "valueConvert": "bool",
+            "valueType": "bool"
+          }
+        ]
       }
-    ]
+    }
   }
 }

@@ -1,7 +1,8 @@
 # Device-sharing fixture provenance
 
-These response bodies are hand-authored synthetic examples for the current
-client's home, device-list, device-status, and API-error handling. They were
+These paired request and response exchanges are hand-authored synthetic
+examples for the current client's home, device-list, device-status, and
+API-error handling. They were
 not captured from Tuya or a Tuya account. `global-device-list.synthetic.json`
 uses the documented `GET /v1.0/devices` logical result shape to check the
 generated-model adapter. Its outer `success`/`t` envelope is synthetic and

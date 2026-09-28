@@ -1,8 +1,40 @@
 {
-  "success": true,
-  "tid": "synthetic-transaction-qr",
-  "t": 1700000000000,
-  "result": {
-    "qrcode": "synthetic-qr-code-001"
+  "request": {
+    "method": "POST",
+    "origin": "https://login.example.invalid",
+    "path": "/v1.0/m/life/home-assistant/qrcode/tokens",
+    "query": {
+      "clientid": [
+        "synthetic-client-id"
+      ],
+      "schema": [
+        "haauthorize"
+      ],
+      "usercode": [
+        "synthetic-user-code"
+      ]
+    },
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": {
+      "success": true,
+      "tid": "synthetic-transaction-qr",
+      "t": 1700000000000,
+      "result": {
+        "qrcode": "synthetic-qr-code-001"
+      }
+    }
   }
 }

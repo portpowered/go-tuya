@@ -37,8 +37,23 @@ func (key replayKey) String() string {
 
 type replayCase struct {
 	fixture  string
-	status   int
 	validate func(*http.Request) error
+}
+
+type fixtureExchange struct {
+	Request struct {
+		Method  string              `json:"method"`
+		Origin  string              `json:"origin"`
+		Path    string              `json:"path"`
+		Query   map[string][]string `json:"query"`
+		Headers map[string][]string `json:"headers"`
+		Body    string              `json:"body"`
+	} `json:"request"`
+	Response struct {
+		Status  int                 `json:"status"`
+		Headers map[string][]string `json:"headers"`
+		Body    json.RawMessage     `json:"body"`
+	} `json:"response"`
 }
 
 type fixtureTransport struct {
@@ -52,28 +67,123 @@ func (transport *fixtureTransport) RoundTrip(request *http.Request) (*http.Respo
 	if !ok {
 		return nil, fmt.Errorf("unexpected replay request: %s", key)
 	}
+	for _, seen := range transport.calls {
+		if seen == key {
+			return nil, fmt.Errorf("duplicate replay request: %s", key)
+		}
+	}
+	data, err := os.ReadFile(filepath.Join("fixtures", replay.fixture))
+	if err != nil {
+		return nil, fmt.Errorf("read replay fixture %q: %w", replay.fixture, err)
+	}
+	var exchange fixtureExchange
+	if err := json.Unmarshal(data, &exchange); err != nil {
+		return nil, fmt.Errorf("decode replay fixture %q: %w", replay.fixture, err)
+	}
+	if err := matchFixtureRequest(request, exchange); err != nil {
+		return nil, fmt.Errorf("replay request %s: %w", key, err)
+	}
 	if replay.validate != nil {
 		if err := replay.validate(request); err != nil {
 			return nil, fmt.Errorf("validate replay request %s: %w", key, err)
 		}
 	}
 
-	body, err := os.ReadFile(filepath.Join("fixtures", replay.fixture))
-	if err != nil {
-		return nil, fmt.Errorf("read replay fixture %q: %w", replay.fixture, err)
-	}
 	transport.calls = append(transport.calls, key)
-	status := replay.status
-	if status == 0 {
-		status = http.StatusOK
-	}
-
 	return &http.Response{
-		StatusCode: status,
-		Header:     http.Header{"Content-Type": []string{"application/json"}},
-		Body:       io.NopCloser(bytes.NewReader(body)),
+		StatusCode: exchange.Response.Status,
+		Header:     http.Header(exchange.Response.Headers),
+		Body:       io.NopCloser(bytes.NewReader(exchange.Response.Body)),
 		Request:    request,
 	}, nil
+}
+
+func matchFixtureRequest(request *http.Request, exchange fixtureExchange) error {
+	want := exchange.Request
+	if request.Method != want.Method || request.URL.Scheme+"://"+request.URL.Host != want.Origin || request.URL.EscapedPath() != want.Path {
+		return fmt.Errorf("method/origin/path = %s %s%s, want %s %s%s", request.Method, request.URL.Scheme+"://"+request.URL.Host, request.URL.EscapedPath(), want.Method, want.Origin, want.Path)
+	}
+	query := request.URL.Query()
+	if len(query) != len(want.Query) {
+		return fmt.Errorf("query keys = %v, want %v", query, want.Query)
+	}
+	for name, values := range want.Query {
+		got := query[name]
+		if len(got) != len(values) {
+			return fmt.Errorf("query %s = %v, want %v", name, got, values)
+		}
+		for i, value := range values {
+			if !matchFixtureValue(got[i], value) {
+				return fmt.Errorf("query %s[%d] = %q, want %q", name, i, got[i], value)
+			}
+		}
+	}
+	for name, values := range want.Headers {
+		got := request.Header.Values(name)
+		if len(got) != len(values) {
+			return fmt.Errorf("header %s = %v, want %v", name, got, values)
+		}
+		for i, value := range values {
+			if !matchFixtureValue(got[i], value) {
+				return fmt.Errorf("header %s[%d] = %q, want %q", name, i, got[i], value)
+			}
+		}
+	}
+	var body []byte
+	if request.Body != nil {
+		var err error
+		body, err = io.ReadAll(request.Body)
+		if err != nil {
+			return err
+		}
+		request.Body = io.NopCloser(bytes.NewReader(body))
+	}
+	if string(body) != want.Body {
+		return fmt.Errorf("request body = %q, want %q", body, want.Body)
+	}
+	return nil
+}
+
+func matchFixtureValue(got, want string) bool {
+	switch want {
+	case "<nonempty>":
+		return got != ""
+	case "<unix-millis>":
+		_, err := strconv.ParseInt(got, 10, 64)
+		return err == nil
+	case "<encrypted>":
+		data, err := base64.StdEncoding.DecodeString(got)
+		return err == nil && len(data) >= 12
+	default:
+		return got == want
+	}
+}
+
+func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
+	key := replayKey{method: http.MethodPost, path: "/v1.0/m/life/home-assistant/qrcode/tokens"}
+	transport := &fixtureTransport{cases: map[replayKey]replayCase{
+		key: {fixture: "auth/synthetic/qr-created.synthetic.json"},
+	}}
+	request := func(query string) *http.Request {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodPost, "https://login.example.invalid"+key.path+"?"+query, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		return req
+	}
+	bad := request("clientid=synthetic-client-id&schema=haauthorize&usercode=wrong")
+	if response, err := transport.RoundTrip(bad); err == nil || response != nil {
+		t.Fatalf("request mismatch returned response %v, error %v", response, err)
+	}
+	goodQuery := "clientid=synthetic-client-id&schema=haauthorize&usercode=synthetic-user-code"
+	if _, err := transport.RoundTrip(request(goodQuery)); err != nil {
+		t.Fatal(err)
+	}
+	if response, err := transport.RoundTrip(request(goodQuery)); err == nil || response != nil {
+		t.Fatalf("duplicate request returned response %v, error %v", response, err)
+	}
 }
 
 func replayClient(transport *fixtureTransport) *tuya.Session {

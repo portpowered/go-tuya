@@ -20,6 +20,11 @@ fixtures from `tests/replay/fixtures`. Those fixtures are synthetic examples of
 the current implementation; they are not Tuya captures and do not validate
 private provider schemas.
 
+Each HTTP fixture pairs an expected outbound request with its response. Replay
+checks the origin, path, query, relevant headers, and body before returning the
+response; encrypted fields use explicit format checks and decoded-value
+assertions. This synthetic check does not establish live provider behavior.
+
 The current non-generated statement result is 82.2% (1,302/1,583). The raw
 `go tool cover` total includes generated wire code, so it is not the release
 metric. Remaining low-coverage areas include MQTT retry and expiry branches

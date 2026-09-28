@@ -1,7 +1,41 @@
 {
-  "success": false,
-  "code": "1010",
-  "msg": "synthetic token rejected",
-  "t": 1700000005000,
-  "tid": "synthetic-transaction-error"
+  "request": {
+    "method": "GET",
+    "origin": "https://api.example.invalid",
+    "path": "/v1.0/m/life/users/homes",
+    "query": {},
+    "headers": {
+      "X-appKey": [
+        "synthetic-client-id"
+      ],
+      "X-requestId": [
+        "<nonempty>"
+      ],
+      "X-sign": [
+        "<nonempty>"
+      ],
+      "X-time": [
+        "<unix-millis>"
+      ],
+      "X-token": [
+        "synthetic-access-token"
+      ]
+    },
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": {
+      "success": false,
+      "code": "1010",
+      "msg": "synthetic token rejected",
+      "t": 1700000005000,
+      "tid": "synthetic-transaction-error"
+    }
+  }
 }

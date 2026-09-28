@@ -1,18 +1,52 @@
 {
-  "success": true,
-  "t": 1700000002000,
-  "result": [
-    {
-      "geoName": "Synthetic Region",
-      "groupId": 1,
-      "name": "Synthetic Test Home",
-      "ownerId": "synthetic-home-01",
-      "id": 1,
-      "lat": 0,
-      "lon": 0,
-      "background": "",
-      "status": true,
-      "uid": "synthetic-user-01"
+  "request": {
+    "method": "GET",
+    "origin": "https://api.example.invalid",
+    "path": "/v1.0/m/life/users/homes",
+    "query": {},
+    "headers": {
+      "X-appKey": [
+        "synthetic-client-id"
+      ],
+      "X-requestId": [
+        "<nonempty>"
+      ],
+      "X-sign": [
+        "<nonempty>"
+      ],
+      "X-time": [
+        "<unix-millis>"
+      ],
+      "X-token": [
+        "synthetic-access-token"
+      ]
+    },
+    "body": ""
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": {
+      "success": true,
+      "t": 1700000002000,
+      "result": [
+        {
+          "geoName": "Synthetic Region",
+          "groupId": 1,
+          "name": "Synthetic Test Home",
+          "ownerId": "synthetic-home-01",
+          "id": 1,
+          "lat": 0,
+          "lon": 0,
+          "background": "",
+          "status": true,
+          "uid": "synthetic-user-01"
+        }
+      ]
     }
-  ]
+  }
 }
