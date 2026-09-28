@@ -2,7 +2,7 @@
 
 [![Go version](https://img.shields.io/github/go-mod/go-version/portpowered/go-tuya)](go.mod)
 [![CI](https://github.com/portpowered/go-tuya/actions/workflows/go.yml/badge.svg)](https://github.com/portpowered/go-tuya/actions/workflows/go.yml)
-[![Coverage](https://codecov.io/gh/portpowered/go-tuya/branch/main/graph/badge.svg)](https://codecov.io/gh/portpowered/go-tuya)
+[![Coverage](https://img.shields.io/endpoint?url=https://portpowered.github.io/go-tuya/coverage.json)](https://portpowered.github.io/go-tuya/coverage.html)
 [![Release](https://img.shields.io/github/v/release/portpowered/go-tuya?display_name=tag)](https://github.com/portpowered/go-tuya/releases/latest)
 [![Go Reference](https://pkg.go.dev/badge/github.com/portpowered/go-tuya/tuya.svg)](https://pkg.go.dev/github.com/portpowered/go-tuya/tuya)
 [![License](https://img.shields.io/github/license/portpowered/go-tuya)](LICENSE)

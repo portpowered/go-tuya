@@ -39,6 +39,9 @@ jobs:
         run: |
           git ls-files --error-unmatch tuya/internal/wire/models.gen.go
           git diff --exit-code -- tuya/internal/wire/models.gen.go
+      - name: Test with coverage
+        if: github.event_name != 'pull_request'
+        run: go test -race -coverprofile=coverage.out ./...
       - name: Build Fumadocs site
         uses: portpowered/api-docs-website-github-action@v0.3.0
         with:
@@ -47,6 +50,30 @@ jobs:
           discover: false
           guides-directory: docs/guides
           output: site
+      - name: Generate coverage report and badge data
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          go tool cover -html=coverage.out -o site/coverage.html
+          coverage="$(go tool cover -func=coverage.out | awk '$1 == "total:" {print $3}')"
+          coverage="${coverage%\%}"
+          if awk -v value="$coverage" 'BEGIN {exit !(value >= 90)}'; then
+            color=brightgreen
+          elif awk -v value="$coverage" 'BEGIN {exit !(value >= 75)}'; then
+            color=yellow
+          else
+            color=red
+          fi
+          node - "$coverage" "$color" <<'JS'
+          const fs = require('node:fs');
+          const [coverage, color] = process.argv.slice(2);
+          fs.writeFileSync('site/coverage.json', `${JSON.stringify({
+            schemaVersion: 1,
+            label: 'coverage',
+            message: `${coverage}%`,
+            color,
+          }, null, 2)}\n`);
+          JS
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
