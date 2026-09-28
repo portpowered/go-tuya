@@ -52,8 +52,11 @@ unredacted test output. The live test is not run in pull-request CI.
 
 ## Evidence limits
 
-The repository has synthetic replay fixtures, but no captured provider responses
-or private account/device fixtures. Before describing a live response as captured
+The maintainer reports successful tests of the implemented API flows with their
+real Tuya account(s). Those tests were not documented with sanitized captures or
+route-by-route provenance. The repository therefore has no captured provider
+responses or private account/device fixtures, and the report cannot be replayed
+or independently inspected here. Before describing a live response as captured
 evidence, sanitize it, record its source and collection date in UTC in a
 neighboring provenance note, and keep it separate from synthetic examples.
 Remove tokens, cookies, personal data, account identifiers, and device

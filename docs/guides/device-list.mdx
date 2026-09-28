@@ -32,13 +32,15 @@ properties can include sensitive fields such as `LocalKey`, so avoid logging
 whole response values. The Tuya reference types `start_time` and `end_time` as
 `Long` timestamps, while this library's public request currently exposes those
 two fields as strings. Pass decimal timestamp strings when using them. The
-request goes through the library's custom encrypted parameter path, whose
-provider wire representation has not been verified.
+request goes through the library's custom encrypted parameter path. The
+maintainer reports successful real-account testing, but no sanitized exchange
+or route-level provenance records the exact wire representation.
 
 Consult the generated API reference for the documented logical query and
 result fields.
 
-This route match does not verify the library's Device Sharing request signing,
-encryption, or response behavior. The OpenAPI document intentionally omits
-those details. Other client operations using `/v1.0/m/...` are not covered by
-the route reference.
+This route match and the maintainer's account-test report do not provide a
+reviewable record of the library's Device Sharing request signing, encryption,
+or response behavior. The OpenAPI document intentionally omits those details.
+Other client operations using `/v1.0/m/...` are not covered by the route
+reference; see the [provider evidence review](../provider-evidence.md).

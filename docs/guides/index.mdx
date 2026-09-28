@@ -15,9 +15,12 @@ through its Device Sharing encrypted transport; the route documentation does
 not specify or verify that transport.
 
 The client's `/v1.0/m/...` routes and event, authentication, and RTC flows do
-not have matching provider wire specifications or sanitized captures. They
-remain unverified. The repository's authored guides explain the current Go
-implementation and identify their limits:
+not have matching provider wire specifications or sanitized captures. The
+maintainer reports that the implemented API flows worked with their real Tuya
+account(s), but the tests were not recorded with route-by-route provenance.
+These guides describe that report separately from the public wire references.
+The repository's authored guides explain the current Go implementation and
+identify its limits:
 
 - [Authentication and token handling](https://github.com/portpowered/go-tuya/blob/main/docs/authentication.md)
 - [Device queries and commands](https://github.com/portpowered/go-tuya/blob/main/docs/device-control.md)

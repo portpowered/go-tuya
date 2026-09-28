@@ -92,4 +92,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           VERSION: ${{ github.ref_name }}
-        run: gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes
+        run: |
+          gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes \
+            --notes "Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See https://github.com/$REPOSITORY/blob/$VERSION/docs/provider-evidence.md."

@@ -2,14 +2,22 @@
 
 ## Before the first release
 
-The first version tag remains gated on verifying the provider behavior described
-by the library. Follow the pre-release review in the template's
+The maintainer reports that the implemented API flows worked with their real
+Tuya account(s). Those tests were not documented with sanitized exchanges or
+route-by-route provenance, so the repository cannot independently reproduce
+or inspect them. The README and [provider evidence review](provider-evidence.md)
+record this limit. The checked-in provider schema covers the exact documented
+`GET /v1.0/devices` route; the `/v1.0/m/...` routes remain private routes without
+matching public wire specifications, despite the reported account-test success.
+Keep that distinction in release notes and customer documentation.
+
+Follow the pre-release review in the template's
 [`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/main/docs/releasing.md),
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
 [`template-checklist.md`](template-checklist.md) as a separate sign-off. Adding
-this workflow does not sign off checklist item 3 or any other open item; leave
-each item unchecked until its evidence is reviewed.
+this workflow does not sign off checklist item 3; keep it unchecked until a
+GitHub Release, Go proxy fetch, and live release-badge check have all succeeded.
 
 The module path is `github.com/portpowered/go-tuya`. The public client package
 is `github.com/portpowered/go-tuya/tuya`, so the release workflow compares

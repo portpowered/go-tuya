@@ -128,9 +128,15 @@ secret manager in deployed applications.
 
 The automated tests use `httptest` servers and hand-authored synthetic event
 messages. They validate this implementation's request handling and parsing; they
-are not real Tuya captures and do not establish that a live account or every
-device model behaves the same way. No private captures are checked in. See
-[test and fixture notes](docs/testing.md) and the operation guides for scope.
+are not real Tuya captures. The maintainer reports that the implemented API
+flows worked with their real Tuya account(s), but those tests were not recorded
+with sanitized exchanges or route-by-route provenance. The report cannot be
+independently reproduced or reviewed from this repository and does not establish
+behavior for every account or device model. No private captures are checked in.
+`GET /v1.0/devices` is the only exact route in the checked-in provider schema;
+the `/v1.0/m/...` routes are private routes without matching public wire
+specifications. See [test and fixture notes](docs/testing.md) and the
+[provider evidence review](docs/provider-evidence.md) for scope.
 
 Run the checks from the module root:
 

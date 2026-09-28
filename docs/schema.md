@@ -4,9 +4,12 @@
 Tuya's documented `GET /v1.0/devices` route. The path and query parameters are
 documented by Tuya; the result object fields and the sample record are recorded
 with optional fields because the reference does not define their requiredness
-or an exhaustive record shape. The route is used by `QueryDevices`, but this
-does not verify the library's Device Sharing signing, encryption, or response
-handling. The `/v1.0/m/...` routes remain outside the schema.
+or an exhaustive record shape. The route is used by `QueryDevices`. The
+maintainer reports successful real-account testing of the implemented flows,
+but there is no sanitized exchange or provenance record to review the Device
+Sharing signing, encryption, or response handling. The `/v1.0/m/...` routes
+remain outside the schema because no matching public wire specification or
+sanitized exchange is checked in.
 
 The internal Go wire models are generated from that file with
 [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) v2.8.0. From the
@@ -23,5 +26,5 @@ existing public device result. The Documentation workflow regenerates the
 models and fails if the checked-in output is stale. It also builds the
 Fumadocs site from this schema and `docs/guides/`. The existing public request
 keeps `StartTime` and `EndTime` as strings even though Tuya documents these
-parameters as `Long`; their representation inside the custom encrypted request
-has not been verified.
+parameters as `Long`; their exact representation inside the custom encrypted
+request is not documented by a sanitized exchange.

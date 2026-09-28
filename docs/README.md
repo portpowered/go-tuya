@@ -1,9 +1,10 @@
 # go-tuya documentation
 
 These guides describe operations implemented by the standalone Go package.
-The tests use synthetic requests and responses; they are not live provider
-captures. Read the root [README](../README.md) for the supported surface and
-install instructions.
+Offline tests use synthetic requests and responses; they are not live provider
+captures. The maintainer reports successful real-account tests, but they were
+not recorded with sanitized exchanges or route-by-route provenance. Read the
+root [README](../README.md) for the supported surface and install instructions.
 
 - [Authentication and token handling](authentication.md)
 - [Device queries and commands](device-control.md)

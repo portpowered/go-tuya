@@ -10,7 +10,10 @@ device.
 Authentication, HTTP request handling, message parsing, and selected device
 operations are exercised with `httptest` and hand-authored synthetic
 responses. These are tests of the implementation contract, not captured Tuya
-responses. No captured live payloads are included in this repository.
+responses. The maintainer reports successful tests of the implemented API
+flows with their real Tuya account(s), but those tests were not recorded with
+sanitized exchanges or route-by-route provenance. No captured live payloads are
+included in this repository.
 
 The client uses Tuya request signing and provider-specific request formats.
 Refer to the [Tuya Device Sharing SDK](https://github.com/tuya/tuya-device-sharing-sdk)
