@@ -11,7 +11,7 @@ and verification guides. Sign-off records below are specific to this library.
 
 ## Release and history sign-off
 
-- [x] Inspect the exported API and compile a separate consumer example. **Signed off:** reviewed the exported `tuya` API and compiled `examples/auth`, a separate module importing the library through a local replacement.
+- [x] Inspect the exported API and compile a separate consumer example. **Signed off:** reviewed the exported `tuya` API and compiled `examples/auth`; `go get github.com/portpowered/go-tuya@main`, `go mod tidy`, and `go test ./...` also passed in a separate temporary module against the rewritten remote history and latest schema/replay commit.
 - [x] Run `make lint` and `make check`. **Signed off:** both commands passed after the migration and schema changes; `make replay` also passed.
 - [x] Review the new tree for credentials and private captures. **Signed off:** removed the embedded partially redacted device response and token-printing examples; a filename-and-line-only credential-pattern scan found no remaining non-synthetic values. Tests use synthetic mock values; no capture directory or private capture is present.
 - [x] Replace `main` history and remove old tags that retain the old commits. **Signed off:** a new root commit replaced `main`; v1.0.8 through v1.0.10 were deleted. A remote ref check found only the rewritten `main`, and its CI run passed.
