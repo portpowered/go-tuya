@@ -51,9 +51,9 @@ After publication, verify the package independently with the released tag:
 mkdir module-check
 cd module-check
 go mod init example.com/tuya-module-check
-GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@v0.1.0
+GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@v0.2.0
 ```
 
 Then compile a consumer importing
-`github.com/portpowered/go-tuya/pkg/tuya`. Replace `v0.1.0` with the version that
-was released.
+`github.com/portpowered/go-tuya/pkg/tuya`. Replace `v0.2.0` with a later
+version when checking a subsequent release.
