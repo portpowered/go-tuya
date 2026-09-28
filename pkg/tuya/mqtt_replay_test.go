@@ -299,7 +299,9 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 	if err := replay.verifyConsumed(); err != nil {
 		t.Fatal(err)
 	}
-	if response,err:=httpReplay.RoundTrip(&http.Request{}); err==nil || response!=nil { t.Fatalf("duplicate HTTP config request returned %v, %v",response,err) }
+	if response, err := httpReplay.RoundTrip(&http.Request{}); err == nil || response != nil {
+		t.Fatalf("duplicate HTTP config request returned %v, %v", response, err)
+	}
 	// Negative checks prove that the transcript has no response/frame fallback.
 	replay.accept(mqttReplayFrame{Direction: "client", Action: "disconnect"})
 	if replay.err == nil {
