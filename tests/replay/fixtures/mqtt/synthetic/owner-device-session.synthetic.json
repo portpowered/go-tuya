@@ -1,0 +1,14 @@
+{
+  "provenance": "Hand-authored synthetic owner/device session; no broker or account capture",
+  "frames": [
+    {"direction":"client", "action":"connect", "topic":"ssl://mqtt.example.invalid:8883"},
+    {"direction":"client", "action":"subscribe", "topic":"general"},
+    {"direction":"client", "action":"subscribe", "topic":"cloud/device/device-1/in/channel/sta"},
+    {"direction":"server", "action":"message", "topic":"general", "payload":"{\"protocol\":4,\"data\":{\"devId\":\"device-1\",\"status\":[]}}"},
+    {"direction":"callback", "action":"owner-event", "topic":"general", "payload":"device-1"},
+    {"direction":"server", "action":"message", "topic":"cloud/device/device-1/in/channel/sta", "payload":"{\"protocol\":4,\"data\":{\"devId\":\"device-1\",\"status\":[]}}"},
+    {"direction":"callback", "action":"device-event", "topic":"device-1", "payload":"device-1"},
+    {"direction":"client", "action":"unsubscribe", "topic":"cloud/device/device-1/in/channel/sta"},
+    {"direction":"client", "action":"disconnect"}
+  ]
+}

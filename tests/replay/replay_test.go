@@ -19,7 +19,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,12 +44,14 @@ type replayCase struct {
 
 type fixtureExchange struct {
 	Request struct {
-		Method  string              `json:"method"`
-		Origin  string              `json:"origin"`
-		Path    string              `json:"path"`
-		Query   map[string][]string `json:"query"`
-		Headers map[string][]string `json:"headers"`
-		Body    string              `json:"body"`
+		Method     string              `json:"method"`
+		Origin     string              `json:"origin"`
+		Path       string              `json:"path"`
+		Query      map[string][]string `json:"query"`
+		Headers    map[string][]string `json:"headers"`
+		Body       string              `json:"body"`
+		PlainQuery map[string]any      `json:"plain_query,omitempty"`
+		PlainBody  map[string]any      `json:"plain_body,omitempty"`
 	} `json:"request"`
 	Response struct {
 		Status  int                 `json:"status"`
@@ -59,6 +63,13 @@ type fixtureExchange struct {
 type fixtureTransport struct {
 	cases map[replayKey]replayCase
 	calls []replayKey
+}
+
+func (transport *fixtureTransport) verifyConsumed() error {
+	if len(transport.calls) != len(transport.cases) {
+		return fmt.Errorf("consumed %d of %d replay exchanges", len(transport.calls), len(transport.cases))
+	}
+	return nil
 }
 
 func (transport *fixtureTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -139,24 +150,114 @@ func matchFixtureRequest(request *http.Request, exchange fixtureExchange) error 
 		request.Body = io.NopCloser(bytes.NewReader(body))
 	}
 	if string(body) != want.Body {
-		return fmt.Errorf("request body = %q, want %q", body, want.Body)
+		if want.Body != "<encrypted-json>" {
+			return fmt.Errorf("request body = %q, want %q", body, want.Body)
+		}
+		var envelope struct {
+			Encdata string `json:"encdata"`
+		}
+		if err := json.Unmarshal(body, &envelope); err != nil || envelope.Encdata == "" {
+			return fmt.Errorf("request body is not an encrypted JSON envelope: %v", err)
+		}
+		plain, err := decryptEncdata(envelope.Encdata, request.Header.Get("X-requestId"), "synthetic-refresh-token")
+		if err != nil || !matchJSONMeaning(plain, want.PlainBody) {
+			return fmt.Errorf("encrypted body = %#v, want %#v: %v", plain, want.PlainBody, err)
+		}
+	}
+	if expected := want.Query["encdata"]; len(expected) == 1 && expected[0] == "<encrypted>" {
+		plain, err := decryptEncryptedQuery(request, "synthetic-refresh-token")
+		if err != nil || (want.PlainQuery != nil && !matchJSONMeaning(plain, want.PlainQuery)) {
+			return fmt.Errorf("encrypted query = %#v, want %#v: %v", plain, want.PlainQuery, err)
+		}
+	}
+	if expected := want.Headers["X-sign"]; len(expected) == 1 && expected[0] == "<tuya-signature>" {
+		if err := verifyTuyaSignature(request, body, "synthetic-refresh-token"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
+func matchJSONMeaning(got, want any) bool {
+	switch expected := want.(type) {
+	case string:
+		if actual, ok := got.(string); ok {
+			return matchFixtureValue(actual, expected)
+		}
+		return false
+	case map[string]any:
+		actual, ok := got.(map[string]any)
+		if !ok || len(actual) != len(expected) {
+			return false
+		}
+		for key, value := range expected {
+			if !matchJSONMeaning(actual[key], value) {
+				return false
+			}
+		}
+		return true
+	case []any:
+		actual, ok := got.([]any)
+		if !ok || len(actual) != len(expected) {
+			return false
+		}
+		for index, value := range expected {
+			if !matchJSONMeaning(actual[index], value) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(got, want)
+	}
+}
+
+var uuidPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+var hexSignaturePattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
 func matchFixtureValue(got, want string) bool {
 	switch want {
-	case "<nonempty>":
-		return got != ""
+	case "<uuid>":
+		return uuidPattern.MatchString(got)
+	case "<tuya-signature>":
+		return hexSignaturePattern.MatchString(got)
 	case "<unix-millis>":
-		_, err := strconv.ParseInt(got, 10, 64)
-		return err == nil
+		stamp, err := strconv.ParseInt(got, 10, 64)
+		return err == nil && stamp > 0 && time.Since(time.UnixMilli(stamp)) < 5*time.Minute && time.Until(time.UnixMilli(stamp)) < 5*time.Minute
 	case "<encrypted>":
 		data, err := base64.StdEncoding.DecodeString(got)
-		return err == nil && len(data) >= 12
+		return err == nil && len(data) > 12
 	default:
 		return got == want
 	}
+}
+
+func verifyTuyaSignature(request *http.Request, body []byte, refreshToken string) error {
+	requestID := request.Header.Get("X-requestId")
+	hash := md5.Sum([]byte(requestID + refreshToken))
+	hashKey := hex.EncodeToString(hash[:])
+	var signedHeaders []string
+	for _, name := range []string{"X-appKey", "X-requestId", "X-sid", "X-time", "X-token"} {
+		if value := request.Header.Get(name); value != "" {
+			signedHeaders = append(signedHeaders, name+"="+value)
+		}
+	}
+	message := strings.Join(signedHeaders, "||") + request.URL.Query().Get("encdata")
+	if len(body) > 0 {
+		var envelope struct {
+			Encdata string `json:"encdata"`
+		}
+		if err := json.Unmarshal(body, &envelope); err != nil {
+			return err
+		}
+		message += envelope.Encdata
+	}
+	mac := hmac.New(sha256.New, []byte(hashKey))
+	_, _ = mac.Write([]byte(message))
+	if got, want := request.Header.Get("X-sign"), hex.EncodeToString(mac.Sum(nil)); got != want {
+		return fmt.Errorf("X-sign does not authenticate request headers and encrypted data")
+	}
+	return nil
 }
 
 func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
@@ -178,7 +279,31 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 		t.Fatalf("request mismatch returned response %v, error %v", response, err)
 	}
 	goodQuery := "clientid=synthetic-client-id&schema=haauthorize&usercode=synthetic-user-code"
+	for _, mutation := range []struct {
+		name string
+		edit func(*http.Request)
+	}{
+		{"origin", func(r *http.Request) { r.URL.Host = "other.example.invalid" }},
+		{"escaped path", func(r *http.Request) { r.URL.RawPath = "/v1.0/m/life/home-assistant/qrcode/%74okens" }},
+		{"header", func(r *http.Request) { r.Header.Del("Content-Type") }},
+		{"body", func(r *http.Request) { r.Body = io.NopCloser(strings.NewReader(`{}`)) }},
+		{"unexpected call", func(r *http.Request) { r.URL.Path = "/v1.0/unknown" }},
+	} {
+		t.Run(mutation.name, func(t *testing.T) {
+			candidate := request(goodQuery)
+			mutation.edit(candidate)
+			if response, err := transport.RoundTrip(candidate); err == nil || response != nil {
+				t.Fatalf("mismatched request returned response %v, error %v", response, err)
+			}
+		})
+	}
+	if err := transport.verifyConsumed(); err == nil {
+		t.Fatal("unconsumed exchange was accepted")
+	}
 	if _, err := transport.RoundTrip(request(goodQuery)); err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.verifyConsumed(); err != nil {
 		t.Fatal(err)
 	}
 	if response, err := transport.RoundTrip(request(goodQuery)); err == nil || response != nil {
@@ -199,7 +324,7 @@ func replayClient(transport *fixtureTransport) *tuya.Session {
 	return client.NewSession(tuya.Tokens{})
 }
 
-func authenticatedReplayClient(transport *fixtureTransport) *tuya.Session {
+func authenticatedReplayClient(transport http.RoundTripper) *tuya.Session {
 	client, err := tuya.NewClient(
 		tuya.WithHTTPTransport(transport),
 		tuya.WithClientID("synthetic-client-id"),
@@ -228,6 +353,9 @@ func assertReplayCalls(t *testing.T, transport *fixtureTransport, want ...replay
 		}
 		t.Fatalf("replay requests = %v, want %v", got, wantStrings)
 	}
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func requireAuthRequest(request *http.Request, method, path string, query url.Values) error {
@@ -249,7 +377,10 @@ func requireAuthRequest(request *http.Request, method, path string, query url.Va
 }
 
 func decryptEncryptedQuery(request *http.Request, refreshToken string) (map[string]any, error) {
-	encoded := request.URL.Query().Get("encdata")
+	return decryptEncdata(request.URL.Query().Get("encdata"), request.Header.Get("X-requestId"), refreshToken)
+}
+
+func decryptEncdata(encoded, requestID, refreshToken string) (map[string]any, error) {
 	cipherData, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("decode encdata: %w", err)
@@ -258,7 +389,6 @@ func decryptEncryptedQuery(request *http.Request, refreshToken string) (map[stri
 		return nil, fmt.Errorf("encdata has %d bytes, want at least 12", len(cipherData))
 	}
 
-	requestID := request.Header.Get("X-requestId")
 	hash := md5.Sum([]byte(requestID + refreshToken))
 	hashKey := hex.EncodeToString(hash[:])
 	mac := hmac.New(sha256.New, []byte(requestID))

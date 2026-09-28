@@ -9,10 +9,10 @@
         "synthetic-client-id"
       ],
       "X-requestId": [
-        "<nonempty>"
+        "<uuid>"
       ],
       "X-sign": [
-        "<nonempty>"
+        "<tuya-signature>"
       ],
       "X-time": [
         "<unix-millis>"

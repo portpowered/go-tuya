@@ -1,0 +1,980 @@
+[
+  {
+    "operation_id": "getDeviceDetails",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "id": "device-1",
+          "name": "Desk lamp",
+          "category": "dj"
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "getDevicesByUser",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/users/user-1/devices",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": [
+          {
+            "id": "device-1",
+            "name": "Desk lamp",
+            "category": "dj"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation_id": "updateDeviceFunctionName",
+    "request": {
+      "method": "PUT",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/functions/switch",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "name": "Power"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "getDeviceLogs",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/logs",
+      "query": {
+        "encdata": [
+          "<encrypted>"
+        ]
+      },
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "",
+      "plain_query": {
+        "type": "report",
+        "start_time": 0,
+        "end_time": 0
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "logs": [],
+          "has_next": false
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "resetDeviceFactory",
+    "request": {
+      "method": "PUT",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/reset-factory",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "getSubDevices",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/sub-devices",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": []
+      }
+    }
+  },
+  {
+    "operation_id": "getFactoryInfos",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/factory-infos",
+      "query": {
+        "encdata": [
+          "<encrypted>"
+        ]
+      },
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "",
+      "plain_query": {
+        "device_ids": "device-1"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": []
+      }
+    }
+  },
+  {
+    "operation_id": "addDeviceUser",
+    "request": {
+      "method": "POST",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/user",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "nick_name": "Guest",
+        "sex": 0
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": "user-2"
+      }
+    },
+    "response_transform": "encrypted-string-result"
+  },
+  {
+    "operation_id": "updateDeviceUser",
+    "request": {
+      "method": "PUT",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/users/user-2",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "nick_name": "Guest",
+        "sex": 0
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "getDeviceUser",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/users/user-2",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "user_id": "user-2",
+          "nick_name": "Guest"
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "listDeviceUsers",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/users",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": [
+          {
+            "user_id": "user-2",
+            "nick_name": "Guest"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation_id": "deleteDeviceUser",
+    "request": {
+      "method": "DELETE",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/users/user-2",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "updateMultiOutletName",
+    "request": {
+      "method": "PUT",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/multiple-name",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "identifier": "outlet-1",
+        "name": "Desk"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "listMultiOutletNames",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1/multiple-names",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": [
+          {
+            "identifier": "outlet-1",
+            "name": "Desk"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "operation_id": "updateDeviceName",
+    "request": {
+      "method": "PUT",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "name": "Desk lamp"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "sendDeviceCommands",
+    "request": {
+      "method": "POST",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.1/m/thing/device-1/commands",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "commands": [
+          {
+            "code": "switch",
+            "value": true
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "queryDeviceSpecification",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.1/m/life/device-1/specifications",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {}
+      }
+    }
+  },
+  {
+    "operation_id": "refreshAccessToken",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/token/synthetic-refresh-token",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "expireTime": 7200,
+          "uid": "synthetic-user-id",
+          "accessToken": "synthetic-rotated-access",
+          "refreshToken": "synthetic-rotated-refresh"
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "getMessageQueueConfig",
+    "request": {
+      "method": "POST",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/ha/access/config",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "linkId": "<uuid>"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "url": "ssl://mqtt.example.invalid:8883",
+          "clientId": "synthetic-mqtt-client",
+          "username": "synthetic-user",
+          "password": "synthetic-password",
+          "expireTime": 7200,
+          "topic": {
+            "ownerId": {
+              "sub": "cloud/owner/in/channel"
+            },
+            "devId": {
+              "sub": "cloud/device/{devId}/in/channel"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "startRTCSession",
+    "request": {
+      "method": "POST",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/ipc/device-1/webrtc/session",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "<encrypted-json>",
+      "plain_body": {
+        "sdp": "v=0 synthetic offer",
+        "type": "offer"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "session_id": "session-1",
+          "sdp": "v=0 synthetic answer"
+        }
+      }
+    }
+  },
+  {
+    "operation_id": "stopRTCSession",
+    "request": {
+      "method": "DELETE",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/ipc/device-1/webrtc/session/session-1",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  },
+  {
+    "operation_id": "deleteDevice",
+    "request": {
+      "method": "DELETE",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/devices/device-1",
+      "query": {},
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": true
+      }
+    }
+  }
+]

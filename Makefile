@@ -27,6 +27,7 @@ fmt:
 
 replay:
 	$(GO) test -race -coverpkg=./pkg/tuya -cover ./tests/replay
+	$(GO) test -race -run TestSyntheticMQTTPairedTranscript ./pkg/tuya
 
 coverage:
 	$(GO) test -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...

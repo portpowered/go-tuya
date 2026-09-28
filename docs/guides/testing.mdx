@@ -20,12 +20,16 @@ fixtures from `tests/replay/fixtures`. Those fixtures are synthetic examples of
 the current implementation; they are not Tuya captures and do not validate
 private provider schemas.
 
-Each HTTP fixture pairs an expected outbound request with its response. Replay
-checks the origin, path, query, relevant headers, and body before returning the
-response; encrypted fields use explicit format checks and decoded-value
-assertions. This synthetic check does not establish live provider behavior.
+All 28 schema HTTP operations have stored synthetic request/response pairs.
+Replay checks the method, origin, escaped path, query, relevant headers, and
+body before returning the paired response. Encrypted values are decrypted and
+compared with fixture meanings; signatures are recomputed. An ordered MQTT
+transcript checks connect, owner/device subscriptions, incoming events,
+callbacks, unsubscribe, and disconnect. Both transports reject unexpected or
+duplicate exchanges and require every expected exchange to be consumed. These
+synthetic checks do not establish live provider behavior.
 
-The current non-generated statement result is 82.2% (1,302/1,583). The raw
+The current non-generated statement result is 82.4% (1,304/1,583). The raw
 `go tool cover` total includes generated wire code, so it is not the release
 metric. Remaining low-coverage areas include MQTT retry and expiry branches
 (`runMQTTLoop` 57.7%, `connectMQTT` 69.0%) and unimplemented public placeholders
