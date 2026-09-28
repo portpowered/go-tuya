@@ -21,6 +21,7 @@ and verification guides. Sign-off records below are specific to this library.
 - [x] Run `make lint` and `make check`. **Signed off:** both commands passed after the migration and schema changes; `make replay` also passed.
 - [x] Review the new tree for credentials and private captures. **Signed off:** removed the embedded partially redacted device response and token-printing examples; a filename-and-line-only credential-pattern scan found no remaining non-synthetic values. Tests use synthetic mock values; no capture directory or private capture is present.
 - [x] Replace `main` history and remove old tags that retain the old commits. **Signed off:** a new root commit replaced `main`; v1.0.8 through v1.0.10 were deleted. A remote ref check found only the rewritten `main`, and its CI run passed. GitHub's cached views of old commit IDs require a separate Support request.
+- [x] Publish the `pkg/tuya` migration as `v0.2.0`. **Signed off:** CI and documentation passed on `63b6160`; the tag's release workflow passed the compatibility, build, race, vet, replay, and public Go proxy consumer checks before publishing the GitHub Release. The published coverage badge reports 81.4%, and the versioned Go Reference page for `pkg/tuya` is available.
 
-Unfinished items remain unchecked until verified. This file is a review record,
-not a claim that incomplete checklist items are complete.
+Checklist items 1–11 are signed off for the published library. Cached GitHub
+views of old commit IDs still require the separate Support request recorded above.
