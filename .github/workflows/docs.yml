@@ -57,7 +57,7 @@ jobs:
           discover: false
           guides-directory: docs/guides
           output: site
-      - name: Check rendered guide links
+      - name: Check rendered site links
         run: python3 tools/check_site_links.py site
       - name: Generate coverage report and badge data
         if: github.event_name != 'pull_request'

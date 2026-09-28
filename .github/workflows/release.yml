@@ -25,6 +25,13 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Verify generated wire artifacts on the tag
+        run: |
+          go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
+          go run ./tools/wireroutes -check
+          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go pkg/tuya/internal/wire/mqtt.gen.go
+      - name: Check non-generated coverage on the tag
+        run: make coverage
       - name: Check release module configuration
         run: test "$(go list -m)" = "$PUBLIC_MODULE"
       - name: Check public API compatibility
@@ -94,4 +101,4 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes \
-            --notes "Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See https://github.com/$REPOSITORY/blob/$VERSION/docs/provider-evidence.md."
+            --notes "Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See [provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)."
