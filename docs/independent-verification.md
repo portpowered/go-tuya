@@ -1,5 +1,52 @@
 # Independent standards verification: go-tuya
 
+## Full 15-item re-review at `v0.3.3`
+
+Reviewer: independent Codex reviewer, not an implementer of the Tuya code.
+The reviewed tag `v0.3.3` resolves to
+`2b598febb4f656e407e0f6a525c8633063def27b`. Relative to the prior
+item-15 review commit `0364688`, its only change formats
+`pkg/tuya/mqtt_replay_test.go`; no behavior, schema, fixture, or site source
+changed. The previous `v0.3.2` tag at `0364688` passed Release
+[`36495543940`](https://github.com/portpowered/go-tuya/actions/runs/36495543940)
+and Documentation but failed main CI
+[`36495455240`](https://github.com/portpowered/go-tuya/actions/runs/36495455240)
+because that test was not gofmt-formatted. At `2b598fe`, main CI
+[`36495828460`](https://github.com/portpowered/go-tuya/actions/runs/36495828460),
+Documentation [`36495828389`](https://github.com/portpowered/go-tuya/actions/runs/36495828389),
+and exact-tag Release [`36495952279`](https://github.com/portpowered/go-tuya/actions/runs/36495952279)
+passed. The release verify job passed generated-wire drift, coverage,
+compatibility, build, race, vet, paired replay, and a separate consumer
+fetching `v0.3.3` through the public Go proxy. I reran `make lint`, `make
+check`, and `make replay` locally; all passed, and `gofmt -l` is empty.
+
+| Standard | Final-commit verdict | Independent evidence |
+| --- | --- | --- |
+| 1. Standalone | Verified | Package, examples, README, and site are provider-focused; no consuming-application adapter was added since the prior inventory below. |
+| 2. Operations and errors | Verified | Exported API examples, authentication, operation, error, transport, and provider-evidence guides remain consistent. Synthetic replay is labeled separately from undocumented maintainer account testing. |
+| 3. Badges | Verified | All seven README badges still point to this repository's live reports or package documentation. The `v0.3.3` versioned Go Reference page returned HTTP 200 and contains the `pkg/tuya` API. |
+| 4. Generated wire surface | Verified | The 28 HTTP operations, three MQTT channel templates, generated models/descriptors, call-site inventory, and negative route/channel tests are detailed below. Exact-tag generation/drift and inventory gates passed again in `v0.3.3` Release. |
+| 5. Offline checks and provenance | Verified | Local lint, build/race/check, replay, and exact-tag checks passed. HTTP and MQTT pairs are explicitly synthetic; no private captures were introduced. |
+| 6. Coverage | Verified | Exact-tag coverage gate passed the 80% non-generated floor; the prior direct measurement was 82.6% (1,308/1,583). Generated exclusions and low-coverage branches remain documented. |
+| 7. Package boundaries | Verified | Public import is `pkg/tuya`, private generated wire is `pkg/tuya/internal/wire`, and the exact-tag public-proxy job compiled a separate `v0.3.3` consumer. |
+| 8. Options | Verified | `NewClient(...Option)` and tests cover endpoint, HTTP, MQTT, RTC, region, client ID, validation, and conflicting HTTP options. No account token is reusable client configuration. |
+| 9. Session state | Verified | `Session` owns tokens and queue/RTC lifecycle; `MessageQueue` exposes initial and later errors, deterministic stop, and serial callback pressure. Race-enabled lifecycle tests passed. |
+| 10. Injectable network edges | Verified | HTTP transport/client, MQTT factory, and RTC signaling seams are exercised, including the actual MQTT `Connect` path in paired replay. |
+| 11. Explicit credentials | Verified | Refresh returns tokens without mutating session state; callers read/set the token snapshot explicitly. Synthetic tests cover rotation. |
+| 12. MDX guides | Verified | Nine customer guides remain under `docs/guides/*.mdx` and link generated HTTP/MQTT references. The final-commit Documentation build and rendered-site link checker passed. |
+| 13. Concise published copy | Verified | Prior 46-page rendered copy audit below remains applicable because site sources did not change. The published `v0.3.3` notes link the live provider-evidence guide and `v0.3.2...v0.3.3` changelog, with the undocumented-account caveat. |
+| 14. Independent verification | **Verified** | I independently inspected all 15 items at the final tag, reran affected checks, verified CI/Documentation/Release and the public consumer, and checked the published release, Pages guide, and versioned Go Reference. Earlier format and MQTT replay findings were corrected and rechecked. No finding remains open. |
+| 15. Paired replay | Verified | All 28 HTTP operations have consumed request/response pairs; the MQTT transcript runs real queue startup through paired HTTP config, MQTT factory/`Connect`, subscriptions, events, callbacks, unsubscribe, and disconnect. Strict negative and exhaustion tests passed again at the formatted tag. See [paired-replay review](paired-replay-review.md). |
+
+The [published `v0.3.3` release](https://github.com/portpowered/go-tuya/releases/tag/v0.3.3),
+[provider-evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/),
+[versioned Go Reference](https://pkg.go.dev/github.com/portpowered/go-tuya@v0.3.3/pkg/tuya),
+and public proxy version endpoint returned HTTP 200. The Go Reference page
+contains `NewClient` and `MessageQueue` from the exported `pkg/tuya` API.
+**All 15 items are verified at `2b598fe`; item 14 is signed off.** The
+commit that adds this final report and checklist signoff is documentation-only
+relative to the tag and is recorded in Git history.
+
 ## Renewed review at `efde7aef0988ef3a068cf383aaca29e318bece0c`
 
 The prior itemized table below is the historical 14-item review for

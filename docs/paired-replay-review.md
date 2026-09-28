@@ -118,3 +118,20 @@ the published `v0.3.1` exact-tag workflow predates the new replay suite.
 The next tagged release must run the current generation, route/channel,
 coverage, replay, race, compatibility, public-consumer and documentation
 gates, followed by a full 15-item independent review at that final commit.
+
+## Exact-tag recheck at `v0.3.3`
+
+`v0.3.3` resolves to `2b598febb4f656e407e0f6a525c8633063def27b`.
+The only code change after the item-15 review commit `0364688` was gofmt
+formatting in `mqtt_replay_test.go`; all fixture, matcher, and MQTT startup
+behavior is identical. The preceding `v0.3.2` tag passed Release but failed
+main CI formatting. At `v0.3.3`, main CI
+[`36495828460`](https://github.com/portpowered/go-tuya/actions/runs/36495828460),
+Documentation [`36495828389`](https://github.com/portpowered/go-tuya/actions/runs/36495828389),
+and exact-tag Release [`36495952279`](https://github.com/portpowered/go-tuya/actions/runs/36495952279)
+all passed. The release replay step reran the paired HTTP and MQTT tests;
+race, schema drift, route/channel, coverage, and public-proxy consumer gates
+also passed. I reran `make lint`, `make check`, and `make replay` locally at
+the formatted commit. **Item 15 remains verified.** The full
+[15-item independent re-review](independent-verification.md) closes renewed
+item 14 at this tag.
