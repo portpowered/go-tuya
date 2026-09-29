@@ -12,6 +12,8 @@ import (
 // TestIntegration_DeviceManagementWorkflow tests the complete device management workflow
 // This opt-in test requires real Tuya credentials and makes live cloud requests.
 func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
+	t.Parallel()
+
 	// Check required environment variables
 	requiredEnvVars := []string{
 		"TUYA_AUTH_TOKEN",
@@ -47,6 +49,8 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 
 	// Test 1: Query Homes
 	t.Run("QueryHomes", func(t *testing.T) {
+		t.Parallel()
+
 		homes, err := client.HomeService.QueryHomes(ctx, QueryHomesRequest{})
 		if err != nil {
 			t.Fatalf("Failed to query homes: %v", err)
@@ -76,6 +80,8 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 
 	// Test 2: Query Devices by Home
 	t.Run("QueryDevicesByHome", func(t *testing.T) {
+		t.Parallel()
+
 		devices, err := client.DevicesService.QueryDevicesByHome(ctx, QueryDevicesByHomeRequest{
 			HomeID: homeID,
 		})
@@ -105,6 +111,8 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 	deviceID := devices.Results[0].ID
 
 	t.Run("QueryDeviceStatus", func(t *testing.T) {
+		t.Parallel()
+
 		deviceStatus, err := client.DevicesService.QueryDeviceStatus(ctx, QueryDeviceStatusRequest{
 			DeviceID: deviceID,
 		})

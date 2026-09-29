@@ -20,13 +20,14 @@ type AuthService service
 // "sign\":\"1231\",
 // \"tid\":\"1231\"
 // ,\"success\":true,
-// \"result\":\"1"}"
+// \"result\":\"1"}".
 func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest) (RefreshTokenResponse, error) {
 	// This is an explicit caller-requested exchange. Sign it with the supplied
 	// refresh token and the session's current access token; do not refresh first.
 	req.AuthorizationContext = &AuthorizationContext{
 		AccessToken:  c.client.Tokens().AccessToken,
 		RefreshToken: req.RefreshToken,
+		ExpireTime:   0,
 	}
 
 	response, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationRefreshAccessToken(), []any{req.RefreshToken}, nil, nil, &req)
@@ -38,9 +39,11 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 	if err != nil {
 		return RefreshTokenResponse{}, clientError(ErrorProtocol, fmt.Errorf("failed to decode refresh response: %w", err))
 	}
+
 	if dereference(wireResponse.Success) && wireResponse.Result != nil {
 		timestamp := dereference(wireResponse.T)
 		expirySeconds := dereference(wireResponse.Result.ExpireTime)
+
 		return RefreshTokenResponse{
 			AccessToken:  dereference(wireResponse.Result.AccessToken),
 			RefreshToken: dereference(wireResponse.Result.RefreshToken),
@@ -52,21 +55,23 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 			T:          timestamp,
 		}, nil
 	}
-	return RefreshTokenResponse{}, clientError(ErrorProvider, fmt.Errorf("failed to refresh token: %+v", response))
+
+	return RefreshTokenResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errRefreshTokenFailure, response))
 }
 
-// RefreshTokenRequest represents a request to refresh an access token
+// RefreshTokenRequest represents a request to refresh an access token.
 type RefreshTokenRequest struct {
 	Request
+
 	RefreshToken string `json:"refresh_token"`
 }
 
-// GetRequest returns the underlying Request for the RefreshTokenRequest
+// GetRequest returns the underlying Request for the RefreshTokenRequest.
 func (r *RefreshTokenRequest) GetRequest() Request {
 	return r.Request
 }
 
-// RefreshTokenResponse represents the response from a token refresh request
+// RefreshTokenResponse represents the response from a token refresh request.
 type RefreshTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -76,12 +81,13 @@ type RefreshTokenResponse struct {
 	T          int64  `json:"t"`
 }
 
-// GenerateQrCodeForLogin generates a QR code for login authentication
+// GenerateQrCodeForLogin generates a QR code for login authentication.
 func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
 	schema := req.Schema
 	if schema == "" {
 		schema = AuthenticationSchema
 	}
+
 	query, err := wireQueryValues(wire.GenerateLoginQRCodeParams{
 		Clientid: c.client.ClientID,
 		Usercode: req.AccessCode,
@@ -90,12 +96,16 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
+
 	endpoint := c.client.AuthenticationURL + wire.RouteGenerateLoginQRCode + "?" + query.Encode()
+
 	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, endpoint, nil)
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorInvalidOperation, err)
 	}
+
 	httpRequest.Header.Set("Content-Type", "application/json")
+
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorTransport, err)
@@ -104,15 +114,18 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	defer func() {
 		_ = response.Body.Close()
 	}()
+
 	var loginResponse wire.QRCodeEnvelope
+
 	err = json.NewDecoder(response.Body).Decode(&loginResponse)
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
 
 	if !dereference(loginResponse.Success) {
-		return LoginResponse{}, clientError(ErrorProvider, fmt.Errorf("login failed: %+v", loginResponse))
+		return LoginResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errLoginFailure, loginResponse))
 	}
+
 	var qrCode string
 	if loginResponse.Result != nil {
 		qrCode = dereference(loginResponse.Result.Qrcode)
@@ -126,7 +139,7 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	// See: https://github.com/home-assistant/core/blob/dev/homeassistant/components/tuya/config_flow.py#L48
 	return LoginResponse{
 		Code:            qrCode,
-		QrFormattedCode: fmt.Sprintf("tuyaSmart--qrLogin?token=%s", qrCode),
+		QrFormattedCode: "tuyaSmart--qrLogin?token=" + qrCode,
 	}, nil
 }
 
@@ -145,13 +158,17 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
+
 	path := fmt.Sprintf(wire.RouteValidateLoginCode, url.PathEscape(req.LoginCode))
 	endpoint := c.client.AuthenticationURL + path + "?" + query.Encode()
+
 	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, endpoint, nil)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorInvalidOperation, err)
 	}
+
 	httpRequest.Header.Set("Content-Type", "application/json")
+
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorTransport, err)
@@ -160,14 +177,16 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 	defer func() {
 		_ = response.Body.Close()
 	}()
+
 	var validateLoginCodeResponse wire.LoginCodeEnvelope
+
 	err = json.NewDecoder(response.Body).Decode(&validateLoginCodeResponse)
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
 
 	if !dereference(validateLoginCodeResponse.Success) || validateLoginCodeResponse.Result == nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorProvider, fmt.Errorf("validate login code failed: %+v", validateLoginCodeResponse))
+		return ValidateLoginCodeResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errLoginCodeValidationFailure, validateLoginCodeResponse))
 	}
 
 	return ValidateLoginCodeResponse{

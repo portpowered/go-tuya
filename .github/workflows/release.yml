@@ -25,6 +25,12 @@ jobs:
         with:
           go-version: '1.25.0'
           cache: true
+      - name: Lint (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          only-new-issues: false
+          args: --timeout=5m
       - name: Verify generated wire artifacts on the tag
         run: |
           go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml

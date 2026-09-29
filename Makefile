@@ -1,4 +1,6 @@
 GO ?= go
+GOLANGCI_LINT_VERSION ?= v2.14.0
+GOLANGCI_LINT ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 export GOWORK := off
 
 .DEFAULT_GOAL := check
@@ -21,6 +23,7 @@ test:
 
 lint:
 	$(GO) vet ./...
+	$(GOLANGCI_LINT) run --config .golangci.yml --timeout=5m ./...
 
 fmt:
 	$(GO) fmt ./...

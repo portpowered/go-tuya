@@ -30,6 +30,7 @@ func TestReleaseAllowsBreak(t *testing.T) {
 			if err != nil {
 				t.Fatalf("releaseAllowsBreak() error = %v", err)
 			}
+
 			if allowed != test.wantAllowed {
 				t.Errorf("releaseAllowsBreak() = %t, want %t", allowed, test.wantAllowed)
 			}
@@ -44,6 +45,7 @@ func TestParsePackages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsePackages() error = %v", err)
 	}
+
 	if len(got) != 1 || got[0] != "pkg/tuya" {
 		t.Errorf("parsePackages() = %#v, want the public tuya package", got)
 	}
@@ -58,13 +60,17 @@ func TestFullPackagePath(t *testing.T) {
 }
 
 func TestBaselinePackagePathSupportsPackageDirectoryMove(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	writePackageFile(t, filepath.Join(root, "tuya", "client.go"))
+
 	if got, want := baselinePackagePath(root, "pkg/tuya"), "tuya"; got != want {
 		t.Errorf("baselinePackagePath() = %q, want legacy package %q", got, want)
 	}
 
 	writePackageFile(t, filepath.Join(root, "pkg", "tuya", "client.go"))
+
 	if got, want := baselinePackagePath(root, "pkg/tuya"), "pkg/tuya"; got != want {
 		t.Errorf("baselinePackagePath() = %q, want current package %q", got, want)
 	}
@@ -72,10 +78,14 @@ func TestBaselinePackagePathSupportsPackageDirectoryMove(t *testing.T) {
 
 func writePackageFile(t *testing.T, name string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(name), 0700); err != nil {
+
+	err := os.MkdirAll(filepath.Dir(name), 0700)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(name, []byte("package sample\n"), 0600); err != nil {
+
+	err = os.WriteFile(name, []byte("package sample\n"), 0600)
+	if err != nil {
 		t.Fatal(err)
 	}
 }
@@ -98,7 +108,8 @@ func TestValidateReleaseVersionBeforeBaselineLookup(t *testing.T) {
 		t.Run(test.tag, func(t *testing.T) {
 			t.Parallel()
 
-			if err := validateReleaseVersion(test.tag); (err != nil) != test.wantErr {
+			err := validateReleaseVersion(test.tag)
+			if (err != nil) != test.wantErr {
 				t.Errorf("validateReleaseVersion(%q) error = %v, want error %t", test.tag, err, test.wantErr)
 			}
 		})

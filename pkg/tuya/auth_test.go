@@ -11,24 +11,61 @@ import (
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
+// Repeated values stay test-local so synthetic fixtures remain independent of production constants.
+const (
+	authFixtureHaauthorize      = "haauthorize"
+	authFixtureResult           = "result"
+	authFixtureSuccess          = "success"
+	authFixtureTestAccessCode   = "test-access-code"
+	authFixtureTestAccessToken  = "test-access-token"
+	authFixtureTestClientID     = "test-client-id"
+	authFixtureExplicitRefresh  = "synthetic-explicit-refresh"
+	authFixtureTestLoginCode    = "test-login-code"
+	authFixtureTestRefreshToken = "test-refresh-token"
+	authFixtureTestUserCode     = "test-user-code"
+)
+
+func writeSyntheticJSONResponse(t *testing.T, responseWriter http.ResponseWriter, value any) {
+	t.Helper()
+
+	err := json.NewEncoder(responseWriter).Encode(value)
+	if err != nil {
+		t.Errorf("encode synthetic JSON response: %v", err)
+	}
+}
+
+func writeSyntheticResponseBody(t *testing.T, responseWriter http.ResponseWriter, body string) {
+	t.Helper()
+
+	_, err := responseWriter.Write([]byte(body))
+	if err != nil {
+		t.Errorf("write synthetic response body: %v", err)
+	}
+}
+
 func syntheticQRCodeEnvelope(success bool) wire.QRCodeEnvelope {
 	tid := "test-tid"
 	timestamp := int64(1234567890)
+
 	response := wire.QRCodeEnvelope{Success: &success, Tid: &tid, T: &timestamp}
+
 	if success {
 		code := "test-qr-code-token"
 		response.Result = &wire.QRCodeResult{Qrcode: &code}
 	}
+
 	return response
 }
 
 func syntheticLoginCodeEnvelope(success bool) wire.LoginCodeEnvelope {
 	tid := "test-tid"
 	timestamp := int64(1234567890)
+
 	response := wire.LoginCodeEnvelope{Success: &success, Tid: &tid, T: &timestamp}
+
 	if success {
-		accessToken := "test-access-token"
-		refreshToken := "test-refresh-token"
+		accessToken := authFixtureTestAccessToken
+		refreshToken := authFixtureTestRefreshToken
 		expireTime := int64(7200)
 		terminalID := "test-terminal-id"
 		uid := "test-uid"
@@ -44,16 +81,17 @@ func syntheticLoginCodeEnvelope(success bool) wire.LoginCodeEnvelope {
 			Endpoint:     &endpoint,
 		}
 	}
+
 	return response
 }
 
-// setupAuthServiceWithMockServer creates an AuthService with a mocked HTTPS server
+// setupAuthServiceWithMockServer creates an AuthService with a mocked HTTPS server.
 func setupAuthServiceWithMockServer(handler http.HandlerFunc) (*AuthService, *httptest.Server) {
 	server := httptest.NewTLSServer(handler)
 
 	client := &Session{
 		HTTPClient:        server.Client(),
-		ClientID:          "test-client-id",
+		ClientID:          authFixtureTestClientID,
 		AuthenticationURL: server.URL,
 		CloudAPIURL:       server.URL,
 	}
@@ -61,39 +99,44 @@ func setupAuthServiceWithMockServer(handler http.HandlerFunc) (*AuthService, *ht
 	client.SetTokens(Tokens{AccessToken: "synthetic-access-token", RefreshToken: "synthetic-refresh-token"})
 
 	authService := &AuthService{client: client}
+
 	return authService, server
 }
 
 func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
+	t.Parallel()
+
 	// Mock successful response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(responseWriter http.ResponseWriter, request *http.Request) {
 		// Verify request method and path
-		if r.Method != "POST" {
-			t.Errorf("Expected POST request, got %s", r.Method)
+		if request.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", request.Method)
 		}
 
 		expectedPath := "/v1.0/m/life/home-assistant/qrcode/tokens"
-		if !strings.Contains(r.URL.Path, expectedPath) {
-			t.Errorf("Expected path to contain %s, got %s", expectedPath, r.URL.Path)
+		if !strings.Contains(request.URL.Path, expectedPath) {
+			t.Errorf("Expected path to contain %s, got %s", expectedPath, request.URL.Path)
 		}
 
 		// Verify query parameters
-		query := r.URL.Query()
-		if query.Get("clientid") != "test-client-id" {
+		query := request.URL.Query()
+		if query.Get("clientid") != authFixtureTestClientID {
 			t.Errorf("Expected clientid=test-client-id, got %s", query.Get("clientid"))
 		}
-		if query.Get("usercode") != "test-access-code" {
+
+		if query.Get("usercode") != authFixtureTestAccessCode {
 			t.Errorf("Expected usercode=test-access-code, got %s", query.Get("usercode"))
 		}
-		if query.Get("schema") != "haauthorize" {
+
+		if query.Get("schema") != authFixtureHaauthorize {
 			t.Errorf("Expected schema=haauthorize, got %s", query.Get("schema"))
 		}
 
 		// Return successful response
 		response := syntheticQRCodeEnvelope(true)
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		responseWriter.Header().Set("Content-Type", "application/json")
+		writeSyntheticJSONResponse(t, responseWriter, response)
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
@@ -101,8 +144,8 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 
 	// Test the method
 	req := LoginRequest{
-		AccessCode: "test-access-code",
-		Schema:     "haauthorize",
+		AccessCode: authFixtureTestAccessCode,
+		Schema:     authFixtureHaauthorize,
 	}
 
 	ctx := context.Background()
@@ -124,17 +167,19 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 }
 
 func TestAuthService_GenerateQrCodeForLogin_DefaultSchema(t *testing.T) {
+	t.Parallel()
+
 	// Test that default schema is used when not provided
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
+	mockHandler := func(responseWriter http.ResponseWriter, request *http.Request) {
+		query := request.URL.Query()
 		if query.Get("schema") != AuthenticationSchema {
 			t.Errorf("Expected schema=%s, got %s", AuthenticationSchema, query.Get("schema"))
 		}
 
 		response := syntheticQRCodeEnvelope(true)
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		responseWriter.Header().Set("Content-Type", "application/json")
+		writeSyntheticJSONResponse(t, responseWriter, response)
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
@@ -142,25 +187,27 @@ func TestAuthService_GenerateQrCodeForLogin_DefaultSchema(t *testing.T) {
 
 	// Test with empty schema - should use default
 	req := LoginRequest{
-		AccessCode: "test-access-code",
+		AccessCode: authFixtureTestAccessCode,
 		Schema:     "", // Empty schema should use default
 	}
 
 	ctx := context.Background()
-	_, err := authService.GenerateQrCodeForLogin(ctx, req)
 
+	_, err := authService.GenerateQrCodeForLogin(ctx, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 }
 
 func TestAuthService_GenerateQrCodeForLogin_Failure(t *testing.T) {
+	t.Parallel()
+
 	// Mock failure response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		response := syntheticQRCodeEnvelope(false)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		writeSyntheticJSONResponse(t, w, response)
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
@@ -168,8 +215,8 @@ func TestAuthService_GenerateQrCodeForLogin_Failure(t *testing.T) {
 
 	// Test the method
 	req := LoginRequest{
-		AccessCode: "test-access-code",
-		Schema:     "haauthorize",
+		AccessCode: authFixtureTestAccessCode,
+		Schema:     authFixtureHaauthorize,
 	}
 
 	ctx := context.Background()
@@ -186,18 +233,20 @@ func TestAuthService_GenerateQrCodeForLogin_Failure(t *testing.T) {
 }
 
 func TestAuthService_GenerateQrCodeForLogin_MalformedJSON(t *testing.T) {
+	t.Parallel()
+
 	// Mock malformed JSON response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{invalid json"))
+		writeSyntheticResponseBody(t, w, "{invalid json")
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
 	defer server.Close()
 
 	req := LoginRequest{
-		AccessCode: "test-access-code",
-		Schema:     "haauthorize",
+		AccessCode: authFixtureTestAccessCode,
+		Schema:     authFixtureHaauthorize,
 	}
 
 	ctx := context.Background()
@@ -209,33 +258,37 @@ func TestAuthService_GenerateQrCodeForLogin_MalformedJSON(t *testing.T) {
 	}
 }
 
+//nolint:cyclop,funlen // This success test checks the complete request/response contract, including optional returned account details.
 func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
+	t.Parallel()
+
 	// Mock successful validation response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(responseWriter http.ResponseWriter, request *http.Request) {
 		// Verify request method and path
-		if r.Method != "GET" {
-			t.Errorf("Expected GET request, got %s", r.Method)
+		if request.Method != http.MethodGet {
+			t.Errorf("Expected GET request, got %s", request.Method)
 		}
 
 		expectedPath := "/v1.0/m/life/home-assistant/qrcode/tokens/test-login-code"
-		if !strings.Contains(r.URL.Path, expectedPath) {
-			t.Errorf("Expected path to contain %s, got %s", expectedPath, r.URL.Path)
+		if !strings.Contains(request.URL.Path, expectedPath) {
+			t.Errorf("Expected path to contain %s, got %s", expectedPath, request.URL.Path)
 		}
 
 		// Verify query parameters
-		query := r.URL.Query()
-		if query.Get("clientid") != "test-client-id" {
+		query := request.URL.Query()
+		if query.Get("clientid") != authFixtureTestClientID {
 			t.Errorf("Expected clientid=test-client-id, got %s", query.Get("clientid"))
 		}
-		if query.Get("usercode") != "test-user-code" {
+
+		if query.Get("usercode") != authFixtureTestUserCode {
 			t.Errorf("Expected usercode=test-user-code, got %s", query.Get("usercode"))
 		}
 
 		// Return successful response
 		response := syntheticLoginCodeEnvelope(true)
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		responseWriter.Header().Set("Content-Type", "application/json")
+		writeSyntheticJSONResponse(t, responseWriter, response)
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
@@ -243,8 +296,8 @@ func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
 
 	// Test the method
 	req := ValidateLoginCodeRequest{
-		LoginCode: "test-login-code",
-		UserCode:  "test-user-code",
+		LoginCode: authFixtureTestLoginCode,
+		UserCode:  authFixtureTestUserCode,
 	}
 
 	ctx := context.Background()
@@ -259,11 +312,11 @@ func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
 		t.Error("Expected Success=true")
 	}
 
-	if resp.AccessToken != "test-access-token" {
+	if resp.AccessToken != authFixtureTestAccessToken {
 		t.Errorf("Expected AccessToken=test-access-token, got %s", resp.AccessToken)
 	}
 
-	if resp.RefreshToken != "test-refresh-token" {
+	if resp.RefreshToken != authFixtureTestRefreshToken {
 		t.Errorf("Expected RefreshToken=test-refresh-token, got %s", resp.RefreshToken)
 	}
 
@@ -289,12 +342,14 @@ func TestAuthService_ValidateLoginCode_Success(t *testing.T) {
 }
 
 func TestAuthService_ValidateLoginCode_Failure(t *testing.T) {
+	t.Parallel()
+
 	// Mock failure response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		response := syntheticLoginCodeEnvelope(false)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		writeSyntheticJSONResponse(t, w, response)
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
@@ -303,7 +358,7 @@ func TestAuthService_ValidateLoginCode_Failure(t *testing.T) {
 	// Test the method
 	req := ValidateLoginCodeRequest{
 		LoginCode: "invalid-login-code",
-		UserCode:  "test-user-code",
+		UserCode:  authFixtureTestUserCode,
 	}
 
 	ctx := context.Background()
@@ -320,18 +375,20 @@ func TestAuthService_ValidateLoginCode_Failure(t *testing.T) {
 }
 
 func TestAuthService_ValidateLoginCode_MalformedJSON(t *testing.T) {
+	t.Parallel()
+
 	// Mock malformed JSON response
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{invalid json"))
+		writeSyntheticResponseBody(t, w, "{invalid json")
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
 	defer server.Close()
 
 	req := ValidateLoginCodeRequest{
-		LoginCode: "test-login-code",
-		UserCode:  "test-user-code",
+		LoginCode: authFixtureTestLoginCode,
+		UserCode:  authFixtureTestUserCode,
 	}
 
 	ctx := context.Background()
@@ -344,18 +401,20 @@ func TestAuthService_ValidateLoginCode_MalformedJSON(t *testing.T) {
 }
 
 func TestAuthService_ValidateLoginCode_HTTPError(t *testing.T) {
+	t.Parallel()
+
 	// Mock HTTP error (server returns 500)
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		writeSyntheticResponseBody(t, w, "Internal Server Error")
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
 	defer server.Close()
 
 	req := ValidateLoginCodeRequest{
-		LoginCode: "test-login-code",
-		UserCode:  "test-user-code",
+		LoginCode: authFixtureTestLoginCode,
+		UserCode:  authFixtureTestUserCode,
 	}
 
 	ctx := context.Background()
@@ -368,16 +427,21 @@ func TestAuthService_ValidateLoginCode_HTTPError(t *testing.T) {
 }
 
 func TestAuthService_RefreshTokenReturnsRotatedTokensWithoutChangingSession(t *testing.T) {
-	var requestPath string
-	var requestAccessToken string
+	t.Parallel()
+
+	var (
+		requestPath        string
+		requestAccessToken string
+	)
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		requestPath = r.URL.Path
-		requestAccessToken = r.Header.Get("X-token")
+		requestAccessToken = r.Header.Get("X-Token")
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": true,
-			"t":       1700000000000,
-			"result": map[string]interface{}{
+		writeSyntheticJSONResponse(t, w, map[string]any{
+			authFixtureSuccess: true,
+			"t":                1700000000000,
+			authFixtureResult: map[string]any{
 				"expireTime":   7200,
 				"uid":          "synthetic-user-id",
 				"accessToken":  "synthetic-rotated-access",
@@ -388,6 +452,7 @@ func TestAuthService_RefreshTokenReturnsRotatedTokensWithoutChangingSession(t *t
 
 	service, server := setupAuthServiceWithMockServer(handler)
 	defer server.Close()
+
 	oldTokens := Tokens{
 		AccessToken:  "synthetic-current-access",
 		RefreshToken: "synthetic-current-refresh",
@@ -395,16 +460,19 @@ func TestAuthService_RefreshTokenReturnsRotatedTokensWithoutChangingSession(t *t
 	}
 	service.client.SetTokens(oldTokens)
 
-	got, err := service.RefreshToken(context.Background(), RefreshTokenRequest{RefreshToken: "synthetic-explicit-refresh"})
+	got, err := service.RefreshToken(context.Background(), RefreshTokenRequest{RefreshToken: authFixtureExplicitRefresh})
 	if err != nil {
 		t.Fatalf("RefreshToken() error = %v", err)
 	}
+
 	if requestPath != "/v1.0/m/token/synthetic-explicit-refresh" {
 		t.Errorf("refresh path = %q", requestPath)
 	}
+
 	if requestAccessToken != oldTokens.AccessToken {
 		t.Errorf("request access token = %q, want explicit current session token", requestAccessToken)
 	}
+
 	want := RefreshTokenResponse{
 		AccessToken:  "synthetic-rotated-access",
 		RefreshToken: "synthetic-rotated-refresh",
@@ -415,24 +483,27 @@ func TestAuthService_RefreshTokenReturnsRotatedTokensWithoutChangingSession(t *t
 	if got != want {
 		t.Errorf("RefreshToken() = %+v, want %+v", got, want)
 	}
+
 	if current := service.client.Tokens(); current != oldTokens {
 		t.Errorf("RefreshToken() changed session tokens to %+v; callers must apply replacements explicitly", current)
 	}
 }
 
 func TestAuthService_GenerateQrCodeForLogin_HTTPError(t *testing.T) {
+	t.Parallel()
+
 	// Mock HTTP error (server returns 500)
-	mockHandler := func(w http.ResponseWriter, r *http.Request) {
+	mockHandler := func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		writeSyntheticResponseBody(t, w, "Internal Server Error")
 	}
 
 	authService, server := setupAuthServiceWithMockServer(mockHandler)
 	defer server.Close()
 
 	req := LoginRequest{
-		AccessCode: "test-access-code",
-		Schema:     "haauthorize",
+		AccessCode: authFixtureTestAccessCode,
+		Schema:     authFixtureHaauthorize,
 	}
 
 	ctx := context.Background()

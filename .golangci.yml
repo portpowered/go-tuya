@@ -2,28 +2,170 @@
 # See the dedicated "version" documentation section.
 version: "2"
 linters:
-  enable:
-    - nakedret
-    - misspell
-    - ineffassign
-    - ginkgolinter
-    - goconst
-    - errcheck
-    - dupl
-    - unparam
-    - revive
-    - staticcheck
-    - unused
-    - unconvert
-    - gocyclo
-    - gosec
+  default: all
   exclusions:
-    paths:
-      - ".*_test\\.go$"
+    generated: strict
+    rules:
+      # Each exception is limited to missing-field diagnostics in one fixture file.
+      # These tests intentionally populate only fields relevant to the case.
+      # QR and login envelopes in auth_test.go are partial provider responses.
+      - path: pkg/tuya/auth_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # capabilities_test.go constructs focused status and capability values.
+      - path: pkg/tuya/capabilities_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # client_rtc_test.go supplies only the RTC offer/answer fields under test.
+      - path: pkg/tuya/client_rtc_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # client_test.go uses partial request and response values for transport seams.
+      - path: pkg/tuya/client_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # encryption_test.go uses minimal encrypted request/response fixtures.
+      - path: pkg/tuya/encryption_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # message_protocol_test.go tests individual MQTT event fields.
+      - path: pkg/tuya/message_protocol_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # messages_synthetic_test.go models only the queue/listener state used per case.
+      - path: pkg/tuya/messages_synthetic_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # mqtt_replay_test.go stores only the MQTT frames used by each transcript.
+      - path: pkg/tuya/mqtt_replay_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # route_synthetic_test.go gives each route probe only its relevant request fields.
+      - path: pkg/tuya/route_synthetic_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # complete_replay_test.go uses partial paired responses and requests.
+      - path: tests/replay/complete_replay_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # replay_test.go uses partial request mutations to isolate mismatch rules.
+      - path: tests/replay/replay_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # main_test.go table cases specify only compatibility-policy inputs under test.
+      - path: tools/compatibility/main_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      # Short-scoped errors keep assertions independent in these test files.
+      - path: pkg/tuya/client_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: pkg/tuya/encryption_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: pkg/tuya/message_protocol_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: pkg/tuya/messages_synthetic_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: pkg/tuya/mqtt_replay_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: pkg/tuya/route_synthetic_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: tests/replay/complete_replay_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: tests/replay/replay_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: tools/compatibility/main_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      - path: tools/coverage/main_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      # These files use package-private auth state and fixtures to test error handling.
+      - path: pkg/tuya/auth_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # Capability conversion tests inspect the private conversion state.
+      - path: pkg/tuya/capabilities_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # RTC lifecycle tests inspect session and stream internals.
+      - path: pkg/tuya/client_rtc_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # Client option and transport tests inspect package-private setup state.
+      - path: pkg/tuya/client_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # Encryption tests validate private key derivation and request signing.
+      - path: pkg/tuya/encryption_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # MQTT event parsing tests validate private wire-to-event mappings.
+      - path: pkg/tuya/message_protocol_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # Queue tests inspect private listener and reconnect state.
+      - path: pkg/tuya/messages_synthetic_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # MQTT replay tests exercise the internal client factory and transcript state.
+      - path: pkg/tuya/mqtt_replay_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # Route probes verify private route dispatch and signature data.
+      - path: pkg/tuya/route_synthetic_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
+      # The SID argument stays available for provider authorization context; current Tuya requests set it empty.
+      - path: pkg/tuya/encryption\.go
+        text: 'sid always receives ""'
+        linters: [unparam]
+      # These example and CLI commands intentionally print their user-facing stdout output.
+      - path: examples/command/command\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+      - path: examples/devices/devices\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+      - path: examples/messaging/messages\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+      - path: examples/token_refresh/token_refresh\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+      - path: tools/compatibility/main\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+      - path: tools/coverage/main\.go
+        text: 'fmt\.Print'
+        linters: [forbidigo]
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: use the standard library errors package
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+    lll:
+      line-length: 160
 
 formatters:
   enable:
     - goimports
 run:
   timeout: 5m
-  
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -8,17 +8,18 @@ import (
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
-// DevicesService provides methods for managing smart devices
+// DevicesService provides methods for managing smart devices.
 type DevicesService service
 
 // QueryDevicesByHome fetches all devices for a given home.
-// TODO: there is actually a mechanism inside of here to basically fetch across like each device and get their capabilities.
+// Fetching every device's capabilities would require an additional request per device.
 // This is done individually for each device, along with their states, which is a very expensive operation generally.
 func (c *DevicesService) QueryDevicesByHome(ctx context.Context, req QueryDevicesByHomeRequest) (QueryDevicesByHomeResponse, error) {
-	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: &req.HomeID})
+	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: &req.HomeID, DeviceIds: nil})
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
+
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
@@ -31,15 +32,18 @@ func (c *DevicesService) QueryDevicesByHome(ctx context.Context, req QueryDevice
 
 	return QueryDevicesByHomeResponse{
 		Results: mapWireDevices(dereference(wireResponse.Result)),
+		Success: false,
+		Message: "",
 	}, nil
 }
 
 // QueryDevicesByHomeAssistantDevices fetches all devices for a given home using the Home Assistant devices endpoint.
 func (c *DevicesService) QueryDevicesByHomeAssistantDevices(ctx context.Context, req QueryDevicesByHomeRequest) (QueryDevicesByHomeResponse, error) {
-	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: &req.HomeID})
+	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: &req.HomeID, DeviceIds: nil})
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
+
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
@@ -52,6 +56,8 @@ func (c *DevicesService) QueryDevicesByHomeAssistantDevices(ctx context.Context,
 
 	return QueryDevicesByHomeResponse{
 		Results: mapWireDevices(dereference(wireResponse.Result)),
+		Success: false,
+		Message: "",
 	}, nil
 }
 
@@ -80,6 +86,7 @@ func mapWireDevices(records []wire.DeviceRecord) []Device {
 			Capabilities: nil,
 		}
 	}
+
 	return devices
 }
 
@@ -92,19 +99,23 @@ func mapGeneratedDeviceStatus(statuses *[]wire.DeviceStatus) []Status {
 	for i, status := range *statuses {
 		result[i] = Status{Code: dereference(status.Code), Value: status.Value}
 	}
+
 	return result
 }
 
-func additionalString(properties map[string]interface{}, name string) string {
+func additionalString(properties map[string]any, name string) string {
 	value, _ := properties[name].(string)
+
 	return value
 }
 
-func dereference[T any](value *T) T {
+func dereference[T any](value *T) T { //nolint:ireturn // This generic helper returns the pointed-to concrete wire field type.
 	if value == nil {
 		var zero T
+
 		return zero
 	}
+
 	return *value
 }
 
@@ -112,6 +123,7 @@ func optionalString(value string) *string {
 	if value == "" {
 		return nil
 	}
+
 	return &value
 }
 
@@ -119,26 +131,32 @@ func optionalCommaList(values []string) *string {
 	if len(values) == 0 {
 		return nil
 	}
+
 	joined := strings.Join(values, ",")
+
 	return &joined
 }
 
 func checkedInt64AsInt(value int64) (int, error) {
 	converted := int(value)
 	if int64(converted) != value {
-		return 0, fmt.Errorf("wire query integer %d is outside the generated model range", value)
+		return 0, fmt.Errorf("%w %d is outside the generated model range", errWireQueryIntegerOutOfRange, value)
 	}
+
 	return converted, nil
 }
 
 func optionalInt64AsInt(value *int64) (*int, error) {
 	if value == nil {
+		//nolint:nilnil // An absent optional parameter remains nil and is not an error.
 		return nil, nil
 	}
+
 	converted, err := checkedInt64AsInt(*value)
 	if err != nil {
 		return nil, err
 	}
+
 	return &converted, nil
 }
 
@@ -147,16 +165,19 @@ func decodeBooleanResult(response *EncryptedAPIResponse) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return dereference(wireResponse.Result), nil
 }
 
-// QueryDevicesByIDs fetches devices by their IDs
+// QueryDevicesByIDs fetches devices by their IDs.
 func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevicesByIDsRequest) (QueryDevicesByIDsResponse, error) {
 	deviceIDs := strings.Join(req.DeviceIDs, ",")
-	params, err := wireRequestMap(wire.QueryHomeDevicesParams{DeviceIds: &deviceIDs})
+
+	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: nil, DeviceIds: &deviceIDs})
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
+
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
@@ -167,10 +188,6 @@ func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevices
 		return QueryDevicesByIDsResponse{}, err
 	}
 
-	// return QueryDevicesByHomeResponse{
-	// 	Devices: devices,
-	// }, nil
-	// TODO: implement device querying by home
 	return QueryDevicesByIDsResponse{
 		Results: mapWireDevices(dereference(wireResponse.Result)),
 	}, nil
@@ -181,13 +198,15 @@ func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevices
 func (c *DevicesService) SendCommands(ctx context.Context, req SendCommandsRequest) (SendCommandsResponse, error) {
 	commands := make([]wire.SendCommandsBody_Commands_Item, len(req.Commands))
 	for i, command := range req.Commands {
-		commands[i] = wire.SendCommandsBody_Commands_Item{Code: command.Code, Value: command.Value}
+		commands[i] = wire.SendCommandsBody_Commands_Item{Code: command.Code, Value: command.Value, AdditionalProperties: nil}
 	}
-	body, err := wireRequestMap(wire.SendCommandsBody{Commands: commands})
+
+	body, err := wireRequestMap(wire.SendCommandsBody{Commands: commands, AdditionalProperties: nil})
 	if err != nil {
 		return SendCommandsResponse{}, err
 	}
-	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationSendDeviceCommands(), []any{req.DeviceID}, map[string]interface{}{}, body, &req)
+
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationSendDeviceCommands(), []any{req.DeviceID}, map[string]any{}, body, &req)
 	if err != nil {
 		return SendCommandsResponse{}, err
 	}
@@ -198,20 +217,22 @@ func (c *DevicesService) SendCommands(ctx context.Context, req SendCommandsReque
 	}
 
 	return SendCommandsResponse{
-		Result: dereference(wireResponse.Result),
+		Result:  dereference(wireResponse.Result),
+		Message: "",
 	}, nil
 }
 
-// GetDeviceStreamAllocate allocates a stream for a device
+// GetDeviceStreamAllocate allocates a stream for a device.
 func (c *DevicesService) GetDeviceStreamAllocate(_ context.Context, _ GetDeviceStreamAllocateRequest) (GetDeviceStreamAllocateResponse, error) {
-	// TODO: implement device stream allocation
+	// Device stream allocation is not implemented yet.
 	return GetDeviceStreamAllocateResponse{
-		Success: false,
-		Message: "GetDeviceStreamAllocate not yet implemented",
+		StreamURL: "",
+		Success:   false,
+		Message:   "GetDeviceStreamAllocate not yet implemented",
 	}, nil
 }
 
-// QueryDeviceStatus retrieves the current status of a device
+// QueryDeviceStatus retrieves the current status of a device.
 func (c *DevicesService) QueryDeviceStatus(ctx context.Context,
 	req QueryDeviceStatusRequest) (QueryDeviceStatusResponse, error) {
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryDeviceStatus(), []any{req.DeviceID}, nil, nil, &req)
@@ -223,51 +244,58 @@ func (c *DevicesService) QueryDeviceStatus(ctx context.Context,
 	if err != nil {
 		return QueryDeviceStatusResponse{}, fmt.Errorf("error unmarshalling response: %w", err)
 	}
+
 	var wireStatus []wire.DeviceStatusMapping
 	if wireResponse.Result != nil {
 		wireStatus = dereference(wireResponse.Result.DpStatusRelationDTOS)
 	}
+
 	publicStatus, err := convertWireValue[[]DeviceStatusMapping](wireStatus)
 	if err != nil {
 		return QueryDeviceStatusResponse{}, fmt.Errorf("error converting device status: %w", err)
 	}
 
 	return QueryDeviceStatusResponse{
-		Status: publicStatus,
+		Status:  publicStatus,
+		Message: "",
 	}, nil
 }
 
-func buildDeviceUserBody(nickName string, sex int, birthday *int64, height, weight *int, contact string) (map[string]interface{}, error) {
+func buildDeviceUserBody(nickName string, sex int, birthday *int64, height, weight *int, contact string) (map[string]any, error) {
 	var contactValue *string
 	if contact != "" {
 		contactValue = &contact
 	}
+
 	return wireRequestMap(wire.DeviceUserBody{
-		NickName: nickName,
-		Sex:      sex,
-		Birthday: birthday,
-		Height:   height,
-		Weight:   weight,
-		Contact:  contactValue,
+		NickName:             nickName,
+		Sex:                  sex,
+		Birthday:             birthday,
+		Height:               height,
+		Weight:               weight,
+		Contact:              contactValue,
+		AdditionalProperties: nil,
 	})
 }
 
-// QueryDeviceSpecification retrieves the specification details for a device
+// QueryDeviceSpecification retrieves the specification details for a device.
 func (c *DevicesService) QueryDeviceSpecification(ctx context.Context,
 	req QueryDeviceSpecificationRequest) (QueryDeviceSpecificationResponse, error) {
-
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryDeviceSpecification(), []any{req.DeviceID}, nil, nil, &req)
 	if err != nil {
 		return QueryDeviceSpecificationResponse{}, err
 	}
+
 	wireResponse, err := decodeWireResponse[wire.DeviceSpecificationEnvelope](resp)
 	if err != nil {
 		return QueryDeviceSpecificationResponse{}, fmt.Errorf("error unmarshalling response: %w", err)
 	}
+
 	var wireSpecification wire.DeviceSpecification
 	if wireResponse.Result != nil {
 		wireSpecification = *wireResponse.Result
 	}
+
 	specification, err := convertWireValue[Specification](wireSpecification)
 	if err != nil {
 		return QueryDeviceSpecificationResponse{}, fmt.Errorf("error converting device specification: %w", err)
@@ -291,6 +319,7 @@ func (c *DevicesService) GetDeviceDetails(ctx context.Context, req GetDeviceDeta
 	}
 
 	var device Device
+
 	if wireResponse.Result != nil {
 		mapped := mapWireDevices([]wire.DeviceRecord{*wireResponse.Result})
 		if len(mapped) > 0 {
@@ -309,6 +338,7 @@ func (c *DevicesService) QueryDevicesByUser(ctx context.Context, req QueryDevice
 	if req.From != "" {
 		from = &req.From
 	}
+
 	params, err := wireRequestMap(wire.GetDevicesByUserParams{
 		From:     from,
 		PageNo:   req.PageNo,
@@ -368,6 +398,7 @@ func (c *DevicesService) QueryDevices(ctx context.Context, req QueryDevicesReque
 	if wireResponse.Result != nil && wireResponse.Result.Total != nil {
 		total = *wireResponse.Result.Total
 	}
+
 	var lastID string
 	if wireResponse.Result != nil && wireResponse.Result.LastId != nil {
 		lastID = *wireResponse.Result.LastId
@@ -382,10 +413,11 @@ func (c *DevicesService) QueryDevices(ctx context.Context, req QueryDevicesReque
 
 // UpdateDeviceFunctionName updates the display name of a device function.
 func (c *DevicesService) UpdateDeviceFunctionName(ctx context.Context, req UpdateDeviceFunctionNameRequest) (UpdateDeviceFunctionNameResponse, error) {
-	body, err := wireRequestMap(wire.UpdateNameBody{Name: req.Name})
+	body, err := wireRequestMap(wire.UpdateNameBody{Name: req.Name, AdditionalProperties: nil})
 	if err != nil {
 		return UpdateDeviceFunctionNameResponse{}, err
 	}
+
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateDeviceFunctionName(), []any{req.DeviceID, req.FunctionCode}, nil, body, &req)
 	if err != nil {
 		return UpdateDeviceFunctionNameResponse{}, err
@@ -407,14 +439,17 @@ func (c *DevicesService) QueryDeviceLogs(ctx context.Context, req QueryDeviceLog
 	if err != nil {
 		return QueryDeviceLogsResponse{}, err
 	}
+
 	startTime, err := checkedInt64AsInt(req.StartTime)
 	if err != nil {
 		return QueryDeviceLogsResponse{}, err
 	}
+
 	endTime, err := checkedInt64AsInt(req.EndTime)
 	if err != nil {
 		return QueryDeviceLogsResponse{}, err
 	}
+
 	params, err := wireRequestMap(wire.GetDeviceLogsParams{
 		Type:          strings.Join(req.Types, ","),
 		StartTime:     startTime,
@@ -441,12 +476,21 @@ func (c *DevicesService) QueryDeviceLogs(ctx context.Context, req QueryDeviceLog
 	}
 
 	if wireResponse.Result == nil {
-		return QueryDeviceLogsResponse{}, nil
+		return QueryDeviceLogsResponse{
+			Logs:          nil,
+			HasNext:       false,
+			DeviceID:      "",
+			CurrentRowKey: "",
+			NextRowKey:    "",
+			Count:         0,
+		}, nil
 	}
+
 	result, err := convertWireValue[QueryDeviceLogsResponse](*wireResponse.Result)
 	if err != nil {
 		return QueryDeviceLogsResponse{}, err
 	}
+
 	return result, nil
 }
 
@@ -495,10 +539,12 @@ func (c *DevicesService) QuerySubDevices(ctx context.Context, req QuerySubDevice
 	if err != nil {
 		return QuerySubDevicesResponse{}, err
 	}
+
 	var wireDevices []wire.SubDeviceRecord
 	if wireResponse.Result != nil {
 		wireDevices = *wireResponse.Result
 	}
+
 	devices, err := convertWireValue[[]SubDevice](wireDevices)
 	if err != nil {
 		return QuerySubDevicesResponse{}, err
@@ -527,10 +573,12 @@ func (c *DevicesService) QueryDeviceFactoryInfos(ctx context.Context, req QueryD
 	if err != nil {
 		return QueryDeviceFactoryInfosResponse{}, err
 	}
+
 	var wireDevices []wire.FactoryInfoRecord
 	if wireResponse.Result != nil {
 		wireDevices = *wireResponse.Result
 	}
+
 	devices, err := convertWireValue[[]DeviceFactoryInfo](wireDevices)
 	if err != nil {
 		return QueryDeviceFactoryInfosResponse{}, err
@@ -543,10 +591,11 @@ func (c *DevicesService) QueryDeviceFactoryInfos(ctx context.Context, req QueryD
 
 // UpdateDeviceName sets the human-readable name of a device.
 func (c *DevicesService) UpdateDeviceName(ctx context.Context, req UpdateDeviceNameRequest) (UpdateDeviceNameResponse, error) {
-	body, err := wireRequestMap(wire.UpdateNameBody{Name: req.Name})
+	body, err := wireRequestMap(wire.UpdateNameBody{Name: req.Name, AdditionalProperties: nil})
 	if err != nil {
 		return UpdateDeviceNameResponse{}, err
 	}
+
 	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationUpdateDeviceName(), []any{req.DeviceID}, nil, body, &req)
 	if err != nil {
 		return UpdateDeviceNameResponse{}, err
@@ -634,6 +683,7 @@ func (c *DevicesService) GetDeviceUser(ctx context.Context, req GetDeviceUserReq
 	if err != nil {
 		return GetDeviceUserResponse{}, err
 	}
+
 	var user DeviceUser
 	if wireResponse.Result != nil {
 		user, err = convertWireValue[DeviceUser](*wireResponse.Result)
@@ -658,10 +708,12 @@ func (c *DevicesService) ListDeviceUsers(ctx context.Context, req ListDeviceUser
 	if err != nil {
 		return ListDeviceUsersResponse{}, err
 	}
+
 	var wireUsers []wire.DeviceUserRecord
 	if wireResponse.Result != nil {
 		wireUsers = *wireResponse.Result
 	}
+
 	users, err := convertWireValue[[]DeviceUser](wireUsers)
 	if err != nil {
 		return ListDeviceUsersResponse{}, err
@@ -675,8 +727,9 @@ func (c *DevicesService) ListDeviceUsers(ctx context.Context, req ListDeviceUser
 // UpdateMultiOutletName updates the name of a single outlet on a multi-outlet device.
 func (c *DevicesService) UpdateMultiOutletName(ctx context.Context, req UpdateMultiOutletNameRequest) (UpdateMultiOutletNameResponse, error) {
 	body, err := wireRequestMap(wire.UpdateMultiOutletNameBody{
-		Identifier: req.Identifier,
-		Name:       req.Name,
+		Identifier:           req.Identifier,
+		Name:                 req.Name,
+		AdditionalProperties: nil,
 	})
 	if err != nil {
 		return UpdateMultiOutletNameResponse{}, err
@@ -708,10 +761,12 @@ func (c *DevicesService) ListMultiOutletNames(ctx context.Context, req ListMulti
 	if err != nil {
 		return ListMultiOutletNamesResponse{}, err
 	}
+
 	var wireNames []wire.MultiOutletNameRecord
 	if wireResponse.Result != nil {
 		wireNames = *wireResponse.Result
 	}
+
 	names, err := convertWireValue[[]MultiOutletName](wireNames)
 	if err != nil {
 		return ListMultiOutletNamesResponse{}, err

@@ -30,10 +30,10 @@ callbacks, unsubscribe, and disconnect. Both transports reject unexpected or
 duplicate exchanges and require every expected exchange to be consumed. These
 synthetic checks do not establish live provider behavior.
 
-The current non-generated statement result is 82.6% (1,308/1,583). The raw
+The current non-generated statement result is 82.8% (1,336/1,614). The raw
 `go tool cover` total includes generated wire code, so it is not the release
 metric. Remaining low-coverage areas include MQTT retry and expiry branches
-(`runMQTTLoop` 57.7%, `connectMQTT` 69.0%) and unimplemented public placeholders
+(`runMQTTLoop` 73.7%, `waitBeforeReconnect` 50.0%, `connectMQTT` 80.0%) and unimplemented public placeholders
 such as `UserService.Unload` and `GetDeviceStreamAllocate` (0%). The synthetic
 lifecycle tests cover initial failure, reconnect error reporting, and orderly
 stop; they do not prove broker behavior with a real account.

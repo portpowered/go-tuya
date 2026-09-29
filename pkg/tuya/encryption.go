@@ -17,11 +17,18 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+)
+
+const (
+	aesGCMNonceSize          = 12
+	derivedSecretKeySize     = 16
+	signatureHeaderSeparator = "||"
 )
 
 // EncryptedClient provides access to Tuya Customer API operations with encryption of the payload and response.
@@ -30,299 +37,432 @@ type EncryptedClient struct {
 	Client *Session
 }
 
+// Get performs an encrypted GET request.
+func (c *EncryptedClient) Get(ctx context.Context, path string, params map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
+	return c.makeRequest(ctx, "GET", path, params, nil, operationRequest)
+}
+
+// Post performs an encrypted POST request.
+func (c *EncryptedClient) Post(
+	ctx context.Context,
+	path string,
+	params, body map[string]any,
+	operationRequest OperationRequest,
+) (*EncryptedAPIResponse, error) {
+	return c.makeRequest(ctx, "POST", path, params, body, operationRequest)
+}
+
+// Put performs an encrypted PUT request.
+func (c *EncryptedClient) Put(ctx context.Context, path string, body map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
+	return c.makeRequest(ctx, "PUT", path, nil, body, operationRequest)
+}
+
+// Delete performs an encrypted DELETE request.
+func (c *EncryptedClient) Delete(ctx context.Context, path string, params map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
+	return c.makeRequest(ctx, "DELETE", path, params, nil, operationRequest)
+}
+
 // requestOperation dispatches an inventoried operation using its generated
 // method and path as one unit.
-func (c *EncryptedClient) requestOperation(ctx context.Context, operation wire.Operation, pathArgs []any, params, body map[string]interface{}, request OperationRequest) (*EncryptedAPIResponse, error) {
+func (c *EncryptedClient) requestOperation(
+	ctx context.Context,
+	operation wire.Operation,
+	pathArgs []any,
+	params, body map[string]any,
+	request OperationRequest,
+) (*EncryptedAPIResponse, error) {
 	path := operation.Path
 	if len(pathArgs) > 0 {
 		path = fmt.Sprintf(path, pathArgs...)
 	}
+
 	return c.makeRequest(ctx, operation.Method, path, params, body, request)
-}
-
-// Get performs an encrypted GET request
-func (c *EncryptedClient) Get(ctx context.Context, path string, params map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "GET", path, params, nil, operationRequest)
-}
-
-// Post performs an encrypted POST request
-func (c *EncryptedClient) Post(ctx context.Context, path string, params, body map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "POST", path, params, body, operationRequest)
-}
-
-// Put performs an encrypted PUT request
-func (c *EncryptedClient) Put(ctx context.Context, path string, body map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "PUT", path, nil, body, operationRequest)
-}
-
-// Delete performs an encrypted DELETE request
-func (c *EncryptedClient) Delete(ctx context.Context, path string, params map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "DELETE", path, params, nil, operationRequest)
 }
 
 // makeRequest performs the actual encrypted HTTP request
 // https://developer.tuya.com/en/docs/iot/new-singnature
-// The actual request is wrapped around roughly like:
-// curl -X GET tuyawebsite.com/api/blah/blah?encdata={encrypted query params} --body {encdata: encrypted request body} --header "X-appKey: 123" --header "X-requestId: 123"
-// --header "X-sid: 123" --header "X-time: 123" --header "X-token: 123" --header "X-sign: 123"
-// Then the response looks like
-// { result: "encrypted response data", success: true, code: 200, msg: "success", t: 123, tid: "123" }
-func (c *EncryptedClient) makeRequest(ctx context.Context, method, path string, params, body map[string]interface{}, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
+// Requests carry encrypted query parameters or body data in encdata, with
+// X-appKey, X-requestId, X-sid, X-time, X-token, and X-sign headers.
+// Responses contain a result, success, code, message, timestamp, and request ID.
+func (c *EncryptedClient) makeRequest(
+	ctx context.Context,
+	method, path string,
+	params, body map[string]any,
+	operationRequest OperationRequest,
+) (*EncryptedAPIResponse, error) {
 	if !wire.IsKnownOperation(method, path) {
-		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("operation %s %s is not in api/openapi.yaml", method, path))
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("operation %s %s %w", method, path, errUnschematizedOperation))
 	}
-	// Generate request ID and secret
+
 	rid := GenerateRID()
 	sid := ""
-
-	var token string
-	var err error
-	var authContext *AuthorizationContext
-
-	// Extract authorization context from request if provided
-	if operationRequest != nil {
-		req := operationRequest.GetRequest()
-		authContext = req.AuthorizationContext
-	}
-
+	authContext := requestAuthorizationContext(operationRequest)
 	tokens := c.Client.Tokens()
-	// Request-local authorization takes precedence; otherwise use the session's
-	// explicitly assigned credentials. Token retrieval never refreshes silently.
-	if authContext != nil && authContext.RefreshToken != "" {
-		token = authContext.RefreshToken
-	} else {
-		token = tokens.RefreshToken
-		if token == "" {
-			return nil, clientError(ErrorUnauthorized, fmt.Errorf("refresh token is required; set it on the session or request"))
-		}
+
+	refreshToken, err := requiredRefreshToken(authContext, tokens)
+	if err != nil {
+		return nil, err
 	}
 
-	// Create hash key: MD5(rid + refresh_token)
 	// #nosec G401 - MD5 is required by Tuya API protocol
 	h := md5.New()
-	h.Write([]byte(rid + token))
+	h.Write([]byte(rid + refreshToken))
 	hashKey := hex.EncodeToString(h.Sum(nil))
-
-	// Generate secret
 	secret := secretGenerating(rid, sid, hashKey)
 
-	// Encrypt params and body
-	var queryEncdata, bodyEncdata string
-	var finalBody []byte
+	payload, err := encryptRequestPayload(params, body, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, err := requiredAccessToken(authContext, tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	headers, err := signedRequestHeaders(c.Client.ClientID, rid, sid, accessToken, hashKey, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := c.newEncryptedRequest(ctx, method, path, payload, headers)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.Client.HTTPClient.Do(request)
+	if err != nil {
+		return nil, clientError(ErrorTransport, fmt.Errorf("failed to make request: %w", err))
+	}
+
+	defer func() {
+		closeErr := response.Body.Close()
+		if closeErr != nil {
+			log.Printf("failed to close response body: %v", closeErr) // Do not override the request result.
+		}
+	}()
+
+	return decodeEncryptedResponse(response, secret)
+}
+
+type encryptedRequestPayload struct {
+	queryEncdata string
+	bodyEncdata  string
+	finalBody    []byte
+}
+
+func requestAuthorizationContext(operationRequest OperationRequest) *AuthorizationContext {
+	if operationRequest == nil {
+		return nil
+	}
+
+	return operationRequest.GetRequest().AuthorizationContext
+}
+
+func requiredRefreshToken(authContext *AuthorizationContext, tokens Tokens) (string, error) {
+	if authContext != nil && authContext.RefreshToken != "" {
+		return authContext.RefreshToken, nil
+	}
+
+	if tokens.RefreshToken == "" {
+		return "", clientError(ErrorUnauthorized, errRefreshTokenRequired)
+	}
+
+	return tokens.RefreshToken, nil
+}
+
+func requiredAccessToken(authContext *AuthorizationContext, tokens Tokens) (string, error) {
+	if authContext != nil && authContext.AccessToken != "" {
+		return authContext.AccessToken, nil
+	}
+
+	if tokens.AccessToken == "" {
+		return "", clientError(ErrorUnauthorized, errAccessTokenRequired)
+	}
+
+	return tokens.AccessToken, nil
+}
+
+func encryptRequestPayload(params, body map[string]any, secret string) (encryptedRequestPayload, error) {
+	var payload encryptedRequestPayload
 
 	if len(params) > 0 {
-		queryJSON := formToJSON(params)
+		queryJSON, err := formToJSON(params)
+		if err != nil {
+			return encryptedRequestPayload{}, clientError(ErrorProtocol, fmt.Errorf("failed to marshal params: %w", err))
+		}
+
 		encrypted, err := aesGCMEncrypt(queryJSON, secret)
 		if err != nil {
-			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt params: %w", err))
+			return encryptedRequestPayload{}, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt params: %w", err))
 		}
-		queryEncdata = string(encrypted)
+
+		payload.queryEncdata = string(encrypted)
 	}
 
 	if len(body) > 0 {
-		bodyJSON := formToJSON(body)
+		bodyJSON, err := formToJSON(body)
+		if err != nil {
+			return encryptedRequestPayload{}, clientError(ErrorProtocol, fmt.Errorf("failed to marshal body: %w", err))
+		}
+
 		encrypted, err := aesGCMEncrypt(bodyJSON, secret)
 		if err != nil {
-			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt body: %w", err))
+			return encryptedRequestPayload{}, clientError(ErrorProtocol, fmt.Errorf("failed to encrypt body: %w", err))
 		}
-		bodyEncdata = string(encrypted)
-		finalBody, err = json.Marshal(wire.EncryptedDataEnvelope{
-			Encdata: bodyEncdata,
+
+		payload.bodyEncdata = string(encrypted)
+
+		payload.finalBody, err = json.Marshal(wire.EncryptedDataEnvelope{
+			Encdata: payload.bodyEncdata,
 		})
 		if err != nil {
-			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to marshal encrypted body envelope: %w", err))
+			return encryptedRequestPayload{}, clientError(ErrorProtocol, fmt.Errorf("failed to marshal encrypted body envelope: %w", err))
 		}
 	}
 
-	var accessToken string
-	// Use an operation-specific access token or the session's current token.
-	if authContext != nil && authContext.AccessToken != "" {
-		accessToken = authContext.AccessToken
-	} else {
-		accessToken = tokens.AccessToken
-		if accessToken == "" {
-			return nil, clientError(ErrorUnauthorized, fmt.Errorf("access token is required; set it on the session or request"))
-		}
-	}
+	return payload, nil
+}
 
-	// Build header values using the generated model so names and fields stay
-	// aligned with the transport schema.
+func signedRequestHeaders(clientID, rid, sid, accessToken, hashKey string, payload encryptedRequestPayload) (map[string]string, error) {
 	requestHeaders := wire.EncryptedRequestHeaders{
-		XAppKey:    c.Client.ClientID,
+		XAppKey:    clientID,
 		XRequestId: rid,
 		XSid:       sid,
+		XSign:      "",
 		XTime:      strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10),
 		XToken:     accessToken,
 	}
+
 	headers, err := wireStringMap(requestHeaders)
 	if err != nil {
 		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode request headers: %w", err))
 	}
 
-	// Generate signature
-	sign := restfulSign(hashKey, queryEncdata, bodyEncdata, headers)
-	requestHeaders.XSign = sign
+	requestHeaders.XSign = restfulSign(hashKey, payload.queryEncdata, payload.bodyEncdata, headers)
+
 	headers, err = wireStringMap(requestHeaders)
 	if err != nil {
 		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode request headers: %w", err))
 	}
 
-	// Build URL
-	url := c.Client.CloudAPIURL + path
+	return headers, nil
+}
 
-	// Create HTTP request
-	var reqBody io.Reader
-	if finalBody != nil {
-		reqBody = bytes.NewBuffer(finalBody)
+func (c *EncryptedClient) newEncryptedRequest(
+	ctx context.Context,
+	method, path string,
+	payload encryptedRequestPayload,
+	headers map[string]string,
+) (*http.Request, error) {
+	var body io.Reader
+	if payload.finalBody != nil {
+		body = bytes.NewBuffer(payload.finalBody)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+	request, err := http.NewRequestWithContext(ctx, method, c.Client.CloudAPIURL+path, body)
 	if err != nil {
 		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("failed to create request: %w", err))
 	}
-	q := req.URL.Query()
-	if queryEncdata != "" {
-		queryEnvelope := wire.EncryptedDataEnvelope{Encdata: queryEncdata}
+
+	queryValues := request.URL.Query()
+
+	if payload.queryEncdata != "" {
+		queryEnvelope := wire.EncryptedDataEnvelope{Encdata: payload.queryEncdata}
+
 		encodedParams, err := wireQueryValues(queryEnvelope)
 		if err != nil {
 			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode encrypted query envelope: %w", err))
 		}
+
 		for key, values := range encodedParams {
 			for _, value := range values {
-				q.Add(key, value)
+				queryValues.Add(key, value)
 			}
 		}
 	}
 
-	req.URL.RawQuery = q.Encode()
-
-	// Set headers
+	request.URL.RawQuery = queryValues.Encode()
 	for key, value := range headers {
-		req.Header.Set(key, value)
+		request.Header.Set(key, value)
 	}
 
-	// Make request
-	resp, err := c.Client.HTTPClient.Do(req)
-	if err != nil {
-		return nil, clientError(ErrorTransport, fmt.Errorf("failed to make request: %w", err))
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
-			// Log error but don't override return error
-		}
-	}()
+	return request, nil
+}
 
-	// Read response
+func decodeEncryptedResponse(resp *http.Response, secret string) (*EncryptedAPIResponse, error) {
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, clientError(ErrorTransport, fmt.Errorf("failed to read response: %w", err))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		kind := ErrorProvider
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			kind = ErrorUnauthorized
-		} else if resp.StatusCode == http.StatusNotFound {
-			kind = ErrorNotFound
-		}
-		return nil, clientError(kind, fmt.Errorf("response error: code=%d, content=%s", resp.StatusCode, string(respBody)))
+		return nil, responseStatusError(resp.StatusCode, respBody)
 	}
 
-	// Parse the encrypted transport envelope before handing the decrypted result
-	// to operation-specific generated models.
-	var transportResponse wire.EncryptedHTTPResponseEnvelope
-	if err := json.Unmarshal(respBody, &transportResponse); err != nil {
-		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to unmarshal response: %w", err))
+	return parseSuccessfulEncryptedResponse(resp.StatusCode, respBody, secret)
+}
+
+func responseStatusError(statusCode int, responseBody []byte) error {
+	kind := ErrorProvider
+
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		kind = ErrorUnauthorized
+	case http.StatusNotFound:
+		kind = ErrorNotFound
 	}
 
-	// Check success
+	return clientError(kind, fmt.Errorf("%w: code=%d, content=%s", errHTTPResponse, statusCode, string(responseBody)))
+}
+
+func parseSuccessfulEncryptedResponse(statusCode int, responseBody []byte, secret string) (*EncryptedAPIResponse, error) {
+	transportResponse, err := decodeTransportResponse(responseBody)
+	if err != nil {
+		return nil, err
+	}
+
 	success := dereference(transportResponse.Success)
 	if !success {
-		code, _ := transportResponse.Code.(string)
-		msg, _ := transportResponse.Msg.(string)
-		// map[string]interface {} ["code": "1010", "msg": "token is expired", "t": 1753502581085, "tid": "1231", "success": false, ]
-		kind := ErrorProvider
-		if code == "1010" {
-			kind = ErrorUnauthorized
-		}
-		return nil, clientError(kind, fmt.Errorf("network error: (%s) %s", code, msg))
+		return nil, unsuccessfulTransportResponseError(transportResponse)
 	}
-	responseData, err := convertWireValue[map[string]interface{}](transportResponse)
+
+	responseData, err := convertWireValue[map[string]any](transportResponse)
 	if err != nil {
 		return nil, clientError(ErrorProtocol, fmt.Errorf("failed to map transport response: %w", err))
 	}
 
-	// Decrypt result
-	if encResult, ok := transportResponse.Result.(string); ok {
-		decrypted, err := aesGCMDecrypt(encResult, secret)
-		if err != nil {
-			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to decrypt response: %w", err))
-		}
-
-		// Try to parse as JSON
-		var parsedResult interface{}
-		if err := json.Unmarshal([]byte(decrypted), &parsedResult); err != nil {
-			// If not JSON, use as string
-			responseData["result"] = decrypted
-		} else {
-			responseData["result"] = parsedResult
-		}
+	err = populateDecryptedResult(responseData, transportResponse.Result, secret)
+	if err != nil {
+		return nil, err
 	}
 
-	// Build response object
+	return encryptedAPIResponse(statusCode, responseData, success, transportResponse), nil
+}
+
+func decodeTransportResponse(responseBody []byte) (wire.EncryptedHTTPResponseEnvelope, error) {
+	var transportResponse wire.EncryptedHTTPResponseEnvelope
+
+	err := json.Unmarshal(responseBody, &transportResponse)
+	if err != nil {
+		return wire.EncryptedHTTPResponseEnvelope{}, clientError(ErrorProtocol, fmt.Errorf("failed to unmarshal response: %w", err))
+	}
+
+	return transportResponse, nil
+}
+
+func unsuccessfulTransportResponseError(transportResponse wire.EncryptedHTTPResponseEnvelope) error {
+	code, _ := transportResponse.Code.(string)
+	msg, _ := transportResponse.Msg.(string)
+	kind := ErrorProvider
+
+	if code == "1010" {
+		kind = ErrorUnauthorized
+	}
+
+	return clientError(kind, fmt.Errorf("%w: (%s) %s", errNetworkError, code, msg))
+}
+
+func encryptedAPIResponse(
+	statusCode int,
+	responseData map[string]any,
+	success bool,
+	transportResponse wire.EncryptedHTTPResponseEnvelope,
+) *EncryptedAPIResponse {
 	response := &EncryptedAPIResponse{
-		StatusCode: resp.StatusCode,
+		StatusCode: statusCode,
+		Headers:    nil,
 		Body:       responseData,
 		Success:    success,
+		Code:       0,
+		Message:    "",
+		Time:       0,
 	}
 
 	if code, ok := transportResponse.Code.(float64); ok {
 		response.Code = int(code)
 	}
+
 	if msg, ok := transportResponse.Msg.(string); ok {
 		response.Message = msg
 	}
+
 	if transportResponse.T != nil {
 		response.Time = *transportResponse.T
 	}
 
-	return response, nil
+	return response
 }
 
-// GenerateRID generates a UUID-based request ID
+func populateDecryptedResult(responseData map[string]any, result any, secret string) error {
+	encryptedResult, ok := result.(string)
+	if !ok {
+		return nil
+	}
+
+	decrypted, err := aesGCMDecrypt(encryptedResult, secret)
+	if err != nil {
+		return clientError(ErrorProtocol, fmt.Errorf("failed to decrypt response: %w", err))
+	}
+
+	responseData["result"] = parsedResponseResult(decrypted)
+
+	return nil
+}
+
+func parsedResponseResult(decrypted string) any {
+	var parsedResult any
+
+	err := json.Unmarshal([]byte(decrypted), &parsedResult)
+	if err != nil {
+		return decrypted
+	}
+
+	return parsedResult
+}
+
+// GenerateRID generates a UUID-based request ID.
 func GenerateRID() string {
 	return uuid.New().String()
 }
 
-// randomNonce generates a random nonce string
+// randomNonce generates a random nonce string.
 func randomNonce(length int) string {
 	const charset = "ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678"
+
 	result := make([]byte, length)
-	for i := range result {
+	for index := range result {
 		randBytes := make([]byte, 1)
-		if _, err := rand.Read(randBytes); err != nil {
+
+		_, err := rand.Read(randBytes)
+		if err != nil {
 			// Fallback to less secure option if crypto/rand fails
-			result[i] = charset[len(charset)/2] // Use middle character as fallback
+			result[index] = charset[len(charset)/2] // Use middle character as fallback
 		} else {
-			result[i] = charset[int(randBytes[0])%len(charset)]
+			result[index] = charset[int(randBytes[0])%len(charset)]
 		}
 	}
+
 	return string(result)
 }
 
-// formToJSON converts map to JSON string
-func formToJSON(content map[string]interface{}) string {
+// formToJSON converts map to JSON string.
+func formToJSON(content map[string]any) (string, error) {
 	if content == nil {
-		return ""
+		return "", nil
 	}
-	jsonBytes, _ := json.Marshal(content)
-	return string(jsonBytes)
+
+	jsonBytes, err := json.Marshal(content)
+	if err != nil {
+		return "", fmt.Errorf("marshal form as JSON: %w", err)
+	}
+
+	return string(jsonBytes), nil
 }
 
-// aesGCMEncrypt encrypts data using AES-GCM with base64 encoding
+// aesGCMEncrypt encrypts data using AES-GCM with base64 encoding.
 func aesGCMEncrypt(rawData, secret string) ([]byte, error) {
-	nonce := randomNonce(12)
+	nonce := randomNonce(aesGCMNonceSize)
 	// Convert to bytes
 	data := []byte(rawData)
 	key := []byte(secret)
@@ -349,7 +489,7 @@ func aesGCMEncrypt(rawData, secret string) ([]byte, error) {
 	return []byte(nonceB64 + ciphertextB64), nil
 }
 
-// aesGCMDecrypt decrypts AES-GCM encrypted data
+// aesGCMDecrypt decrypts AES-GCM encrypted data.
 func aesGCMDecrypt(cipherData, secret string) (string, error) {
 	// Decode base64
 	cipherBytes, err := base64.StdEncoding.DecodeString(cipherData)
@@ -357,16 +497,17 @@ func aesGCMDecrypt(cipherData, secret string) (string, error) {
 		return "", fmt.Errorf("failed to decode base64: %w", err)
 	}
 
-	// Split nonce and ciphertext (first 12 bytes are nonce)
-	if len(cipherBytes) < 12 {
-		return "", fmt.Errorf("cipher data too short")
+	// Split nonce and ciphertext using Tuya's 12-byte AES-GCM nonce.
+	if len(cipherBytes) < aesGCMNonceSize {
+		return "", errCipherDataTooShort
 	}
 
-	nonce := cipherBytes[:12]
-	ciphertext := cipherBytes[12:]
+	nonce := cipherBytes[:aesGCMNonceSize]
+	ciphertext := cipherBytes[aesGCMNonceSize:]
 
 	// Create AES-GCM cipher
 	key := []byte(secret)
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("failed to create AES cipher: %w", err)
@@ -386,25 +527,28 @@ func aesGCMDecrypt(cipherData, secret string) (string, error) {
 	return string(plaintext), nil
 }
 
-// secretGenerating generates the secret key for encryption
+// secretGenerating generates the secret key for encryption.
 func secretGenerating(rid, sid, hashKey string) string {
 	message := hashKey
-	mod := 16
 
 	if sid != "" {
 		sidLength := len(sid)
-		length := sidLength
-		if sidLength > mod {
-			length = mod
-		}
+
+		length := min(sidLength, derivedSecretKeySize)
 
 		ecode := ""
-		for i := 0; i < length; i++ {
-			idx := int(sid[i]) % mod
+
+		var ecodeSb435 strings.Builder
+
+		for i := range length {
+			idx := int(sid[i]) % derivedSecretKeySize
 			if idx < len(sid) {
-				ecode += string(sid[idx])
+				ecodeSb435.WriteString(string(sid[idx]))
 			}
 		}
+
+		ecode += ecodeSb435.String()
+
 		message += "_" + ecode
 	}
 
@@ -415,32 +559,38 @@ func secretGenerating(rid, sid, hashKey string) string {
 	secret := hex.EncodeToString(byteTemp)
 
 	// Return first 16 characters
-	if len(secret) > 16 {
-		return secret[:16]
+	if len(secret) > derivedSecretKeySize {
+		return secret[:derivedSecretKeySize]
 	}
+
 	return secret
 }
 
-// restfulSign generates the signature for the request
+// restfulSign generates the signature for the request.
 func restfulSign(hashKey, queryEncdata, bodyEncdata string, headers map[string]string) string {
 	headerKeys := []string{"X-appKey", "X-requestId", "X-sid", "X-time", "X-token"}
 	headerSignStr := ""
 
+	var headerSignStrSb464 strings.Builder
+
 	for _, key := range headerKeys {
 		if val, exists := headers[key]; exists && val != "" {
-			headerSignStr += key + "=" + val + "||"
+			headerSignStrSb464.WriteString(key + "=" + val + signatureHeaderSeparator)
 		}
 	}
 
+	headerSignStr += headerSignStrSb464.String()
+
 	// Remove last "||"
-	if len(headerSignStr) > 2 {
-		headerSignStr = headerSignStr[:len(headerSignStr)-2]
+	if len(headerSignStr) > len(signatureHeaderSeparator) {
+		headerSignStr = headerSignStr[:len(headerSignStr)-len(signatureHeaderSeparator)]
 	}
 
 	signStr := headerSignStr
 	if queryEncdata != "" {
 		signStr += queryEncdata
 	}
+
 	if bodyEncdata != "" {
 		signStr += bodyEncdata
 	}
@@ -448,16 +598,17 @@ func restfulSign(hashKey, queryEncdata, bodyEncdata string, headers map[string]s
 	// Create HMAC-SHA256 signature
 	h := hmac.New(sha256.New, []byte(hashKey))
 	h.Write([]byte(signStr))
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// EncryptedAPIResponse represents an encrypted customer API response
+// EncryptedAPIResponse represents an encrypted customer API response.
 type EncryptedAPIResponse struct {
-	StatusCode int                    `json:"status_code"`
-	Headers    map[string]string      `json:"headers,omitempty"`
-	Body       map[string]interface{} `json:"body,omitempty"`
-	Success    bool                   `json:"success"`
-	Code       int                    `json:"code,omitempty"`
-	Message    string                 `json:"msg,omitempty"`
-	Time       int64                  `json:"t,omitempty"`
+	StatusCode int               `json:"status_code"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	Body       map[string]any    `json:"body,omitempty"`
+	Success    bool              `json:"success"`
+	Code       int               `json:"code,omitempty"`
+	Message    string            `json:"msg,omitempty"`
+	Time       int64             `json:"t,omitempty"`
 }

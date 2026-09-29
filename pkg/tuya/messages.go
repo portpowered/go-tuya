@@ -17,19 +17,29 @@ import (
 	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
 )
 
+const (
+	mqttDisconnectQuiesceMillis    = 250
+	mqttConfigRefreshInterval      = 2 * time.Hour
+	mqttExpiryRefreshBufferSeconds = 60
+	minimumMQTTExpirySeconds       = 1
+	reconnectBackoffMultiplier     = 2
+	maximumReconnectBackoffSeconds = 60
+)
+
 // GetMessageQueueConfig retrieves MQTT configuration from Tuya API
 // https://developer.tuya.com/en/docs/cloud/c2c2630d7c?id=Kb68mozbi3foh
 func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (MessageQueueConfig, error) {
 	linkID := uuid.New().String()
 
-	body, err := wireRequestMap(wire.MessageQueueConfigBody{LinkId: linkID})
+	body, err := wireRequestMap(wire.MessageQueueConfigBody{LinkId: linkID, AdditionalProperties: nil})
 	if err != nil {
 		return MessageQueueConfig{}, err
 	}
+
 	resp, err := s.Client.EncryptedClient.requestOperation(ctx, wire.OperationGetMessageQueueConfig(), nil,
-		map[string]interface{}{},
+		map[string]any{},
 		body,
-		&MessageQueueStartRequest{})
+		&MessageQueueStartRequest{Request: Request{AuthorizationContext: nil, DoNotRefreshToken: false}})
 	if err != nil {
 		return MessageQueueConfig{}, err
 	}
@@ -38,54 +48,75 @@ func (s *SharingMessageQueueImpl) GetMessageQueueConfig(ctx context.Context) (Me
 	if err != nil {
 		return MessageQueueConfig{}, fmt.Errorf("failed to parse MQTT config response: %w", err)
 	}
+
 	var wireConfig wire.MessageQueueConfiguration
 	if wireResponse.Result != nil {
 		wireConfig = *wireResponse.Result
 	}
+
 	config := MessageQueueConfig{
-		URL:        dereference(wireConfig.Url),
-		ClientID:   dereference(wireConfig.ClientId),
-		Username:   dereference(wireConfig.Username),
-		Password:   dereference(wireConfig.Password),
-		ExpireTime: dereference(wireConfig.ExpireTime),
+		URL:         dereference(wireConfig.Url),
+		ClientID:    dereference(wireConfig.ClientId),
+		Username:    dereference(wireConfig.Username),
+		Password:    dereference(wireConfig.Password),
+		ExpireTime:  dereference(wireConfig.ExpireTime),
+		OwnerTopic:  "",
+		DeviceTopic: "",
 	}
+
 	if wireConfig.Topic != nil {
 		if wireConfig.Topic.OwnerId != nil {
 			config.OwnerTopic = dereference(wireConfig.Topic.OwnerId.Sub)
 		}
+
 		if wireConfig.Topic.DevId != nil {
 			config.DeviceTopic = dereference(wireConfig.Topic.DevId.Sub)
 		}
 	}
+
 	return config, nil
 }
 
-// MessageQueueConfig represents the MQTT configuration from Tuya API
+// MessageQueueConfig represents the MQTT configuration from Tuya API.
 type MessageQueueConfig struct {
-	URL         string `json:"url"`
-	ClientID    string `json:"clientId"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	ExpireTime  int64  `json:"expireTime"`
-	OwnerTopic  string `json:"ownerTopic"`
+	URL string `json:"url"`
+	//nolint:tagliatelle // OpenAPI defines these provider response keys in camelCase.
+	ClientID string `json:"clientId"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	//nolint:tagliatelle // OpenAPI defines these provider response keys in camelCase.
+	ExpireTime int64 `json:"expireTime"`
+	//nolint:tagliatelle // AsyncAPI defines these provider topic keys in camelCase.
+	OwnerTopic string `json:"ownerTopic"`
+	//nolint:tagliatelle // AsyncAPI defines these provider topic keys in camelCase.
 	DeviceTopic string `json:"deviceTopic"`
+}
+
+func (config MessageQueueConfig) isEmpty() bool {
+	return config.URL == "" &&
+		config.ClientID == "" &&
+		config.Username == "" &&
+		config.Password == "" &&
+		config.ExpireTime == 0 &&
+		config.OwnerTopic == "" &&
+		config.DeviceTopic == ""
 }
 
 // MQTTClientFactory creates the MQTT edge client used by a session's message
 // queue. It can be replaced with a test double or custom Paho client.
 type MQTTClientFactory func(*mqtt.ClientOptions) mqtt.Client
 
-func newMQTTClient(options *mqtt.ClientOptions) mqtt.Client {
+func newMQTTClient(options *mqtt.ClientOptions) mqtt.Client { //nolint:ireturn // Paho constructs and exposes clients through this interface.
 	return mqtt.NewClient(options)
 }
 
-// MessageListener represents a callback function for MQTT messages
-type MessageListener func(topic string, message interface{})
+// MessageListener represents a callback function for MQTT messages.
+type MessageListener func(topic string, message any)
 
 // DeviceListener represents a callback function used to activate event listening for device events.
 type DeviceListener func(deviceID string, status Event)
 
-// mqttState holds the internal MQTT state for a SharingMessageQueueImpl instance
+// mqttState holds the internal MQTT state for a SharingMessageQueueImpl instance.
 type mqttState struct {
 	// MQTT client and configuration
 	mqttClient  mqtt.Client
@@ -121,8 +152,10 @@ type MessageQueueStatus struct {
 // Status returns a snapshot of the message queue lifecycle.
 func (s *SharingMessageQueueImpl) Status() MessageQueueStatus {
 	state := s.State
+
 	state.statusMux.RLock()
 	defer state.statusMux.RUnlock()
+
 	return MessageQueueStatus{Running: state.isRunning.Load(), Connected: state.connected.Load(), LastError: state.lastError}
 }
 
@@ -140,18 +173,21 @@ func (state *mqttState) connectOnce(ctx context.Context, queue *SharingMessageQu
 	} else {
 		err = state.connectMQTT(ctx, queue)
 	}
+
 	var classified *ClientError
 	if err != nil && !errors.As(err, &classified) {
 		return clientError(ErrorTransport, err)
 	}
+
 	return err
 }
 
 // getOrCreateState gets or creates the MQTT state for a SharingMessageQueueImpl instance
 
-// Start initializes and starts the MQTT message queue
+// Start initializes and starts the MQTT message queue.
 func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStartRequest) (MessageQueueStartResponse, error) {
 	state := s.State
+
 	state.lifecycleMux.Lock()
 	defer state.lifecycleMux.Unlock()
 
@@ -167,15 +203,21 @@ func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStart
 	state.reconnectCh = make(chan struct{}, 1)
 	state.doneCh = make(chan struct{})
 	loopCtx, cancel := context.WithCancel(ctx)
+
 	state.cancel = cancel
-	if err := state.connectOnce(loopCtx, s); err != nil {
+
+	err := state.connectOnce(loopCtx, s)
+	if err != nil {
 		state.recordConnection(err)
 		cancel()
+
 		state.cancel = nil
 		state.stopCh = nil
 		state.doneCh = nil
+
 		return MessageQueueStartResponse{Success: false, Message: err.Error()}, err
 	}
+
 	state.recordConnection(nil)
 	state.isRunning.Store(true)
 
@@ -188,9 +230,10 @@ func (s *SharingMessageQueueImpl) Start(ctx context.Context, _ MessageQueueStart
 	}, nil
 }
 
-// Stop gracefully shuts down the MQTT message queue
+// Stop gracefully shuts down the MQTT message queue.
 func (s *SharingMessageQueueImpl) Stop(_ context.Context, _ MessageQueueStopRequest) (MessageQueueStopResponse, error) {
 	state := s.State
+
 	state.lifecycleMux.Lock()
 	defer state.lifecycleMux.Unlock()
 
@@ -203,21 +246,25 @@ func (s *SharingMessageQueueImpl) Stop(_ context.Context, _ MessageQueueStopRequ
 
 	// Signal stop to background goroutine
 	close(state.stopCh)
+
 	if state.cancel != nil {
 		state.cancel()
 		state.cancel = nil
 	}
+
 	if state.doneCh != nil {
 		<-state.doneCh
 		state.doneCh = nil
 	}
+
 	state.stopCh = nil
 	state.isRunning.Store(false)
 
 	// Disconnect MQTT client
 	if state.mqttClient != nil && state.mqttClient.IsConnected() {
-		state.mqttClient.Disconnect(250)
+		state.mqttClient.Disconnect(mqttDisconnectQuiesceMillis)
 	}
+
 	state.connected.Store(false)
 
 	return MessageQueueStopResponse{
@@ -226,9 +273,10 @@ func (s *SharingMessageQueueImpl) Stop(_ context.Context, _ MessageQueueStopRequ
 	}, nil
 }
 
-// AddMessageListener adds a general message listener for a specific topic
+// AddMessageListener adds a general message listener for a specific topic.
 func (s *SharingMessageQueueImpl) AddMessageListener(_ context.Context, req AddMessageListenerRequest) (AddMessageListenerResponse, error) {
 	state := s.State
+
 	state.listenersMux.Lock()
 	defer state.listenersMux.Unlock()
 
@@ -247,13 +295,14 @@ func (s *SharingMessageQueueImpl) AddMessageListener(_ context.Context, req AddM
 
 	return AddMessageListenerResponse{
 		Success: true,
-		Message: fmt.Sprintf("Message listener added for topic: %s", req.Topic),
+		Message: "Message listener added for topic: " + req.Topic,
 	}, nil
 }
 
-// RemoveMessageListener removes a message listener for a specific topic
+// RemoveMessageListener removes a message listener for a specific topic.
 func (s *SharingMessageQueueImpl) RemoveMessageListener(_ context.Context, req RemoveMessageListenerRequest) (RemoveMessageListenerResponse, error) {
 	state := s.State
+
 	state.listenersMux.Lock()
 	defer state.listenersMux.Unlock()
 
@@ -261,11 +310,11 @@ func (s *SharingMessageQueueImpl) RemoveMessageListener(_ context.Context, req R
 
 	return RemoveMessageListenerResponse{
 		Success: true,
-		Message: fmt.Sprintf("Message listeners removed for topic: %s", req.Topic),
+		Message: "Message listeners removed for topic: " + req.Topic,
 	}, nil
 }
 
-// RefreshMQ forces a refresh of the MQTT connection
+// RefreshMQ forces a refresh of the MQTT connection.
 func (s *SharingMessageQueueImpl) RefreshMQ(_ context.Context, _ RefreshMQRequest) (RefreshMQResponse, error) {
 	state := s.State
 
@@ -278,8 +327,7 @@ func (s *SharingMessageQueueImpl) RefreshMQ(_ context.Context, _ RefreshMQReques
 	// Signal reconnection
 	select {
 	case state.reconnectCh <- struct{}{}:
-	default:
-		// Channel already has a pending signal
+	default: // Channel already has a pending signal.
 	}
 
 	return RefreshMQResponse{
@@ -287,9 +335,10 @@ func (s *SharingMessageQueueImpl) RefreshMQ(_ context.Context, _ RefreshMQReques
 	}, nil
 }
 
-// AddDeviceListener adds a device-specific listener
+// AddDeviceListener adds a device-specific listener.
 func (s *SharingMessageQueueImpl) AddDeviceListener(_ context.Context, req AddDeviceListenerRequest) (AddDeviceListenerResponse, error) {
 	state := s.State
+
 	state.listenersMux.Lock()
 	defer state.listenersMux.Unlock()
 
@@ -306,85 +355,116 @@ func (s *SharingMessageQueueImpl) AddDeviceListener(_ context.Context, req AddDe
 	state.deviceListeners[req.DeviceID] = append(state.deviceListeners[req.DeviceID], listener)
 
 	// Subscribe to device topic if MQTT is connected
-	if state.mqttClient != nil && state.mqttClient.IsConnected() && state.mqConfig != (MessageQueueConfig{}) {
+	if state.mqttClient != nil && state.mqttClient.IsConnected() && !state.mqConfig.isEmpty() {
 		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", req.DeviceID)
 		subscribeChannel(state.mqttClient, wire.MQTTChannelDeviceStatus, deviceTopic)
 	}
 
 	return AddDeviceListenerResponse{
-		Message: fmt.Sprintf("Device listener added for device: %s", req.DeviceID),
+		Message: "Device listener added for device: " + req.DeviceID,
 	}, nil
 }
 
-// RemoveDeviceListener removes a device-specific listener
+// RemoveDeviceListener removes a device-specific listener.
 func (s *SharingMessageQueueImpl) RemoveDeviceListener(_ context.Context, req RemoveDeviceListenerRequest) (RemoveDeviceListenerResponse, error) {
 	state := s.State
+
 	state.listenersMux.Lock()
 	defer state.listenersMux.Unlock()
 
 	delete(state.deviceListeners, req.DeviceID)
 
 	// Unsubscribe from device topic if MQTT is connected
-	if state.mqttClient != nil && state.mqttClient.IsConnected() && state.mqConfig != (MessageQueueConfig{}) {
+	if state.mqttClient != nil && state.mqttClient.IsConnected() && !state.mqConfig.isEmpty() {
 		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", req.DeviceID)
 		unsubscribeChannel(state.mqttClient, wire.MQTTChannelDeviceStatus, deviceTopic)
 	}
 
 	return RemoveDeviceListenerResponse{
-		Message: fmt.Sprintf("Device listener removed for device: %s", req.DeviceID),
+		Message: "Device listener removed for device: " + req.DeviceID,
 	}, nil
 }
 
-// runMQTTLoop manages the MQTT connection lifecycle
-func (state *mqttState) runMQTTLoop(ctx context.Context, s *SharingMessageQueueImpl) {
+// runMQTTLoop manages the MQTT connection lifecycle.
+func (state *mqttState) runMQTTLoop(ctx context.Context, queue *SharingMessageQueueImpl) {
 	defer close(state.doneCh)
 	defer state.isRunning.Store(false)
+
 	backoffSeconds := 1
-	ticker := time.NewTicker(2 * time.Hour) // Refresh every 2 hours
+
+	ticker := time.NewTicker(mqttConfigRefreshInterval) // Refresh every 2 hours
 	defer ticker.Stop()
 
 	for {
-		expiry := time.Duration(max(state.mqConfig.ExpireTime-60, 1)) * time.Second
-		expiryTimer := time.NewTimer(expiry)
-		select {
-		case <-state.stopCh:
-			expiryTimer.Stop()
+		if !state.waitForMQTTTrigger(ctx, ticker) {
 			return
-		case <-ctx.Done():
-			expiryTimer.Stop()
-			state.recordConnection(ctx.Err())
-			return
-		case <-state.reconnectCh:
-		case <-ticker.C:
-		case <-expiryTimer.C:
 		}
-		expiryTimer.Stop()
-		if err := state.connectOnce(ctx, s); err != nil {
+
+		err := state.connectOnce(ctx, queue)
+		if err != nil {
 			state.recordConnection(err)
 			log.Printf("Failed to connect to MQTT: %v, retrying in %d seconds", err, backoffSeconds)
-			select {
-			case <-state.stopCh:
+
+			if !state.waitBeforeReconnect(ctx, backoffSeconds) {
 				return
-			case <-ctx.Done():
-				return
-			case <-time.After(time.Duration(backoffSeconds) * time.Second):
 			}
-			backoffSeconds = min(backoffSeconds*2, 60)
-			select {
-			case state.reconnectCh <- struct{}{}:
-			default:
-			}
+
+			backoffSeconds = min(backoffSeconds*reconnectBackoffMultiplier, maximumReconnectBackoffSeconds)
+
+			state.queueReconnect()
+
 			continue
 		}
+
 		state.recordConnection(nil)
+
 		backoffSeconds = 1
 	}
 }
 
-// connectMQTT establishes MQTT connection with current configuration
-func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueImpl) error {
+func (state *mqttState) waitForMQTTTrigger(ctx context.Context, ticker *time.Ticker) bool {
+	expiry := time.Duration(max(state.mqConfig.ExpireTime-mqttExpiryRefreshBufferSeconds, minimumMQTTExpirySeconds)) * time.Second
+
+	expiryTimer := time.NewTimer(expiry)
+	defer expiryTimer.Stop()
+
+	select {
+	case <-state.stopCh:
+		return false
+	case <-ctx.Done():
+		state.recordConnection(ctx.Err())
+
+		return false
+	case <-state.reconnectCh:
+	case <-ticker.C:
+	case <-expiryTimer.C:
+	}
+
+	return true
+}
+
+func (state *mqttState) waitBeforeReconnect(ctx context.Context, backoffSeconds int) bool {
+	select {
+	case <-state.stopCh:
+		return false
+	case <-ctx.Done():
+		return false
+	case <-time.After(time.Duration(backoffSeconds) * time.Second):
+		return true
+	}
+}
+
+func (state *mqttState) queueReconnect() {
+	select {
+	case state.reconnectCh <- struct{}{}:
+	default:
+	}
+}
+
+// connectMQTT establishes MQTT connection with current configuration.
+func (state *mqttState) connectMQTT(ctx context.Context, queue *SharingMessageQueueImpl) error {
 	// Get MQTT configuration from API
-	config, err := s.GetMessageQueueConfig(ctx)
+	config, err := queue.GetMessageQueueConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get MQTT config: %w", err)
 	}
@@ -393,7 +473,7 @@ func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueI
 
 	// Disconnect existing client if any
 	if state.mqttClient != nil && state.mqttClient.IsConnected() {
-		state.mqttClient.Disconnect(250)
+		state.mqttClient.Disconnect(mqttDisconnectQuiesceMillis)
 	}
 
 	// Create new MQTT client
@@ -411,9 +491,9 @@ func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueI
 		opts.SetTLSConfig(nil) // Use default TLS config
 	}
 
-	state.mqttClient = s.Client.mqttClientFactory(opts)
+	state.mqttClient = queue.Client.mqttClientFactory(opts)
 	if state.mqttClient == nil {
-		return fmt.Errorf("MQTT client factory returned nil")
+		return errMQTTFactoryReturnedNil
 	}
 
 	// Connect
@@ -422,33 +502,38 @@ func (state *mqttState) connectMQTT(ctx context.Context, s *SharingMessageQueueI
 	case <-ctx.Done():
 		return fmt.Errorf("MQTT connection canceled: %w", ctx.Err())
 	case <-token.Done():
-		if err := token.Error(); err != nil {
+		err := token.Error()
+		if err != nil {
 			return fmt.Errorf("MQTT connection failed: %w", err)
 		}
 	}
 
 	log.Printf("Connected to MQTT broker: %s", config.URL)
+
 	return nil
 }
 
-// TODO: implement a new function to subscribe to new topics as we add new event listeners,
-// This should only be called when the MQTT server is connected.
-// onConnect handles MQTT connection established
+// Future listener registrations can subscribe to their topics while MQTT is connected.
+// onConnect handles MQTT connection established.
 func (state *mqttState) onConnect(client mqtt.Client) {
 	log.Println("MQTT client connected")
 
 	// Subscribe to topics with existing listeners
 	state.listenersMux.RLock()
+
 	for topic := range state.messageListeners {
 		subscribeChannel(client, wire.MQTTChannelOwnerEvents, topic)
 		log.Printf("Subscribed to listener topic: %s", topic)
 	}
+
 	for deviceID := range state.deviceListeners {
 		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
 		subscribeChannel(client, wire.MQTTChannelDeviceStatus, deviceTopic)
+
 		topic := state.getDeviceTopic(deviceID, false)
 		log.Printf("Subscribed to device listener topic: %s", topic)
 	}
+
 	state.listenersMux.RUnlock()
 }
 
@@ -463,10 +548,11 @@ func unsubscribeChannel(client mqtt.Client, channel wire.MQTTChannel, runtimeTop
 func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
 	address := string(channel)
 	address = strings.ReplaceAll(address, "{ownerTopic}", runtimeTopic)
+
 	return strings.ReplaceAll(address, "{deviceTopic}", runtimeTopic)
 }
 
-// onConnectionLost handles MQTT connection lost
+// onConnectionLost handles MQTT connection lost.
 func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
 	log.Printf("MQTT connection lost: %v", err)
 	state.recordConnection(err)
@@ -480,46 +566,57 @@ func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
 	}
 }
 
-// onMessage handles incoming MQTT messages
+// onMessage handles incoming MQTT messages.
 func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	state.deliveryMux.Lock()
 	defer state.deliveryMux.Unlock()
+
 	topic := msg.Topic()
 	payload := msg.Payload()
 
 	// Parse message
 	var sharingMessage wire.RawSharingMessage
-	if err := json.Unmarshal(payload, &sharingMessage); err != nil {
+
+	err := json.Unmarshal(payload, &sharingMessage)
+	if err != nil {
 		log.Printf("Failed to parse message JSON: %v", err)
+
 		return
 	}
 
 	state.listenersMux.RLock()
 	messageListeners := append([]MessageListener(nil), state.messageListeners[topic]...)
 	deviceID := state.extractDeviceIDFromTopic(topic)
+
 	var deviceListeners []DeviceListener
+
 	if deviceID != "" {
 		deviceListeners = append([]DeviceListener(nil), state.deviceListeners[deviceID]...)
 	}
+
 	state.listenersMux.RUnlock()
+
 	if len(messageListeners) == 0 && len(deviceListeners) == 0 {
 		return
 	}
+
 	evt, err := parseRawSharingMessage(sharingMessage)
 	if err != nil {
 		log.Printf("Failed to parse device state change event JSON: %v", err)
+
 		return
 	}
+
 	for _, listener := range messageListeners {
 		listener(topic, evt)
 	}
+
 	for _, listener := range deviceListeners {
 		listener(deviceID, evt)
 	}
-
 }
 
-// getDeviceTopic constructs device topic from device ID and support_local flag
+// getDeviceTopic constructs device topic from device ID and support_local flag.
 func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) string {
 	topic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
 	if supportLocal {
@@ -528,15 +625,17 @@ func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) strin
 		// To do this, each device needs to maintain the corresponding specification strategy with it for local transformations.
 		return channelAddress(wire.MQTTChannelDeviceLocal, topic)
 	}
+
 	return channelAddress(wire.MQTTChannelDeviceStatus, topic)
 }
 
-// extractDeviceIDFromTopic extracts device ID from topic string
+// extractDeviceIDFromTopic extracts device ID from topic string.
 func (state *mqttState) extractDeviceIDFromTopic(topic string) string {
 	// the default topic format is "cloud/device/{devId}/in/24d2afb98121974b6505c40a3a980362"
 	parts := strings.Split(topic, "/")
 	if len(parts) < 4 || parts[0] != "cloud" || parts[1] != "device" || parts[2] == "" || parts[3] != "in" {
 		return ""
 	}
+
 	return parts[2]
 }

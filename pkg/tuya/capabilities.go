@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Capability type constants
+// Capability type constants.
 const (
 	CapabilityTypePower             = "power"
 	CapabilityTypeBrightness        = "brightness"
@@ -20,112 +20,124 @@ const (
 	CapabilityTypeWindowCovering    = "window-covering"
 	CapabilityTypeCamera            = "camera"
 	CapabilityTypeRTCSession        = "rtc-session"
+
+	dpCodeSwitchLED   = "switch_led"
+	dpCodeBrightness  = "bright_value"
+	dpCodeTemperature = "temp_value"
+	dpCodeColor       = "colour_data"
+	dpCodeSwitch      = "switch_1"
 )
 
-// Capability represents a standardized device capability interface
+const (
+	hueCycleDegrees               = 360
+	minimumPercentage             = 0
+	percentageScale               = 100
+	tuyaDataPointScale            = 1000
+	tgqBrightnessOffset           = 10
+	tgqBrightnessRange            = 990
+	colorHexComponentWidth        = 4
+	minimumColorTemperatureMireds = 153
+	maximumColorTemperatureMireds = 500
+	colorTemperatureMiredsRange   = maximumColorTemperatureMireds - minimumColorTemperatureMireds
+	tuyaTemperatureTenthsScale    = 10
+)
+
+// Capability represents a standardized device capability interface.
 type Capability interface {
 	GetCapabilityType() string
-	GetValue() interface{}
-	SetValue(value interface{}) error
+	GetValue() any
+	SetValue(value any) error
 }
 
-// PowerState represents the power state of a device
+// PowerState represents the power state of a device.
 type PowerState string
 
-// Power state constants
+// Power state constants.
 const (
-	// PowerStateOn indicates the device is powered on
+	// PowerStateOn indicates the device is powered on.
 	PowerStateOn PowerState = "on"
-	// PowerStateOff indicates the device is powered off
+	// PowerStateOff indicates the device is powered off.
 	PowerStateOff PowerState = "off"
 )
 
-// PowerCapability represents power on/off capability
+// PowerCapability represents power on/off capability.
 type PowerCapability struct {
 	State PowerState `json:"state"` // "on" or "off"
 }
 
-// GetCapabilityType returns the capability type for power
+// GetCapabilityType returns the capability type for power.
 func (p *PowerCapability) GetCapabilityType() string {
 	return CapabilityTypePower
 }
 
-// GetValue returns the current power state
-func (p *PowerCapability) GetValue() interface{} {
+// GetValue returns the current power state.
+func (p *PowerCapability) GetValue() any {
 	return p.State
 }
 
-// SetValue sets the power state from various input types
-func (p *PowerCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
+// SetValue sets the power state from various input types.
+func (p *PowerCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
 	case string:
-		if v == string(PowerStateOn) || v == string(PowerStateOff) {
-			p.State = PowerState(v)
+		if typedValue == string(PowerStateOn) || typedValue == string(PowerStateOff) {
+			p.State = PowerState(typedValue)
+
 			return nil
 		}
 	case bool:
-		if v {
+		if typedValue {
 			p.State = PowerStateOn
 		} else {
 			p.State = PowerStateOff
 		}
+
 		return nil
 	}
-	return fmt.Errorf("invalid power state value: %v", value)
+
+	return fmt.Errorf("%w: %v", errInvalidPowerStateValue, value)
 }
 
-// BrightnessCapability represents brightness adjustment capability
+// BrightnessCapability represents brightness adjustment capability.
 type BrightnessCapability struct {
 	Level int `json:"level"` // 0-100 percentage
 }
 
-// GetCapabilityType returns the capability type for brightness
+// GetCapabilityType returns the capability type for brightness.
 func (b *BrightnessCapability) GetCapabilityType() string {
 	return CapabilityTypeBrightness
 }
 
-// GetValue returns the current brightness level
-func (b *BrightnessCapability) GetValue() interface{} {
+// GetValue returns the current brightness level.
+func (b *BrightnessCapability) GetValue() any {
 	return b.Level
 }
 
-// SetValue sets the brightness level from various input types
-func (b *BrightnessCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case int:
-		if v >= 0 && v <= 100 {
-			b.Level = v
-			return nil
-		}
-	case float64:
-		level := int(v)
-		if level >= 0 && level <= 100 {
-			b.Level = level
-			return nil
-		}
-	case string:
-		if level, err := strconv.Atoi(v); err == nil && level >= 0 && level <= 100 {
-			b.Level = level
-			return nil
-		}
+// SetValue sets the brightness level from various input types.
+func (b *BrightnessCapability) SetValue(value any) error {
+	level, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	if ok {
+		b.Level = level
+
+		return nil
 	}
-	return fmt.Errorf("invalid brightness level: %v (must be 0-100)", value)
+
+	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidBrightnessLevel, value)
 }
 
-// ColorCapability represents color control capability (HSV)
+// ColorCapability represents color control capability (HSV).
 type ColorCapability struct {
 	Hue        int `json:"hue"`        // 0-360 degrees
 	Saturation int `json:"saturation"` // 0-100 percentage
 	Value      int `json:"value"`      // 0-100 percentage (brightness in HSV)
 }
 
-// GetCapabilityType returns the capability type for color
+// GetCapabilityType returns the capability type for color.
 func (c *ColorCapability) GetCapabilityType() string {
 	return CapabilityTypeColor
 }
 
-// GetValue returns the current color values as an HSV map
-func (c *ColorCapability) GetValue() interface{} {
+// GetValue returns the current color values as an HSV map.
+func (c *ColorCapability) GetValue() any {
 	return map[string]int{
 		"hue":        c.Hue,
 		"saturation": c.Saturation,
@@ -133,299 +145,305 @@ func (c *ColorCapability) GetValue() interface{} {
 	}
 }
 
-// SetValue sets the color values from various input types
-func (c *ColorCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case map[string]interface{}:
-		if hue, ok := v["hue"].(float64); ok {
-			c.Hue = int(hue) % 360
-		}
-		if sat, ok := v["saturation"].(float64); ok && sat >= 0 && sat <= 100 {
-			c.Saturation = int(sat)
-		}
-		if val, ok := v["value"].(float64); ok && val >= 0 && val <= 100 {
-			c.Value = int(val)
-		}
+// SetValue sets the color values from various input types.
+func (c *ColorCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
+	case map[string]any:
+		c.setFloatValues(typedValue)
+
 		return nil
 	case map[string]int:
-		if hue, ok := v["hue"]; ok {
-			c.Hue = hue % 360
-		}
-		if sat, ok := v["saturation"]; ok && sat >= 0 && sat <= 100 {
-			c.Saturation = sat
-		}
-		if val, ok := v["value"]; ok && val >= 0 && val <= 100 {
-			c.Value = val
-		}
+		c.setIntValues(typedValue)
+
 		return nil
 	}
-	return fmt.Errorf("invalid color value: %v", value)
+
+	return fmt.Errorf("%w: %v", errInvalidColorValue, value)
 }
 
-// ColorTemperatureCapability represents color temperature control capability
+func (c *ColorCapability) setFloatValues(values map[string]any) {
+	if hue, ok := values["hue"].(float64); ok {
+		c.Hue = int(hue) % hueCycleDegrees
+	}
+
+	if saturation, ok := values["saturation"].(float64); ok && saturation >= 0 && saturation <= 100 {
+		c.Saturation = int(saturation)
+	}
+
+	if value, ok := values["value"].(float64); ok && value >= 0 && value <= 100 {
+		c.Value = int(value)
+	}
+}
+
+func (c *ColorCapability) setIntValues(values map[string]int) {
+	if hue, ok := values["hue"]; ok {
+		c.Hue = hue % hueCycleDegrees
+	}
+
+	if saturation, ok := values["saturation"]; ok && saturation >= 0 && saturation <= 100 {
+		c.Saturation = saturation
+	}
+
+	if value, ok := values["value"]; ok && value >= 0 && value <= 100 {
+		c.Value = value
+	}
+}
+
+// ColorTemperatureCapability represents color temperature control capability.
 type ColorTemperatureCapability struct {
 	Mireds int `json:"mireds"` // Color temperature in mireds (153-500, i.e. 2000-6500K)
 }
 
-// GetCapabilityType returns the capability type for color temperature
+// GetCapabilityType returns the capability type for color temperature.
 func (ct *ColorTemperatureCapability) GetCapabilityType() string {
 	return CapabilityTypeColorTemperature
 }
 
-// GetValue returns the current color temperature in mireds
-func (ct *ColorTemperatureCapability) GetValue() interface{} {
+// GetValue returns the current color temperature in mireds.
+func (ct *ColorTemperatureCapability) GetValue() any {
 	return ct.Mireds
 }
 
-// SetValue sets the color temperature from various input types
-func (ct *ColorTemperatureCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case int:
-		if v >= 153 && v <= 500 {
-			ct.Mireds = v
-			return nil
-		}
-	case float64:
-		mireds := int(v)
-		if mireds >= 153 && mireds <= 500 {
-			ct.Mireds = mireds
-			return nil
-		}
-	case string:
-		if mireds, err := strconv.Atoi(v); err == nil && mireds >= 153 && mireds <= 500 {
-			ct.Mireds = mireds
-			return nil
-		}
+// SetValue sets the color temperature from various input types.
+func (ct *ColorTemperatureCapability) SetValue(value any) error {
+	mireds, ok := parseBoundedInt(value, minimumColorTemperatureMireds, maximumColorTemperatureMireds)
+	if ok {
+		ct.Mireds = mireds
+
+		return nil
 	}
-	return fmt.Errorf("invalid color temperature: %v (must be 153-500 mireds)", value)
+
+	return fmt.Errorf("%w: %v (must be 153-500 mireds)", errInvalidColorTemperature, value)
 }
 
-// TemperatureSensorCapability represents a temperature sensor reading
+// TemperatureSensorCapability represents a temperature sensor reading.
 type TemperatureSensorCapability struct {
 	Temperature float64 `json:"temperature"` // Temperature in Celsius
 }
 
-// GetCapabilityType returns the capability type for temperature sensor
+// GetCapabilityType returns the capability type for temperature sensor.
 func (ts *TemperatureSensorCapability) GetCapabilityType() string {
 	return CapabilityTypeTemperatureSensor
 }
 
-// GetValue returns the current temperature in Celsius
-func (ts *TemperatureSensorCapability) GetValue() interface{} {
+// GetValue returns the current temperature in Celsius.
+func (ts *TemperatureSensorCapability) GetValue() any {
 	return ts.Temperature
 }
 
-// SetValue sets the temperature from various input types
-func (ts *TemperatureSensorCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
+// SetValue sets the temperature from various input types.
+func (ts *TemperatureSensorCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
 	case float64:
-		ts.Temperature = v
+		ts.Temperature = typedValue
+
 		return nil
 	case int:
-		ts.Temperature = float64(v)
+		ts.Temperature = float64(typedValue)
+
 		return nil
 	case string:
-		if temp, err := strconv.ParseFloat(v, 64); err == nil {
+		temp, err := strconv.ParseFloat(typedValue, 64)
+		if err == nil {
 			ts.Temperature = temp
+
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid temperature value: %v", value)
+
+	return fmt.Errorf("%w: %v", errInvalidTemperatureValue, value)
 }
 
-// HumiditySensorCapability represents a humidity sensor reading
+// HumiditySensorCapability represents a humidity sensor reading.
 type HumiditySensorCapability struct {
 	Humidity int `json:"humidity"` // Humidity percentage (0-100)
 }
 
-// GetCapabilityType returns the capability type for humidity sensor
+// GetCapabilityType returns the capability type for humidity sensor.
 func (hs *HumiditySensorCapability) GetCapabilityType() string {
 	return CapabilityTypeHumiditySensor
 }
 
-// GetValue returns the current humidity percentage
-func (hs *HumiditySensorCapability) GetValue() interface{} {
+// GetValue returns the current humidity percentage.
+func (hs *HumiditySensorCapability) GetValue() any {
 	return hs.Humidity
 }
 
-// SetValue sets the humidity from various input types
-func (hs *HumiditySensorCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case int:
-		if v >= 0 && v <= 100 {
-			hs.Humidity = v
-			return nil
-		}
-	case float64:
-		level := int(v)
-		if level >= 0 && level <= 100 {
-			hs.Humidity = level
-			return nil
-		}
-	case string:
-		if level, err := strconv.Atoi(v); err == nil && level >= 0 && level <= 100 {
-			hs.Humidity = level
-			return nil
-		}
+// SetValue sets the humidity from various input types.
+func (hs *HumiditySensorCapability) SetValue(value any) error {
+	humidity, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	if ok {
+		hs.Humidity = humidity
+
+		return nil
 	}
-	return fmt.Errorf("invalid humidity value: %v (must be 0-100)", value)
+
+	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidHumidityValue, value)
 }
 
-// FanSpeedCapability represents fan speed control capability
+// FanSpeedCapability represents fan speed control capability.
 type FanSpeedCapability struct {
 	Speed int `json:"speed"` // Fan speed percentage (0-100)
 }
 
-// GetCapabilityType returns the capability type for fan speed
+// GetCapabilityType returns the capability type for fan speed.
 func (fs *FanSpeedCapability) GetCapabilityType() string {
 	return CapabilityTypeFanSpeed
 }
 
-// GetValue returns the current fan speed percentage
-func (fs *FanSpeedCapability) GetValue() interface{} {
+// GetValue returns the current fan speed percentage.
+func (fs *FanSpeedCapability) GetValue() any {
 	return fs.Speed
 }
 
-// SetValue sets the fan speed from various input types
-func (fs *FanSpeedCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case int:
-		if v >= 0 && v <= 100 {
-			fs.Speed = v
-			return nil
-		}
-	case float64:
-		speed := int(v)
-		if speed >= 0 && speed <= 100 {
-			fs.Speed = speed
-			return nil
-		}
-	case string:
-		if speed, err := strconv.Atoi(v); err == nil && speed >= 0 && speed <= 100 {
-			fs.Speed = speed
-			return nil
-		}
+// SetValue sets the fan speed from various input types.
+func (fs *FanSpeedCapability) SetValue(value any) error {
+	speed, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	if ok {
+		fs.Speed = speed
+
+		return nil
 	}
-	return fmt.Errorf("invalid fan speed value: %v (must be 0-100)", value)
+
+	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidFanSpeedValue, value)
 }
 
-// LockState represents the lock state of a device
+// LockState represents the lock state of a device.
 type LockState string
 
-// Lock state constants
+// Lock state constants.
 const (
 	LockStateLocked   LockState = "locked"
 	LockStateUnlocked LockState = "unlocked"
 )
 
-// LockCapability represents lock/unlock capability
+// LockCapability represents lock/unlock capability.
 type LockCapability struct {
 	State LockState `json:"state"` // "locked" or "unlocked"
 }
 
-// GetCapabilityType returns the capability type for lock
+// GetCapabilityType returns the capability type for lock.
 func (l *LockCapability) GetCapabilityType() string {
 	return CapabilityTypeLock
 }
 
-// GetValue returns the current lock state
-func (l *LockCapability) GetValue() interface{} {
+// GetValue returns the current lock state.
+func (l *LockCapability) GetValue() any {
 	return l.State
 }
 
-// SetValue sets the lock state from various input types
-func (l *LockCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
+// SetValue sets the lock state from various input types.
+func (l *LockCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
 	case string:
-		if v == string(LockStateLocked) || v == string(LockStateUnlocked) {
-			l.State = LockState(v)
+		if typedValue == string(LockStateLocked) || typedValue == string(LockStateUnlocked) {
+			l.State = LockState(typedValue)
+
 			return nil
 		}
 	case bool:
 		// true = locked (closed), false = unlocked (opened)
-		if v {
+		if typedValue {
 			l.State = LockStateLocked
 		} else {
 			l.State = LockStateUnlocked
 		}
+
 		return nil
 	}
-	return fmt.Errorf("invalid lock state value: %v", value)
+
+	return fmt.Errorf("%w: %v", errInvalidLockStateValue, value)
 }
 
-// ContactSensorCapability represents a contact (door/window) sensor reading
+// ContactSensorCapability represents a contact (door/window) sensor reading.
 type ContactSensorCapability struct {
+	//nolint:tagliatelle // Preserve the public capability model's established JSON key.
 	IsOpen bool `json:"isOpen"` // true if the contact is open (door/window open)
 }
 
-// GetCapabilityType returns the capability type for contact sensor
+// GetCapabilityType returns the capability type for contact sensor.
 func (cs *ContactSensorCapability) GetCapabilityType() string {
 	return CapabilityTypeContactSensor
 }
 
-// GetValue returns whether the contact is open
-func (cs *ContactSensorCapability) GetValue() interface{} {
+// GetValue returns whether the contact is open.
+func (cs *ContactSensorCapability) GetValue() any {
 	return cs.IsOpen
 }
 
-// SetValue sets the contact sensor state from various input types
-func (cs *ContactSensorCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
+// SetValue sets the contact sensor state from various input types.
+func (cs *ContactSensorCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
 	case bool:
-		cs.IsOpen = v
+		cs.IsOpen = typedValue
+
 		return nil
 	case string:
-		switch v {
+		switch typedValue {
 		case "true", "open":
 			cs.IsOpen = true
+
 			return nil
 		case "false", "closed":
 			cs.IsOpen = false
+
 			return nil
 		}
 	}
-	return fmt.Errorf("invalid contact sensor value: %v", value)
+
+	return fmt.Errorf("%w: %v", errInvalidContactSensorValue, value)
 }
 
-// WindowCoveringCapability represents window covering (curtain/blind) position
+// WindowCoveringCapability represents window covering (curtain/blind) position.
 type WindowCoveringCapability struct {
 	Position int `json:"position"` // Position percentage (0-100, where 0=closed, 100=fully open)
 }
 
-// GetCapabilityType returns the capability type for window covering
+// GetCapabilityType returns the capability type for window covering.
 func (wc *WindowCoveringCapability) GetCapabilityType() string {
 	return CapabilityTypeWindowCovering
 }
 
-// GetValue returns the current position percentage
-func (wc *WindowCoveringCapability) GetValue() interface{} {
+// GetValue returns the current position percentage.
+func (wc *WindowCoveringCapability) GetValue() any {
 	return wc.Position
 }
 
-// SetValue sets the window covering position from various input types
-func (wc *WindowCoveringCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
-	case int:
-		if v >= 0 && v <= 100 {
-			wc.Position = v
-			return nil
-		}
-	case float64:
-		pos := int(v)
-		if pos >= 0 && pos <= 100 {
-			wc.Position = pos
-			return nil
-		}
-	case string:
-		if pos, err := strconv.Atoi(v); err == nil && pos >= 0 && pos <= 100 {
-			wc.Position = pos
-			return nil
-		}
+// SetValue sets the window covering position from various input types.
+func (wc *WindowCoveringCapability) SetValue(value any) error {
+	position, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	if ok {
+		wc.Position = position
+
+		return nil
 	}
-	return fmt.Errorf("invalid window covering position: %v (must be 0-100)", value)
+
+	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidWindowCoveringPosition, value)
 }
 
-// StreamingState represents the streaming state of a camera
+func parseBoundedInt(value any, minimum, maximum int) (int, bool) {
+	switch typedValue := value.(type) {
+	case int:
+		return withinIntRange(typedValue, minimum, maximum)
+	case float64:
+		return withinIntRange(int(typedValue), minimum, maximum)
+	case string:
+		converted, err := strconv.Atoi(typedValue)
+		if err != nil {
+			return 0, false
+		}
+
+		return withinIntRange(converted, minimum, maximum)
+	}
+
+	return 0, false
+}
+
+func withinIntRange(value, minimum, maximum int) (int, bool) {
+	return value, value >= minimum && value <= maximum
+}
+
+// StreamingState represents the streaming state of a camera.
 type StreamingState string
 
 // Streaming state constants for camera capability.
@@ -436,90 +454,97 @@ const (
 	StreamingStateStreaming StreamingState = "streaming"
 )
 
-// CameraCapability represents camera functionality
+// CameraCapability represents camera functionality.
 type CameraCapability struct {
+	//nolint:tagliatelle // Preserve the public capability model's established JSON key.
 	StreamingState StreamingState `json:"streamingState"`
 }
 
-// GetCapabilityType returns the capability type for camera
+// GetCapabilityType returns the capability type for camera.
 func (c *CameraCapability) GetCapabilityType() string {
 	return CapabilityTypeCamera
 }
 
-// GetValue returns the current streaming state
-func (c *CameraCapability) GetValue() interface{} {
+// GetValue returns the current streaming state.
+func (c *CameraCapability) GetValue() any {
 	return c.StreamingState
 }
 
-// SetValue sets the camera streaming state
-func (c *CameraCapability) SetValue(value interface{}) error {
-	switch v := value.(type) {
+// SetValue sets the camera streaming state.
+func (c *CameraCapability) SetValue(value any) error {
+	switch typedValue := value.(type) {
 	case string:
-		switch StreamingState(v) {
+		switch StreamingState(typedValue) {
 		case StreamingStateIdle, StreamingStateStreaming:
-			c.StreamingState = StreamingState(v)
+			c.StreamingState = StreamingState(typedValue)
+
 			return nil
 		}
 	case StreamingState:
-		c.StreamingState = v
+		c.StreamingState = typedValue
+
 		return nil
 	}
-	return fmt.Errorf("invalid streaming state: %v (must be 'idle' or 'streaming')", value)
+
+	return fmt.Errorf("%w: %v (must be 'idle' or 'streaming')", errInvalidStreamingState, value)
 }
 
-// RTCSessionCapability represents WebRTC session capability
+// RTCSessionCapability represents WebRTC session capability.
 type RTCSessionCapability struct{}
 
-// GetCapabilityType returns the capability type for RTC session
+// GetCapabilityType returns the capability type for RTC session.
 func (r *RTCSessionCapability) GetCapabilityType() string {
 	return CapabilityTypeRTCSession
 }
 
-// GetValue returns nil as RTC session has no persistent value
-func (r *RTCSessionCapability) GetValue() interface{} {
+// GetValue returns nil as RTC session has no persistent value.
+func (r *RTCSessionCapability) GetValue() any {
 	return nil
 }
 
-// SetValue is a no-op for RTC session capability
-func (r *RTCSessionCapability) SetValue(_ interface{}) error {
+// SetValue is a no-op for RTC session capability.
+func (r *RTCSessionCapability) SetValue(_ any) error {
 	return nil
 }
 
-// CapabilityMapping defines how to map Tuya codes to capabilities
+// CapabilityMapping defines how to map Tuya codes to capabilities.
 type CapabilityMapping struct {
 	CapabilityType   string
-	TuyaToCapability func(interface{}) (Capability, error)
-	CapabilityToTuya func(Capability) (string, interface{}, error)
+	TuyaToCapability func(any) (Capability, error)
+	CapabilityToTuya func(Capability) (string, any, error)
 }
 
-// DeviceCapabilityMap maps device categories and codes to capabilities
+// DeviceCapabilityMap maps device categories and codes to capabilities.
 type DeviceCapabilityMap struct {
 	mappings map[string]map[string]CapabilityMapping
 }
 
-// NewDeviceCapabilityMap creates a new capability mapping system
+// NewDeviceCapabilityMap creates a new capability mapping system.
 func NewDeviceCapabilityMap() *DeviceCapabilityMap {
 	dcm := &DeviceCapabilityMap{
 		mappings: make(map[string]map[string]CapabilityMapping),
 	}
 	dcm.initializeStandardMappings()
+
 	return dcm
 }
 
-// Helper functions for common mappings to reduce duplication
+// Helper functions for common mappings to reduce duplication.
 func createPowerMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypePower,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &PowerCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &PowerCapability{State: ""}
 			err := capability.SetValue(value)
+
 			return capability, err
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if power, ok := capability.(*PowerCapability); ok {
 				return tuyaCode, power.State == PowerStateOn, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for power")
+
+			return "", nil, errInvalidPowerCapability
 		},
 	}
 }
@@ -527,39 +552,39 @@ func createPowerMapping(tuyaCode string) CapabilityMapping {
 func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeBrightness,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &BrightnessCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &BrightnessCapability{Level: 0}
+
 			if val, ok := value.(float64); ok {
 				var percentage int
-				if maxValue == 1000 {
-					percentage = int(val / 1000 * 100)
+				if maxValue == tuyaDataPointScale {
+					percentage = int(val / tuyaDataPointScale * percentageScale)
 				} else {
 					// For tgq category: range 10-1000
-					percentage = int((val - 10) / 990 * 100)
-					if percentage < 0 {
-						percentage = 0
-					}
-					if percentage > 100 {
-						percentage = 100
-					}
+					percentage = min(max(int((val-tgqBrightnessOffset)/tgqBrightnessRange*percentageScale), 0), percentageScale)
 				}
+
 				err := capability.SetValue(percentage)
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid brightness value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidBrightnessValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if brightness, ok := capability.(*BrightnessCapability); ok {
 				var tuyaValue int
-				if maxValue == 1000 {
-					tuyaValue = int(float64(brightness.Level) / 100 * 1000)
+				if maxValue == tuyaDataPointScale {
+					tuyaValue = int(float64(brightness.Level) / percentageScale * tuyaDataPointScale)
 				} else {
 					// For tgq category: range 10-1000
-					tuyaValue = int(float64(brightness.Level)/100*990 + 10)
+					tuyaValue = int(float64(brightness.Level)/percentageScale*tgqBrightnessRange + tgqBrightnessOffset)
 				}
+
 				return tuyaCode, tuyaValue, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for brightness")
+
+			return "", nil, errInvalidBrightnessCapability
 		},
 	}
 }
@@ -567,36 +592,46 @@ func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMappin
 func createColorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeColor,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &ColorCapability{}
-			if colorStr, ok := value.(string); ok {
-				if len(colorStr) >= 12 {
-					hueHex := colorStr[0:4]
-					satHex := colorStr[4:8]
-					valHex := colorStr[8:12]
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &ColorCapability{Hue: 0, Saturation: 0, Value: 0}
 
-					if hue, err := strconv.ParseInt(hueHex, 16, 32); err == nil {
-						capability.Hue = int(hue)
-					}
-					if sat, err := strconv.ParseInt(satHex, 16, 32); err == nil {
-						capability.Saturation = int(sat / 1000 * 100)
-					}
-					if val, err := strconv.ParseInt(valHex, 16, 32); err == nil {
-						capability.Value = int(val / 1000 * 100)
-					}
-				}
+			colorString, ok := value.(string)
+			if !ok || len(colorString) < 3*colorHexComponentWidth {
+				return capability, nil
 			}
+
+			hueHex := colorString[0:colorHexComponentWidth]
+			saturationHex := colorString[colorHexComponentWidth : 2*colorHexComponentWidth]
+			valueHex := colorString[2*colorHexComponentWidth : 3*colorHexComponentWidth]
+
+			hue, err := strconv.ParseInt(hueHex, 16, 32)
+			if err == nil {
+				capability.Hue = int(hue)
+			}
+
+			saturation, err := strconv.ParseInt(saturationHex, 16, 32)
+			if err == nil {
+				capability.Saturation = int(saturation / tuyaDataPointScale * percentageScale)
+			}
+
+			valueNumber, err := strconv.ParseInt(valueHex, 16, 32)
+			if err == nil {
+				capability.Value = int(valueNumber / tuyaDataPointScale * percentageScale)
+			}
+
 			return capability, nil
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if color, ok := capability.(*ColorCapability); ok {
 				hue := fmt.Sprintf("%04x", color.Hue)
-				sat := fmt.Sprintf("%04x", int(float64(color.Saturation)/100*1000))
-				val := fmt.Sprintf("%04x", int(float64(color.Value)/100*1000))
+				sat := fmt.Sprintf("%04x", int(float64(color.Saturation)/percentageScale*tuyaDataPointScale))
+				val := fmt.Sprintf("%04x", int(float64(color.Value)/percentageScale*tuyaDataPointScale))
 				colorData := hue + sat + val
+
 				return tuyaCode, colorData, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for color")
+
+			return "", nil, errInvalidColorCapability
 		},
 	}
 }
@@ -604,31 +639,35 @@ func createColorMapping(tuyaCode string) CapabilityMapping {
 func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeColorTemperature,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &ColorTemperatureCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &ColorTemperatureCapability{Mireds: 0}
+
 			if val, ok := value.(float64); ok {
-				// Convert Tuya range (tuyaMin-tuyaMax) to mireds (153-500)
+				// Convert Tuya range (tuyaMin-tuyaMax) to mireds.
 				normalized := (val - float64(tuyaMin)) / float64(tuyaMax-tuyaMin)
-				mireds := int(153 + normalized*347) // 347 = 500-153
-				if mireds < 153 {
-					mireds = 153
-				}
-				if mireds > 500 {
-					mireds = 500
-				}
+
+				mireds := min(
+					max(
+
+						int(minimumColorTemperatureMireds+normalized*float64(colorTemperatureMiredsRange)), minimumColorTemperatureMireds), maximumColorTemperatureMireds)
+
 				err := capability.SetValue(mireds)
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid color temperature value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidColorTemperatureValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if ct, ok := capability.(*ColorTemperatureCapability); ok {
-				// Convert mireds (153-500) to Tuya range (tuyaMin-tuyaMax)
-				normalized := float64(ct.Mireds-153) / 347.0
+				// Convert mireds to the Tuya range (tuyaMin-tuyaMax).
+				normalized := float64(ct.Mireds-minimumColorTemperatureMireds) / float64(colorTemperatureMiredsRange)
 				tuyaValue := int(float64(tuyaMin) + normalized*float64(tuyaMax-tuyaMin))
+
 				return tuyaCode, tuyaValue, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for color temperature")
+
+			return "", nil, errInvalidColorTemperatureCapability
 		},
 	}
 }
@@ -636,21 +675,26 @@ func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) Capabi
 func createTemperatureSensorMapping(tuyaCode string, scaleDivisor float64) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeTemperatureSensor,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &TemperatureSensorCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &TemperatureSensorCapability{Temperature: 0}
+
 			if val, ok := value.(float64); ok {
 				temp := val / scaleDivisor
 				err := capability.SetValue(temp)
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid temperature sensor value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidTemperatureSensorValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if ts, ok := capability.(*TemperatureSensorCapability); ok {
 				tuyaValue := int(ts.Temperature * scaleDivisor)
+
 				return tuyaCode, tuyaValue, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for temperature sensor")
+
+			return "", nil, errInvalidTemperatureSensorCapability
 		},
 	}
 }
@@ -658,19 +702,22 @@ func createTemperatureSensorMapping(tuyaCode string, scaleDivisor float64) Capab
 func createHumiditySensorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeHumiditySensor,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &HumiditySensorCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &HumiditySensorCapability{Humidity: 0}
 			if val, ok := value.(float64); ok {
 				err := capability.SetValue(int(val))
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid humidity sensor value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidHumiditySensorValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if hs, ok := capability.(*HumiditySensorCapability); ok {
 				return tuyaCode, hs.Humidity, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for humidity sensor")
+
+			return "", nil, errInvalidHumiditySensorCapability
 		},
 	}
 }
@@ -678,32 +725,29 @@ func createHumiditySensorMapping(tuyaCode string) CapabilityMapping {
 func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeFanSpeed,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &FanSpeedCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &FanSpeedCapability{Speed: 0}
+
 			if val, ok := value.(float64); ok {
 				// Convert discrete speed levels (1-maxSpeedLevels) to percentage (0-100)
-				percentage := int(val / float64(maxSpeedLevels) * 100)
-				if percentage < 0 {
-					percentage = 0
-				}
-				if percentage > 100 {
-					percentage = 100
-				}
+				percentage := min(max(int(val/float64(maxSpeedLevels)*percentageScale), 0), percentageScale)
+
 				err := capability.SetValue(percentage)
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid fan speed value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidFanSpeedValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if fs, ok := capability.(*FanSpeedCapability); ok {
 				// Convert percentage (0-100) to discrete speed levels (0-maxSpeedLevels)
-				tuyaValue := int(float64(fs.Speed) / 100 * float64(maxSpeedLevels))
-				if tuyaValue > maxSpeedLevels {
-					tuyaValue = maxSpeedLevels
-				}
+				tuyaValue := min(int(float64(fs.Speed)/percentageScale*float64(maxSpeedLevels)), maxSpeedLevels)
+
 				return tuyaCode, tuyaValue, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for fan speed")
+
+			return "", nil, errInvalidFanSpeedCapability
 		},
 	}
 }
@@ -711,17 +755,19 @@ func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMappin
 func createLockMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeLock,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &LockCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &LockCapability{State: ""}
 			// Tuya locks use boolean: true = locked (closed), false = unlocked (opened)
 			err := capability.SetValue(value)
+
 			return capability, err
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if lock, ok := capability.(*LockCapability); ok {
 				return tuyaCode, lock.State == LockStateLocked, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for lock")
+
+			return "", nil, errInvalidLockCapability
 		},
 	}
 }
@@ -729,17 +775,19 @@ func createLockMapping(tuyaCode string) CapabilityMapping {
 func createContactSensorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeContactSensor,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &ContactSensorCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &ContactSensorCapability{IsOpen: false}
 			// Tuya contact sensors: true = open, false = closed
 			err := capability.SetValue(value)
+
 			return capability, err
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if cs, ok := capability.(*ContactSensorCapability); ok {
 				return tuyaCode, cs.IsOpen, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for contact sensor")
+
+			return "", nil, errInvalidContactSensorCapability
 		},
 	}
 }
@@ -747,94 +795,101 @@ func createContactSensorMapping(tuyaCode string) CapabilityMapping {
 func createWindowCoveringMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeWindowCovering,
-		TuyaToCapability: func(value interface{}) (Capability, error) {
-			capability := &WindowCoveringCapability{}
+		TuyaToCapability: func(value any) (Capability, error) {
+			capability := &WindowCoveringCapability{Position: 0}
 			if val, ok := value.(float64); ok {
 				err := capability.SetValue(int(val))
+
 				return capability, err
 			}
-			return capability, fmt.Errorf("invalid window covering value: %v", value)
+
+			return capability, fmt.Errorf("%w: %v", errInvalidWindowCoveringValue, value)
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if wc, ok := capability.(*WindowCoveringCapability); ok {
 				return tuyaCode, wc.Position, nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for window covering")
+
+			return "", nil, errInvalidWindowCoveringCapability
 		},
 	}
 }
 
-// createCameraMapping creates a mapping for camera capability (marker mapping for device discovery)
+// createCameraMapping creates a mapping for camera capability (marker mapping for device discovery).
 func createCameraMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeCamera,
-		TuyaToCapability: func(_ interface{}) (Capability, error) {
+		TuyaToCapability: func(_ any) (Capability, error) {
 			capability := &CameraCapability{StreamingState: StreamingStateIdle}
+
 			return capability, nil
 		},
-		CapabilityToTuya: func(capability Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if cam, ok := capability.(*CameraCapability); ok {
 				return tuyaCode, string(cam.StreamingState), nil
 			}
-			return "", nil, fmt.Errorf("invalid capability type for camera")
+
+			return "", nil, errInvalidCameraCapability
 		},
 	}
 }
 
-// createRTCSessionMapping creates a mapping for RTC session capability (marker mapping for device discovery)
+// createRTCSessionMapping creates a mapping for RTC session capability (marker mapping for device discovery).
 func createRTCSessionMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
 		CapabilityType: CapabilityTypeRTCSession,
-		TuyaToCapability: func(_ interface{}) (Capability, error) {
+		TuyaToCapability: func(_ any) (Capability, error) {
 			return &RTCSessionCapability{}, nil
 		},
-		CapabilityToTuya: func(_ Capability) (string, interface{}, error) {
+		CapabilityToTuya: func(_ Capability) (string, any, error) {
 			return tuyaCode, nil, nil
 		},
 	}
 }
 
-// initializeStandardMappings sets up the default Tuya to capability mappings
+// initializeStandardMappings sets up the default Tuya to capability mappings.
+//
+//nolint:funcorder,funlen // Keep the category map adjacent to its private constructors; splitting its data obscures the mapping.
 func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 	dcm.mappings = map[string]map[string]CapabilityMapping{
 		// Wall Switch Dimmer (tgkg) category mappings
 		"tgkg": {
 			"switch_led_1":   createPowerMapping("switch_led_1"),
-			"bright_value_1": createBrightnessMapping("bright_value_1", 990), // Range 10-1000
+			"bright_value_1": createBrightnessMapping("bright_value_1", tgqBrightnessRange), // Range 10-1000
 		},
 		// Dimmer (tgq) category mappings
 		"tgq": {
 			"switch_led_1":    createPowerMapping("switch_led_1"),
-			"bright_value_v2": createBrightnessMapping("bright_value_v2", 990), // Special range 10-1000
+			"bright_value_v2": createBrightnessMapping("bright_value_v2", tgqBrightnessRange), // Special range 10-1000
 		},
 		// Light (dj) category mappings
 		"dj": {
-			"switch_led":     createPowerMapping("switch_led"),
-			"bright_value":   createBrightnessMapping("bright_value", 1000),
-			"colour_data_v2": createColorMapping("colour_data_v2"),
-			"temp_value":     createColorTemperatureMapping("temp_value", 0, 1000),
+			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
+			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			"colour_data_v2":  createColorMapping("colour_data_v2"),
+			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Strip Light (dd) category mappings
 		"dd": {
-			"switch_led":   createPowerMapping("switch_led"),
-			"bright_value": createBrightnessMapping("bright_value", 1000),
-			"colour_data":  createColorMapping("colour_data"),
+			dpCodeSwitchLED:  createPowerMapping(dpCodeSwitchLED),
+			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeColor:      createColorMapping(dpCodeColor),
 		},
 		// Switch (kg) category mappings
 		"kg": {
-			"switch_1": createPowerMapping("switch_1"),
+			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Socket (cz) category mappings
 		"cz": {
-			"switch_1": createPowerMapping("switch_1"),
+			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Power Strip (pc) category mappings
 		"pc": {
-			"switch_1": createPowerMapping("switch_1"),
+			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Temperature + Humidity Sensor (wsdcg) category mappings
 		"wsdcg": {
-			"va_temperature": createTemperatureSensorMapping("va_temperature", 10), // Tuya reports tenths of degree
+			"va_temperature": createTemperatureSensorMapping("va_temperature", tuyaTemperatureTenthsScale), // Tuya reports tenths of degree
 			"va_humidity":    createHumiditySensorMapping("va_humidity"),
 		},
 		// Contact Sensor (mcs) — door/window sensor category mappings
@@ -843,27 +898,27 @@ func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 		},
 		// String Lights (dc) category mappings
 		"dc": {
-			"switch_led":   createPowerMapping("switch_led"),
-			"bright_value": createBrightnessMapping("bright_value", 1000),
-			"colour_data":  createColorMapping("colour_data"),
-			"temp_value":   createColorTemperatureMapping("temp_value", 0, 1000),
+			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
+			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeColor:       createColorMapping(dpCodeColor),
+			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Ambient Light (fwd) category mappings
 		"fwd": {
-			"switch_led":   createPowerMapping("switch_led"),
-			"bright_value": createBrightnessMapping("bright_value", 1000),
-			"colour_data":  createColorMapping("colour_data"),
-			"temp_value":   createColorTemperatureMapping("temp_value", 0, 1000),
+			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
+			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeColor:       createColorMapping(dpCodeColor),
+			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Fan (fs) category mappings
 		"fs": {
 			"switch_fan":        createPowerMapping("switch_fan"),
-			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", 100),
+			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", percentageScale),
 		},
 		// Ceiling Fan Light (fsd) category mappings
 		"fsd": {
 			"switch_fan":        createPowerMapping("switch_fan"),
-			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", 100),
+			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", percentageScale),
 		},
 		// Curtain (cl) category mappings
 		"cl": {
@@ -898,13 +953,13 @@ func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 	}
 }
 
-// GetCapabilitiesFromTuyaStatus converts Tuya device status to standardized capabilities
+// GetCapabilitiesFromTuyaStatus converts Tuya device status to standardized capabilities.
 func (dcm *DeviceCapabilityMap) GetCapabilitiesFromTuyaStatus(category string, status []DeviceStatusChange) ([]Capability, error) {
 	var capabilities []Capability
 
 	categoryMappings, exists := dcm.mappings[category]
 	if !exists {
-		return nil, fmt.Errorf("unsupported device category: %s", category)
+		return nil, fmt.Errorf("%w: %s", errUnsupportedDeviceCategory, category)
 	}
 
 	for _, statusItem := range status {
@@ -913,6 +968,7 @@ func (dcm *DeviceCapabilityMap) GetCapabilitiesFromTuyaStatus(category string, s
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert %s: %w", statusItem.Code, err)
 			}
+
 			capabilities = append(capabilities, capability)
 		}
 	}
@@ -920,11 +976,11 @@ func (dcm *DeviceCapabilityMap) GetCapabilitiesFromTuyaStatus(category string, s
 	return capabilities, nil
 }
 
-// GetTuyaCommandFromCapability converts a standardized capability to Tuya command
-func (dcm *DeviceCapabilityMap) GetTuyaCommandFromCapability(category string, capability Capability) (string, interface{}, error) {
+// GetTuyaCommandFromCapability converts a standardized capability to Tuya command.
+func (dcm *DeviceCapabilityMap) GetTuyaCommandFromCapability(category string, capability Capability) (string, any, error) {
 	categoryMappings, exists := dcm.mappings[category]
 	if !exists {
-		return "", nil, fmt.Errorf("unsupported device category: %s", category)
+		return "", nil, fmt.Errorf("%w: %s", errUnsupportedDeviceCategory, category)
 	}
 
 	// Find the appropriate mapping for this capability type
@@ -934,24 +990,26 @@ func (dcm *DeviceCapabilityMap) GetTuyaCommandFromCapability(category string, ca
 		}
 	}
 
-	return "", nil, fmt.Errorf("no mapping found for capability type: %s in category: %s", capability.GetCapabilityType(), category)
+	return "", nil, fmt.Errorf("%w: %s in category: %s", errUnmappedCapability, capability.GetCapabilityType(), category)
 }
 
-// GetCapabilityFromTuyaEvent extracts capabilities from a device state change event
+// GetCapabilityFromTuyaEvent extracts capabilities from a device state change event.
 func (dcm *DeviceCapabilityMap) GetCapabilityFromTuyaEvent(event *DeviceStateChangeEvent, category string) ([]Capability, error) {
 	return dcm.GetCapabilitiesFromTuyaStatus(category, event.Status)
 }
 
-// StandardizedDeviceStateEvent represents a device state change with standardized capabilities
+// StandardizedDeviceStateEvent represents a device state change with standardized capabilities.
 type StandardizedDeviceStateEvent struct {
-	DeviceID     string       `json:"deviceId"`
+	//nolint:tagliatelle // This public event model preserves its established JSON key.
+	DeviceID string `json:"deviceId"`
+	//nolint:tagliatelle // This public event model preserves its established JSON key.
 	ProductKey   string       `json:"productKey"`
 	Category     string       `json:"category"`
 	Capabilities []Capability `json:"capabilities"`
 	Timestamp    int64        `json:"timestamp"`
 }
 
-// ConvertToStandardizedEvent converts a Tuya device state change event to standardized format
+// ConvertToStandardizedEvent converts a Tuya device state change event to standardized format.
 func (dcm *DeviceCapabilityMap) ConvertToStandardizedEvent(event *DeviceStateChangeEvent, category string) (*StandardizedDeviceStateEvent, error) {
 	capabilities, err := dcm.GetCapabilityFromTuyaEvent(event, category)
 	if err != nil {
@@ -967,35 +1025,39 @@ func (dcm *DeviceCapabilityMap) ConvertToStandardizedEvent(event *DeviceStateCha
 	}, nil
 }
 
-// AddMapping allows adding custom device category and code mappings
+// AddMapping allows adding custom device category and code mappings.
 func (dcm *DeviceCapabilityMap) AddMapping(category, code string, mapping CapabilityMapping) {
 	if dcm.mappings[category] == nil {
 		dcm.mappings[category] = make(map[string]CapabilityMapping)
 	}
+
 	dcm.mappings[category][code] = mapping
 }
 
-// GetSupportedCategories returns all supported device categories
+// GetSupportedCategories returns all supported device categories.
 func (dcm *DeviceCapabilityMap) GetSupportedCategories() []string {
-	var categories []string
+	categories := make([]string, 0, len(dcm.mappings))
 	for category := range dcm.mappings {
 		categories = append(categories, category)
 	}
+
 	return categories
 }
 
-// GetSupportedCodesForCategory returns all supported codes for a given category
+// GetSupportedCodesForCategory returns all supported codes for a given category.
 func (dcm *DeviceCapabilityMap) GetSupportedCodesForCategory(category string) []string {
 	var codes []string
+
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for code := range categoryMappings {
 			codes = append(codes, code)
 		}
 	}
+
 	return codes
 }
 
-// HasPowerCapability checks if a device supports power control
+// HasPowerCapability checks if a device supports power control.
 func (dcm *DeviceCapabilityMap) HasPowerCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1004,10 +1066,11 @@ func (dcm *DeviceCapabilityMap) HasPowerCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasBrightnessCapability checks if a device supports brightness control
+// HasBrightnessCapability checks if a device supports brightness control.
 func (dcm *DeviceCapabilityMap) HasBrightnessCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1016,10 +1079,11 @@ func (dcm *DeviceCapabilityMap) HasBrightnessCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasColorCapability checks if a device supports color control
+// HasColorCapability checks if a device supports color control.
 func (dcm *DeviceCapabilityMap) HasColorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1028,10 +1092,11 @@ func (dcm *DeviceCapabilityMap) HasColorCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasColorTemperatureCapability checks if a device supports color temperature control
+// HasColorTemperatureCapability checks if a device supports color temperature control.
 func (dcm *DeviceCapabilityMap) HasColorTemperatureCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1040,10 +1105,11 @@ func (dcm *DeviceCapabilityMap) HasColorTemperatureCapability(category string) b
 			}
 		}
 	}
+
 	return false
 }
 
-// HasTemperatureSensorCapability checks if a device supports temperature sensing
+// HasTemperatureSensorCapability checks if a device supports temperature sensing.
 func (dcm *DeviceCapabilityMap) HasTemperatureSensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1052,10 +1118,11 @@ func (dcm *DeviceCapabilityMap) HasTemperatureSensorCapability(category string) 
 			}
 		}
 	}
+
 	return false
 }
 
-// HasHumiditySensorCapability checks if a device supports humidity sensing
+// HasHumiditySensorCapability checks if a device supports humidity sensing.
 func (dcm *DeviceCapabilityMap) HasHumiditySensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1064,10 +1131,11 @@ func (dcm *DeviceCapabilityMap) HasHumiditySensorCapability(category string) boo
 			}
 		}
 	}
+
 	return false
 }
 
-// HasFanSpeedCapability checks if a device supports fan speed control
+// HasFanSpeedCapability checks if a device supports fan speed control.
 func (dcm *DeviceCapabilityMap) HasFanSpeedCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1076,10 +1144,11 @@ func (dcm *DeviceCapabilityMap) HasFanSpeedCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasLockCapability checks if a device supports lock control
+// HasLockCapability checks if a device supports lock control.
 func (dcm *DeviceCapabilityMap) HasLockCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1088,10 +1157,11 @@ func (dcm *DeviceCapabilityMap) HasLockCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasContactSensorCapability checks if a device supports contact sensing
+// HasContactSensorCapability checks if a device supports contact sensing.
 func (dcm *DeviceCapabilityMap) HasContactSensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1100,10 +1170,11 @@ func (dcm *DeviceCapabilityMap) HasContactSensorCapability(category string) bool
 			}
 		}
 	}
+
 	return false
 }
 
-// HasWindowCoveringCapability checks if a device supports window covering control
+// HasWindowCoveringCapability checks if a device supports window covering control.
 func (dcm *DeviceCapabilityMap) HasWindowCoveringCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1112,10 +1183,11 @@ func (dcm *DeviceCapabilityMap) HasWindowCoveringCapability(category string) boo
 			}
 		}
 	}
+
 	return false
 }
 
-// HasCameraCapability checks if a device supports camera functionality
+// HasCameraCapability checks if a device supports camera functionality.
 func (dcm *DeviceCapabilityMap) HasCameraCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1124,10 +1196,11 @@ func (dcm *DeviceCapabilityMap) HasCameraCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
 
-// HasRTCSessionCapability checks if a device supports RTC session
+// HasRTCSessionCapability checks if a device supports RTC session.
 func (dcm *DeviceCapabilityMap) HasRTCSessionCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
@@ -1136,5 +1209,6 @@ func (dcm *DeviceCapabilityMap) HasRTCSessionCapability(category string) bool {
 			}
 		}
 	}
+
 	return false
 }
