@@ -403,7 +403,7 @@ func (state *mqttState) runMQTTLoop(ctx context.Context, queue *SharingMessageQu
 		err := state.connectOnce(ctx, queue)
 		if err != nil {
 			state.recordConnection(err)
-			log.Printf("Failed to connect to MQTT: %v, retrying in %d seconds", err, backoffSeconds)
+			log.Printf("MQTT connection failed; retrying in %d seconds", backoffSeconds)
 
 			if !state.waitBeforeReconnect(ctx, backoffSeconds) {
 				return
@@ -508,7 +508,7 @@ func (state *mqttState) connectMQTT(ctx context.Context, queue *SharingMessageQu
 		}
 	}
 
-	log.Printf("Connected to MQTT broker: %s", config.URL)
+	log.Print("Connected to MQTT broker")
 
 	return nil
 }
@@ -523,15 +523,14 @@ func (state *mqttState) onConnect(client mqtt.Client) {
 
 	for topic := range state.messageListeners {
 		subscribeChannel(client, wire.MQTTChannelOwnerEvents, topic)
-		log.Printf("Subscribed to listener topic: %s", topic)
+		log.Print("Subscribed to account event listener")
 	}
 
 	for deviceID := range state.deviceListeners {
 		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
 		subscribeChannel(client, wire.MQTTChannelDeviceStatus, deviceTopic)
 
-		topic := state.getDeviceTopic(deviceID, false)
-		log.Printf("Subscribed to device listener topic: %s", topic)
+		log.Print("Subscribed to device event listener")
 	}
 
 	state.listenersMux.RUnlock()
@@ -554,7 +553,7 @@ func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
 
 // onConnectionLost handles MQTT connection lost.
 func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
-	log.Printf("MQTT connection lost: %v", err)
+	log.Print("MQTT connection lost")
 	state.recordConnection(err)
 
 	// Signal reconnection if still running
@@ -579,7 +578,7 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 
 	err := json.Unmarshal(payload, &sharingMessage)
 	if err != nil {
-		log.Printf("Failed to parse message JSON: %v", err)
+		log.Print("Failed to parse MQTT message JSON")
 
 		return
 	}
@@ -602,7 +601,7 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 
 	evt, err := parseRawSharingMessage(sharingMessage)
 	if err != nil {
-		log.Printf("Failed to parse device state change event JSON: %v", err)
+		log.Print("Failed to parse MQTT event payload")
 
 		return
 	}

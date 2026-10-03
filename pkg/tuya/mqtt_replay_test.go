@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +28,9 @@ const (
 	mqttFixtureConnect      = "connect"
 	mqttFixtureDevice1      = "device-1"
 	mqttFixtureGeneral      = "general"
+	syntheticMQTTClientID   = "synthetic-mqtt-client"
+	syntheticMQTTPassword   = "synthetic-password"
+	syntheticMQTTUsername   = "synthetic-user"
 	syntheticRefreshFixture = "synthetic-refresh"
 )
 
@@ -293,9 +298,8 @@ func (c *mqttReplayClient) Disconnect(uint) {
 	c.transcript.accept(mqttReplayFrame{Direction: mqttFixtureClient, Action: "disconnect"})
 }
 
-//nolint:cyclop,funlen,gocognit,gocyclo // This test replays the full paired MQTT and HTTP lifecycle in transcript order.
-func TestSyntheticMQTTPairedTranscript(t *testing.T) {
-	t.Parallel()
+func loadSyntheticMQTTReplay(t *testing.T) (mqttReplayTranscript, mqttHTTPPair) {
+	t.Helper()
 
 	data, err := os.ReadFile("../../tests/replay/fixtures/mqtt/synthetic/owner-device-session.synthetic.json")
 	if err != nil {
@@ -321,21 +325,25 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var configPair mqttHTTPPair
-
 	for _, pair := range allPairs {
 		if pair.OperationID == "getMessageQueueConfig" {
-			configPair = pair
-
-			break
+			return replay, pair
 		}
 	}
 
-	if configPair.OperationID == "" {
-		t.Fatal("missing paired MQTT config HTTP exchange")
-	}
+	t.Fatal("missing paired MQTT config HTTP exchange")
 
-	httpReplay := &mqttHTTPReplay{transcript: &replay, pair: configPair}
+	return replay, mqttHTTPPair{}
+}
+
+func newSyntheticMQTTReplayQueue(
+	t *testing.T,
+	replay *mqttReplayTranscript,
+	configPair mqttHTTPPair,
+) (*SharingMessageQueueImpl, *mqttHTTPReplay, func() *mqttReplayClient) {
+	t.Helper()
+
+	httpReplay := &mqttHTTPReplay{transcript: replay, pair: configPair}
 
 	var broker *mqttReplayClient
 
@@ -346,9 +354,9 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 		WithMQTTClientFactory(func(options *mqtt.ClientOptions) mqtt.Client {
 			if len(options.Servers) != 1 ||
 				options.Servers[0].String() != "ssl://mqtt.example.invalid:8883" ||
-				options.ClientID != "synthetic-mqtt-client" ||
-				options.Username != "synthetic-user" ||
-				options.Password != "synthetic-password" ||
+				options.ClientID != syntheticMQTTClientID ||
+				options.Username != syntheticMQTTUsername ||
+				options.Password != syntheticMQTTPassword ||
 				options.OnConnect == nil ||
 				options.DefaultPublishHandler == nil {
 				replay.err = errTestMQTTFactoryOptions
@@ -357,7 +365,7 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 			}
 
 			replay.accept(mqttReplayFrame{Direction: mqttFixtureClient, Action: "factory", Topic: options.Servers[0].String(), Payload: options.ClientID})
-			broker = &mqttReplayClient{transcript: &replay, options: options}
+			broker = &mqttReplayClient{transcript: replay, options: options}
 
 			return broker
 		}),
@@ -371,10 +379,14 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 		RefreshToken: "synthetic-refresh-token",
 		ExpireTime:   time.Now().Add(time.Hour).UnixMilli(),
 	})
-	queue := session.MessageQueue
+
+	return session.MessageQueue, httpReplay, func() *mqttReplayClient { return broker }
+}
+
+func startSyntheticMQTTQueue(t *testing.T, queue *SharingMessageQueueImpl, replay *mqttReplayTranscript) {
+	t.Helper()
 
 	ctx := context.Background()
-
 	if _, err := queue.AddMessageListener(ctx, AddMessageListenerRequest{
 		Topic: mqttFixtureGeneral,
 		Callback: func(topic string, event any) {
@@ -400,10 +412,10 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 	if result, err := queue.Start(ctx, MessageQueueStartRequest{}); err != nil || !result.Success {
 		t.Fatalf("Start = %+v, %v", result, err)
 	}
+}
 
-	if !httpReplay.consumed || broker == nil {
-		t.Fatal("paired HTTP config or MQTT factory was not consumed")
-	}
+func consumeSyntheticMQTTFrames(t *testing.T, replay *mqttReplayTranscript, broker *mqttReplayClient) {
+	t.Helper()
 
 	for range 2 {
 		if replay.next >= len(replay.Frames) {
@@ -422,18 +434,28 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 			t.Fatal(replay.err)
 		}
 	}
+}
 
-	if _, err := queue.RemoveDeviceListener(ctx, RemoveDeviceListenerRequest{DeviceID: mqttFixtureDevice1}); err != nil {
-		t.Fatal(err)
-	}
+func assertNoSensitiveMQTTLogs(t *testing.T, logOutput string) {
+	t.Helper()
 
-	if _, err := queue.Stop(ctx, MessageQueueStopRequest{}); err != nil {
-		t.Fatal(err)
+	for _, sensitiveValue := range []string{
+		syntheticMQTTUsername,
+		syntheticMQTTPassword,
+		"mqtt.example.invalid",
+		syntheticMQTTClientID,
+		mqttFixtureGeneral,
+		mqttFixtureDevice1,
+		"cloud/device/device-1/in/channel/sta",
+	} {
+		if strings.Contains(logOutput, sensitiveValue) {
+			t.Errorf("SDK log output exposed MQTT connection data %q", sensitiveValue)
+		}
 	}
+}
 
-	if err := replay.verifyConsumed(); err != nil {
-		t.Fatal(err)
-	}
+func assertSyntheticMQTTReplayRejectsDuplicates(t *testing.T, replay *mqttReplayTranscript, httpReplay *mqttHTTPReplay) {
+	t.Helper()
 
 	if response, err := httpReplay.RoundTrip(&http.Request{}); err == nil || response != nil {
 		if response != nil && response.Body != nil {
@@ -442,6 +464,7 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 
 		t.Fatalf("duplicate HTTP config request returned %v, %v", response, err)
 	}
+
 	// Negative checks prove that the transcript has no response/frame fallback.
 	replay.accept(mqttReplayFrame{Direction: mqttFixtureClient, Action: "disconnect"})
 
@@ -460,4 +483,42 @@ func TestSyntheticMQTTPairedTranscript(t *testing.T) {
 	if wrong.err == nil {
 		t.Fatal("unexpected MQTT frame accepted")
 	}
+}
+
+//nolint:paralleltest // Captures the process logger while replaying the paired MQTT lifecycle.
+func TestSyntheticMQTTPairedTranscript(t *testing.T) {
+	var capturedLogs bytes.Buffer
+
+	originalLogOutput := log.Writer()
+
+	log.SetOutput(&capturedLogs)
+
+	defer log.SetOutput(originalLogOutput)
+
+	replay, configPair := loadSyntheticMQTTReplay(t)
+	queue, httpReplay, getBroker := newSyntheticMQTTReplayQueue(t, &replay, configPair)
+	startSyntheticMQTTQueue(t, queue, &replay)
+
+	broker := getBroker()
+
+	if !httpReplay.consumed || broker == nil {
+		t.Fatal("paired HTTP config or MQTT factory was not consumed")
+	}
+
+	consumeSyntheticMQTTFrames(t, &replay, broker)
+
+	if _, err := queue.RemoveDeviceListener(context.Background(), RemoveDeviceListenerRequest{DeviceID: mqttFixtureDevice1}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := queue.Stop(context.Background(), MessageQueueStopRequest{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := replay.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
+
+	assertNoSensitiveMQTTLogs(t, capturedLogs.String())
+	assertSyntheticMQTTReplayRejectsDuplicates(t, &replay, httpReplay)
 }

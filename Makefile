@@ -4,9 +4,10 @@ GOLANGCI_LINT ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lin
 export GOWORK := off
 
 .DEFAULT_GOAL := check
-.PHONY: check build test lint fmt replay coverage wire-routes generate-wire
+.PHONY: check build test lint fmt replay coverage wire-routes generate-wire \
+	build-cli test-cli vet-cli lint-cli module-cli check-cli
 
-check: lint wire-routes build test
+check: lint wire-routes build test check-cli
 
 wire-routes:
 	$(GO) run ./tools/wireroutes -check
@@ -24,6 +25,25 @@ test:
 lint:
 	$(GO) vet ./...
 	$(GOLANGCI_LINT) run --config .golangci.yml --timeout=5m ./...
+	$(MAKE) lint-cli
+
+build-cli:
+	$(GO) -C cmd/go-tuya build ./...
+
+test-cli:
+	$(GO) -C cmd/go-tuya test -race ./...
+
+vet-cli:
+	$(GO) -C cmd/go-tuya vet ./...
+
+lint-cli:
+	$(GO) -C cmd/go-tuya run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --config ../../.golangci.yml --timeout=5m ./...
+
+module-cli:
+	$(GO) -C cmd/go-tuya mod tidy -diff
+	$(GO) run ./tools/modulepath -dir cmd/go-tuya -want github.com/portpowered/go-tuya/cmd/go-tuya
+
+check-cli: module-cli build-cli test-cli vet-cli
 
 fmt:
 	$(GO) fmt ./...

@@ -302,8 +302,8 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
-		response := `{"success":true,"result":{"url":"tcp://mqtt.example.test:1883",` +
-			`"clientId":"synthetic-mqtt-client","username":"synthetic-user","password":"synthetic-password",` +
+		response := `{"success":true,"result":{"url":"tcp://mqtt.example.test:1883","clientId":"` +
+			syntheticMQTTClientID + `","username":"` + syntheticMQTTUsername + `","password":"` + syntheticMQTTPassword + `",` +
 			`"expireTime":3600,"topic":{"ownerId":{"sub":"cloud/owner/{ownerId}/in/#"},` +
 			`"devId":{"sub":"cloud/device/{devId}/in/#"}}}}`
 		_, _ = writer.Write([]byte(response))
@@ -337,7 +337,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 		t.Errorf("MQTT client factory calls = %d, want 1", factoryCalls)
 	}
 
-	if receivedOptions == nil || receivedOptions.ClientID != "synthetic-mqtt-client" {
+	if receivedOptions == nil || receivedOptions.ClientID != syntheticMQTTClientID {
 		t.Errorf("factory received MQTT options %#v, expected configured client ID", receivedOptions)
 	}
 }
@@ -417,8 +417,13 @@ func TestAuthClientHTTPTransportCanBeReusedAcrossSessions(t *testing.T) {
 		t.Fatalf("NewClient() error = %v", err)
 	}
 
+	request := LoginRequest{AccessCode: "synthetic-access-code"}
 	for range 2 {
-		if _, err := client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{AccessCode: "synthetic-user"}); err != nil {
+		_, err := client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(
+			context.Background(),
+			request,
+		)
+		if err != nil {
 			t.Fatalf("GenerateQrCodeForLogin() error = %v", err)
 		}
 	}
