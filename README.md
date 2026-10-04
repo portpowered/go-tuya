@@ -31,6 +31,21 @@ Import the client package:
 import "github.com/portpowered/go-tuya/pkg/tuya"
 ```
 
+## Standalone CLI
+
+The separately versioned [`go-tuya` CLI](https://portpowered.github.io/go-tuya/docs/guides/cli)
+lets customers exercise authentication, device reads, explicit commands, and
+event listening without writing an application. After its first CLI release,
+install a published version with:
+
+```sh
+go install github.com/portpowered/go-tuya/cmd/go-tuya@VERSION
+```
+
+The CLI module consumes the public SDK module and has its own nested-module
+release tag. See the [CLI guide](https://portpowered.github.io/go-tuya/docs/guides/cli)
+for command examples and safe credential input options.
+
 ## Supported surface
 
 - QR-code login, login validation, and token refresh.

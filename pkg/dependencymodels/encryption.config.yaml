@@ -1,0 +1,65 @@
+generate:
+  models: true
+output: pkg/dependencymodels/encryption.gen.go
+output-options:
+  exclude-schemas:
+    - BooleanResultEnvelope
+    - DeviceCommand
+    - DeviceDetailsEnvelope
+    - DeviceListByUserEnvelope
+    - DeviceListEnvelope
+    - DeviceListResult
+    - DeviceLogRecord
+    - DeviceLogsEnvelope
+    - DeviceLogsResult
+    - DeviceRecord
+    - DeviceSpecification
+    - DeviceSpecificationEnvelope
+    - DeviceStatus
+    - DeviceStatusEnvelope
+    - DeviceStatusMapping
+    - DeviceStatusResult
+    - DeviceUserBody
+    - DeviceUserEnvelope
+    - DeviceUserRecord
+    - DeviceUsersEnvelope
+    - FactoryInfoRecord
+    - FactoryInfosEnvelope
+    - HomeDevicesEnvelope
+    - HomeListEnvelope
+    - HomeRecord
+    - LoginCodeEnvelope
+    - LoginCodeResult
+    - MessageQueueConfigBody
+    - MessageQueueConfigEnvelope
+    - MessageQueueConfiguration
+    - MessageQueueSubscription
+    - MessageQueueTopic
+    - MultiOutletNameRecord
+    - MultiOutletNamesEnvelope
+    - QRCodeEnvelope
+    - QRCodeResult
+    - RTCOfferBody
+    - RTCSessionEnvelope
+    - RTCSessionResult
+    - RawDeviceManagementBizData
+    - RawDeviceManagementData
+    - RawDeviceReportData
+    - RawDeviceStatusChange
+    - RawSharingMessage
+    - RawSharingMessageData
+    - RefreshTokenEnvelope
+    - RefreshedTokenResult
+    - SendCommandsBody
+    - SpecificationFunction
+    - SpecificationStatus
+    - StringResultEnvelope
+    - SubDeviceRecord
+    - SubDevicesEnvelope
+    - TuyaErrorEnvelope
+    - UpdateMultiOutletNameBody
+    - UpdateNameBody
+  include-operation-ids:
+    - __component_only__
+  skip-prune: true
+package: tuyamodels

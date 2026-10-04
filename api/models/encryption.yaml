@@ -1,0 +1,57 @@
+components:
+  schemas:
+    EncryptedDataEnvelope:
+      type: object
+      description: Implementation-derived encrypted HTTP request wrapper used for
+        JSON bodies and query data.
+      required:
+      - encdata
+      properties:
+        encdata:
+          type: string
+          description: Base64-encoded nonce and AES-GCM ciphertext.
+      additionalProperties: false
+      x-go-tuya-evidence: implementation-derived
+    EncryptedRequestHeaders:
+      type: object
+      description: Implementation-derived authentication and signing headers emitted
+        by EncryptedClient.
+      required:
+      - X-appKey
+      - X-requestId
+      - X-sid
+      - X-time
+      - X-token
+      - X-sign
+      properties:
+        X-appKey:
+          type: string
+        X-requestId:
+          type: string
+        X-sid:
+          type: string
+        X-time:
+          type: string
+        X-token:
+          type: string
+        X-sign:
+          type: string
+      additionalProperties: false
+      x-go-tuya-evidence: implementation-derived
+    EncryptedHTTPResponseEnvelope:
+      type: object
+      description: Implementation-derived outer response envelope received before
+        result decryption.
+      properties:
+        code: {}
+        msg: {}
+        success:
+          type: boolean
+        result: {}
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+      additionalProperties: true
+      x-go-tuya-evidence: implementation-derived

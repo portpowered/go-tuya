@@ -1,0 +1,263 @@
+{
+  "provenance": "Hand-authored synthetic CLI request/response pairs; no Tuya credentials, broker, or account captures",
+  "homes_list": {
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/users/homes",
+      "query": {},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {
+        "success": true,
+        "t": 1700000002000,
+        "result": [
+          {"geoName": "Synthetic Region", "name": "Synthetic Test Home", "ownerId": "synthetic-home-01", "uid": "synthetic-user-01"}
+        ]
+      }
+    }
+  },
+  "unauthorized": {
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/users/homes",
+      "query": {},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {
+        "success": false,
+        "code": "1010",
+        "msg": "synthetic token rejected",
+        "t": 1700000005000,
+        "tid": "synthetic-transaction-error"
+      }
+    }
+  },
+  "device_status": {
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/ha/home/devices",
+      "query": {"encdata": ["<encrypted>"]},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {
+        "success": true,
+        "t": 1700000003000,
+        "result": [
+          {
+            "id": "synthetic-device-01",
+            "name": "Synthetic Lamp",
+            "owner_id": "synthetic-home-01",
+            "online": true,
+            "local_key": "synthetic-private-device-key",
+            "status": [
+              {"code": "switch_1", "value": true},
+              {"code": "brightness", "value": 42}
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "device_command": {
+    "request": {
+      "method": "POST",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.1/m/thing/device-1/commands",
+      "query": {},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": "<encrypted-json>"
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {"success": true, "t": 1700000000000, "result": true}
+    }
+  },
+  "token_refresh": {
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/token/synthetic-refresh-token",
+      "query": {},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": {
+          "expireTime": 7200,
+          "uid": "synthetic-user-id",
+          "accessToken": "synthetic-rotated-access",
+          "refreshToken": "synthetic-rotated-refresh"
+        }
+      }
+    }
+  },
+  "qr_login": [
+    {
+      "request": {
+        "method": "POST",
+        "origin": "https://login.example.invalid",
+        "path": "/v1.0/m/life/home-assistant/qrcode/tokens",
+        "query": {"clientid": ["synthetic-client-id"], "schema": ["haauthorize"], "usercode": ["synthetic-user-code"]},
+        "headers": {"Content-Type": ["application/json"]},
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "tid": "synthetic-transaction-qr", "t": 1700000000000, "result": {"qrcode": "synthetic-qr-code-001"}}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "origin": "https://login.example.invalid",
+        "path": "/v1.0/m/life/home-assistant/qrcode/tokens/synthetic-qr-code-001",
+        "query": {"clientid": ["synthetic-client-id"], "usercode": ["synthetic-user-code"]},
+        "headers": {"Content-Type": ["application/json"]},
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "tid": "synthetic-transaction-validation", "t": 1700000001000, "result": {"access_token": "synthetic-access-token", "refresh_token": "synthetic-refresh-token", "expire_time": 3600, "terminal_id": "synthetic-terminal-01", "uid": "synthetic-user-01", "username": "synthetic-user", "endpoint": "https://api.example.invalid"}}
+      }
+    }
+  ],
+  "events": [
+    {
+      "request": {
+        "method": "GET",
+        "origin": "https://api.example.invalid",
+        "path": "/v1.0/m/life/users/homes",
+        "query": {},
+        "headers": {
+          "X-appKey": ["synthetic-client-id"],
+          "X-requestId": ["<uuid>"],
+          "X-sign": ["<tuya-signature>"],
+          "X-time": ["<unix-millis>"],
+          "X-token": ["synthetic-access-token"]
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "result": [{"name": "Synthetic Test Home", "ownerId": "synthetic-home-01"}]}
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "origin": "https://api.example.invalid",
+        "path": "/v1.0/m/life/ha/home/devices",
+        "query": {"encdata": ["<encrypted>"]},
+        "headers": {
+          "X-appKey": ["synthetic-client-id"],
+          "X-requestId": ["<uuid>"],
+          "X-sign": ["<tuya-signature>"],
+          "X-time": ["<unix-millis>"],
+          "X-token": ["synthetic-access-token"]
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "result": [{"id": "synthetic-device-01", "name": "Synthetic Lamp", "online": true, "local_key": "synthetic-private-device-key", "status": [{"code": "switch_1", "value": true}]}]}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "origin": "https://api.example.invalid",
+        "path": "/v1.0/m/life/ha/access/config",
+        "query": {},
+        "headers": {
+          "X-appKey": ["synthetic-client-id"],
+          "X-requestId": ["<uuid>"],
+          "X-sign": ["<tuya-signature>"],
+          "X-time": ["<unix-millis>"],
+          "X-token": ["synthetic-access-token"]
+        },
+        "body": "<encrypted-json>"
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "result": {"url": "ssl://mqtt.example.invalid:8883", "clientId": "synthetic-mqtt-client", "username": "synthetic-user", "password": "synthetic-password", "expireTime": 7200, "topic": {"ownerId": {"sub": "cloud/owner/in/channel"}, "devId": {"sub": "cloud/device/{devId}/in/channel"}}}}
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "origin": "https://api.example.invalid",
+        "path": "/v1.0/m/life/ha/access/config",
+        "query": {},
+        "headers": {
+          "X-appKey": ["synthetic-client-id"],
+          "X-requestId": ["<uuid>"],
+          "X-sign": ["<tuya-signature>"],
+          "X-time": ["<unix-millis>"],
+          "X-token": ["synthetic-access-token"]
+        },
+        "body": "<encrypted-json>"
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": ["application/json"]},
+        "body": {"success": true, "result": {"url": "ssl://mqtt.example.invalid:8883", "clientId": "synthetic-mqtt-client", "username": "synthetic-user", "password": "synthetic-password", "expireTime": 7200, "topic": {"ownerId": {"sub": "cloud/owner/in/channel"}, "devId": {"sub": "cloud/device/{devId}/in/channel"}}}}
+      }
+    }
+  ]
+}

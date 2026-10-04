@@ -7,8 +7,9 @@ on:
     paths:
       - 'api/**'
       - 'docs/**'
-      - 'pkg/tuya/internal/wire/**'
+      - 'pkg/dependencymodels/**'
       - 'tools/wireroutes/**'
+      - 'tools/wiremodels/**'
       - 'tools/check_site_links.py'
       - '.github/workflows/docs.yml'
       - 'README.md'
@@ -36,22 +37,22 @@ jobs:
           go-version: '1.25.0'
           cache: true
       - name: Generate Tuya API wire models
-        run: go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
+        run: go run ./tools/wiremodels -generate
       - name: Generate Tuya wire routes
         run: go run ./tools/wireroutes
       - name: Check generated models are current
         run: |
-          git ls-files --error-unmatch pkg/tuya/internal/wire/models.gen.go
-          git ls-files --error-unmatch pkg/tuya/internal/wire/routes.gen.go
-          git ls-files --error-unmatch pkg/tuya/internal/wire/mqtt.gen.go
-          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go pkg/tuya/internal/wire/mqtt.gen.go
+          git ls-files --error-unmatch pkg/dependencymodels/routes.gen.go
+          git ls-files --error-unmatch pkg/dependencymodels/mqtt.gen.go
+          git diff --exit-code -- api/openapi.yaml pkg/dependencymodels
+          test -z "$(git ls-files --others --exclude-standard -- pkg/dependencymodels)"
       - name: Test with coverage
         if: github.event_name != 'pull_request'
         run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...
       - name: Build Fumadocs site
         uses: portpowered/api-docs-website-github-action@v0.3.0
         with:
-          title: go-tuya API Reference
+          title: go-tuya implementation-derived API reference
           openapi: api/openapi.yaml
           asyncapi: api/mqtt.asyncapi.yaml
           discover: false
@@ -82,6 +83,12 @@ jobs:
             color,
           }, null, 2)}\n`);
           JS
+      - name: Upload rendered site for independent review
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-site
+          path: site/
+          retention-days: 14
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5

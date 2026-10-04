@@ -1,0 +1,62 @@
+generate:
+  models: true
+output: pkg/dependencymodels/events.gen.go
+output-options:
+  exclude-schemas:
+    - BooleanResultEnvelope
+    - DeviceCommand
+    - DeviceDetailsEnvelope
+    - DeviceListByUserEnvelope
+    - DeviceListEnvelope
+    - DeviceListResult
+    - DeviceLogRecord
+    - DeviceLogsEnvelope
+    - DeviceLogsResult
+    - DeviceRecord
+    - DeviceSpecification
+    - DeviceSpecificationEnvelope
+    - DeviceStatus
+    - DeviceStatusEnvelope
+    - DeviceStatusMapping
+    - DeviceStatusResult
+    - DeviceUserBody
+    - DeviceUserEnvelope
+    - DeviceUserRecord
+    - DeviceUsersEnvelope
+    - EncryptedDataEnvelope
+    - EncryptedHTTPResponseEnvelope
+    - EncryptedRequestHeaders
+    - FactoryInfoRecord
+    - FactoryInfosEnvelope
+    - HomeDevicesEnvelope
+    - HomeListEnvelope
+    - HomeRecord
+    - LoginCodeEnvelope
+    - LoginCodeResult
+    - MessageQueueConfigBody
+    - MessageQueueConfigEnvelope
+    - MessageQueueConfiguration
+    - MessageQueueSubscription
+    - MessageQueueTopic
+    - MultiOutletNameRecord
+    - MultiOutletNamesEnvelope
+    - QRCodeEnvelope
+    - QRCodeResult
+    - RTCOfferBody
+    - RTCSessionEnvelope
+    - RTCSessionResult
+    - RefreshTokenEnvelope
+    - RefreshedTokenResult
+    - SendCommandsBody
+    - SpecificationFunction
+    - SpecificationStatus
+    - StringResultEnvelope
+    - SubDeviceRecord
+    - SubDevicesEnvelope
+    - TuyaErrorEnvelope
+    - UpdateMultiOutletNameBody
+    - UpdateNameBody
+  include-operation-ids:
+    - __component_only__
+  skip-prune: true
+package: tuyamodels

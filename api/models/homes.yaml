@@ -1,0 +1,82 @@
+components:
+  schemas:
+    HomeRecord:
+      type: object
+      description: Home fields observed in the current implementation and example.
+      additionalProperties: true
+      properties:
+        geoName:
+          type: string
+        groupId:
+          type: integer
+        name:
+          type: string
+        ownerId:
+          type: string
+        id:
+          type: integer
+          format: int64
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        background:
+          type: string
+        status:
+          type: boolean
+        uid:
+          type: string
+    HomeListEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeRecord'
+    HomeDevicesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'

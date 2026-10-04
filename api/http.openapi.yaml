@@ -1,0 +1,1135 @@
+openapi: 3.1.0
+info:
+  title: Tuya Cloud HTTP API routes used by go-tuya
+  version: 1.0.0
+  description: Inventory of outbound HTTP routes currently used by pkg/tuya. Operations
+    tagged x-go-tuya-evidence=provider-documented are listed in Tuya Device Management.
+    Operations tagged implementation-derived describe private app/mobile routes observed
+    in go-tuya and are not provider-verified. Request and response objects stay open
+    where the public reference or current implementation does not establish a complete
+    schema. MQTT traffic is a separate protocol; the HTTP route that obtains MQTT
+    credentials is included. EncryptedClient wraps HTTP request bodies and query data,
+    signs requests with the headers, and decrypts the outer response envelope described
+    below.
+  x-go-tuya-encrypted-transport:
+    request-envelope:
+      $ref: '#/components/schemas/EncryptedDataEnvelope'
+    request-headers:
+      $ref: '#/components/schemas/EncryptedRequestHeaders'
+    response-envelope:
+      $ref: '#/components/schemas/EncryptedHTTPResponseEnvelope'
+servers:
+- url: https://apigw.tuyaus.com
+  description: Default US Device Sharing cloud endpoint used by this library. Set
+    WithRegion or WithCloudAPIURL to choose another cloud endpoint.
+- url: https://openapi.tuyacn.com
+  description: China cloud endpoint selected by WithRegion(TuyaRegionChina).
+- url: https://openapi.tuyaeu.com
+  description: Europe cloud endpoint selected by WithRegion(TuyaRegionEU).
+- url: https://openapi.tuyain.com
+  description: India cloud endpoint selected by WithRegion(TuyaRegionIndia).
+paths:
+  /v1.0/devices/{device_id}:
+    get:
+      operationId: getDeviceDetails
+      summary: Get device details
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDetailsEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+    delete:
+      operationId: deleteDevice
+      summary: Delete a device
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+    put:
+      operationId: updateDeviceName
+      summary: Modify a device name
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNameBody'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/users/{uid}/devices:
+    get:
+      operationId: getDevicesByUser
+      summary: Get devices under a specified user
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: uid
+        in: path
+        required: true
+        description: Tuya user ID.
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        description: Source filter; Tuya documents home and sharing.
+        schema:
+          type: string
+      - name: page_no
+        in: query
+        required: false
+        description: Current page number.
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Number of devices per page.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListByUserEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices:
+    get:
+      operationId: getDeviceList
+      summary: Get a device list
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_ids
+        in: query
+        required: false
+        description: Comma-separated device IDs.
+        schema:
+          type: string
+      - name: product_id
+        in: query
+        required: false
+        description: Product ID filter.
+        schema:
+          type: string
+      - name: schema
+        in: query
+        required: false
+        description: Application schema filter.
+        schema:
+          type: string
+      - name: last_id
+        in: query
+        required: false
+        description: Continuation cursor shown in Tuya examples and used by the client.
+        schema:
+          type: string
+      - name: page_size
+        in: query
+        required: true
+        description: Number of entries returned per page.
+        schema:
+          type: integer
+      - name: page_no
+        in: query
+        required: true
+        description: Current page number.
+        schema:
+          type: integer
+      - name: start_time
+        in: query
+        required: false
+        description: 10-digit start timestamp as documented by Tuya.
+        schema:
+          type: string
+      - name: end_time
+        in: query
+        required: false
+        description: 10-digit end timestamp as documented by Tuya.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/functions/{function_code}:
+    put:
+      operationId: updateDeviceFunctionName
+      summary: Modify a data-point name
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      - name: function_code
+        in: path
+        required: true
+        description: Data-point code.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNameBody'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/logs:
+    get:
+      operationId: getDeviceLogs
+      summary: Query device logs
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      - name: type
+        in: query
+        required: true
+        description: Comma-separated event types.
+        schema:
+          type: string
+      - name: start_time
+        in: query
+        required: true
+        description: 13-digit start timestamp.
+        schema:
+          type: integer
+      - name: end_time
+        in: query
+        required: true
+        description: 13-digit end timestamp.
+        schema:
+          type: integer
+      - name: codes
+        in: query
+        required: false
+        description: Comma-separated data-point codes.
+        schema:
+          type: string
+      - name: start_row_key
+        in: query
+        required: false
+        description: Starting row key when supported.
+        schema:
+          type: string
+      - name: last_row_key
+        in: query
+        required: false
+        description: Last row key for pagination when supported.
+        schema:
+          type: string
+      - name: last_event_time
+        in: query
+        required: false
+        description: Last event time for pagination when supported.
+        schema:
+          type: integer
+      - name: size
+        in: query
+        required: false
+        description: Maximum number of returned log rows.
+        schema:
+          type: integer
+      - name: query_type
+        in: query
+        required: false
+        description: Tuya query type.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceLogsEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/reset-factory:
+    put:
+      operationId: resetDeviceFactory
+      summary: Restore device factory defaults
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/sub-devices:
+    get:
+      operationId: getSubDevices
+      summary: List devices under a gateway
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Gateway device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubDevicesEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/factory-infos:
+    get:
+      operationId: getFactoryInfos
+      summary: Get device factory information
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_ids
+        in: query
+        required: true
+        description: Comma-separated device IDs.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FactoryInfosEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/user:
+    post:
+      operationId: addDeviceUser
+      summary: Add a device user
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUserBody'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/users/{user_id}:
+    delete:
+      operationId: deleteDeviceUser
+      summary: Delete a device user
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      - name: user_id
+        in: path
+        required: true
+        description: User ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+    put:
+      operationId: updateDeviceUser
+      summary: Modify a device user
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      - name: user_id
+        in: path
+        required: true
+        description: User ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUserBody'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+    get:
+      operationId: getDeviceUser
+      summary: Get a device user
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      - name: user_id
+        in: path
+        required: true
+        description: User ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceUserEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/users:
+    get:
+      operationId: listDeviceUsers
+      summary: List users associated with a device
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceUsersEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/multiple-name:
+    put:
+      operationId: updateMultiOutletName
+      summary: Modify a multi-outlet name
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMultiOutletNameBody'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/devices/{device_id}/multiple-names:
+    get:
+      operationId: listMultiOutletNames
+      summary: Get multi-outlet names
+      description: Provider-documented in Tuya’s Device Management API reference.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
+        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Device management
+      x-go-tuya-evidence: provider-documented
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiOutletNamesEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+  /v1.0/m/token/{refresh_token}:
+    get:
+      operationId: refreshAccessToken
+      summary: Explicitly refresh an access token
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Authentication
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: refresh_token
+        in: path
+        required: true
+        description: Refresh token supplied by the caller.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/home-assistant/qrcode/tokens:
+    post:
+      operationId: generateLoginQRCode
+      servers:
+      - url: https://apigw.iotbing.com
+        description: Default QR authentication endpoint used by this library. Override
+          with WithAuthenticationURL.
+      summary: Create a QR login token
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use the QR client
+        flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
+      tags:
+      - Authentication
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: clientid
+        in: query
+        required: true
+        description: Configured Tuya client identifier.
+        schema:
+          type: string
+      - name: usercode
+        in: query
+        required: true
+        description: Home Assistant authorization access code.
+        schema:
+          type: string
+      - name: schema
+        in: query
+        required: true
+        description: Authentication schema; defaults to the package constant.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRCodeEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/home-assistant/qrcode/tokens/{login_code}:
+    get:
+      operationId: validateLoginCode
+      servers:
+      - url: https://apigw.iotbing.com
+        description: Default QR authentication endpoint used by this library. Override
+          with WithAuthenticationURL.
+      summary: Validate a scanned QR login code
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use the QR client
+        flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
+      tags:
+      - Authentication
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: login_code
+        in: path
+        required: true
+        description: Login code returned by QR generation.
+        schema:
+          type: string
+      - name: clientid
+        in: query
+        required: true
+        description: Configured Tuya client identifier.
+        schema:
+          type: string
+      - name: usercode
+        in: query
+        required: true
+        description: Home Assistant authorization access code.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginCodeEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/users/homes:
+    get:
+      operationId: queryHomes
+      summary: List homes for the authenticated user
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeListEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/ha/home/devices:
+    get:
+      operationId: queryHomeDevices
+      summary: List home devices or selected devices
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: homeId
+        in: query
+        required: false
+        description: Home identifier used by home-device queries.
+        schema:
+          type: string
+      - name: deviceIds
+        in: query
+        required: false
+        description: Comma-separated device IDs used by device-ID queries.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeDevicesEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.1/m/thing/{device_id}/commands:
+    post:
+      operationId: sendDeviceCommands
+      summary: Send device commands
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCommandsBody'
+  /v1.0/m/life/devices/{device_id}/status:
+    get:
+      operationId: queryDeviceStatus
+      summary: Get device status mappings
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatusEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.1/m/life/{device_id}/specifications:
+    get:
+      operationId: queryDeviceSpecification
+      summary: Get device specifications
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceSpecificationEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/ha/access/config:
+    post:
+      operationId: getMessageQueueConfig
+      summary: Get MQTT connection configuration
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageQueueConfigEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageQueueConfigBody'
+  /v1.0/m/life/ipc/{device_id}/webrtc/session:
+    post:
+      operationId: startRTCSession
+      summary: Start a WebRTC signaling session
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Camera device ID.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RTCSessionEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RTCOfferBody'
+  /v1.0/m/life/ipc/{device_id}/webrtc/session/{session_id}:
+    delete:
+      operationId: stopRTCSession
+      summary: Stop a WebRTC signaling session
+      description: Implementation-derived from go-tuya request encoding and synthetic
+        route tests; not provider-verified. Route illustration only. Use pkg/tuya
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        description: Camera device ID.
+        schema:
+          type: string
+      - name: session_id
+        in: path
+        required: true
+        description: Session ID returned when the session started.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+components: {}

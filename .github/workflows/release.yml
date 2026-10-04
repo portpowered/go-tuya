@@ -33,9 +33,10 @@ jobs:
           args: --timeout=5m
       - name: Verify generated wire artifacts on the tag
         run: |
-          go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
+          go run ./tools/wiremodels -generate
           go run ./tools/wireroutes -check
-          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go pkg/tuya/internal/wire/mqtt.gen.go
+          git diff --exit-code -- api/openapi.yaml pkg/dependencymodels
+          test -z "$(git ls-files --others --exclude-standard -- pkg/dependencymodels)"
       - name: Check non-generated coverage on the tag
         run: make coverage
       - name: Check release module configuration

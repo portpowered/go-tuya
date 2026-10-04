@@ -1,0 +1,119 @@
+---
+title: Standalone CLI
+description: Install and use the separately released go-tuya command-line client.
+---
+
+# Standalone CLI
+
+The `go-tuya` CLI is a separate Go module that calls the public
+[`pkg/tuya` SDK](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya).
+It provides a customer-facing way to test authentication, reads, commands, and
+events without writing an application.
+
+The first standalone CLI release is pending. Until publication, run from a checkout:
+
+```sh
+cd cmd/go-tuya
+go run . --help
+```
+
+The CLI has its own release tag under `cmd/go-tuya/vMAJOR.MINOR.PATCH`. After a
+CLI release is available, install its exact version with:
+
+```sh
+go install github.com/portpowered/go-tuya/cmd/go-tuya@vX.Y.Z
+go-tuya --help
+```
+
+Global flags go before the command. Use `--json` for JSON results and JSON
+Lines event output. Commands that contact Tuya use a 30-second request timeout
+by default; set `--request-timeout` to adjust it for a local sandbox.
+
+## Credentials
+
+The CLI stores token pairs in a protected file under the operating system's
+user configuration directory. Set `--token-file` and `--pending-file` to
+choose alternate paths. On Unix, credential files are restricted to the
+current user; on Windows, the current user's ACL is applied.
+
+Start QR authentication by entering the access code at the hidden terminal
+prompt, or supply it through a protected file or `TUYA_ACCESS_CODE`:
+
+```sh
+go-tuya auth qr --access-code-file ./access-code.txt
+go-tuya auth poll
+go-tuya auth status
+```
+
+The access code file should be readable only by the current user. The QR
+response is rendered in the terminal. `auth poll --wait 2m` waits for approval;
+without `--wait`, the command checks once. Tokens are written to the protected
+token file only after approval.
+
+Existing token JSON can be imported from stdin or a file with `auth import
+--stdin` or `auth import --file path`; input must contain `access_token`,
+`refresh_token`, and an optional Unix-millisecond `expire_time`. `auth export
+--output path` writes the saved token pair to another protected file.
+`auth refresh` explicitly rotates and saves both tokens. The CLI does not
+refresh tokens implicitly while running a read or command. For ephemeral
+automation, `TUYA_AUTH_TOKEN` and `TUYA_REFRESH_TOKEN` can supply a pair without
+creating the default file. Do not put tokens in shell history, command-line
+arguments, checked-in files, or logs.
+
+## Read homes and devices
+
+```sh
+go-tuya homes list
+go-tuya devices list
+go-tuya devices list --home HOME_ID
+go-tuya devices status DEVICE_ID
+go-tuya devices spec DEVICE_ID
+```
+
+Human output is concise. Device list output omits local keys and other
+credential fields. Status displays the online state and device-reported
+properties. Specifications can include device-specific metadata; inspect them
+before sending a command.
+
+## Send an explicit command
+
+Command values are read from a file or stdin so the value is not exposed as a
+process argument:
+
+```sh
+go-tuya device command --value-file ./switch-value.json DEVICE_ID switch
+```
+
+For example, a JSON file containing `true` sends that value for the `switch`
+code. Codes and value types vary by device. Check the specification and review
+the target and value before running a command; this operation changes a real
+device when used with live credentials. You can pass the value through stdin
+instead:
+
+```sh
+printf 'true\n' | go-tuya device command --value-stdin DEVICE_ID switch
+```
+
+## Watch events
+
+```sh
+go-tuya --json events watch --duration 5m
+```
+
+The command lists homes and devices, registers account and device event
+listeners, and watches the Tuya message queue for the selected home(s). Output
+includes event type and device ID when available; event payloads and broker
+credentials are suppressed. Ctrl+C cancels the watch, stops the queue, and
+closes the session.
+
+## Local sandbox endpoints
+
+For offline and local integration testing, the CLI accepts `--cloud-api-url`,
+`--auth-url`, `--http-proxy`, and `--mqtt-broker-url`. Insecure `http`, `ws`, or
+`tcp` overrides are accepted only for loopback hosts. Keep test endpoints on
+local machines and avoid passing credentials to untrusted services. Normal
+cloud and MQTT traffic uses TLS by default.
+
+The CLI tests use synthetic request-response pairs and a local fake MQTT
+client. They do not require Tuya credentials or contact Tuya services. See the
+[verification guide](/docs/guides/testing) for the library's broader evidence limits.

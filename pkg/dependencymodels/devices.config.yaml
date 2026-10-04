@@ -1,0 +1,57 @@
+generate:
+  models: true
+output: pkg/dependencymodels/devices.gen.go
+output-options:
+  exclude-schemas:
+    - BooleanResultEnvelope
+    - EncryptedDataEnvelope
+    - EncryptedHTTPResponseEnvelope
+    - EncryptedRequestHeaders
+    - HomeDevicesEnvelope
+    - HomeListEnvelope
+    - HomeRecord
+    - LoginCodeEnvelope
+    - LoginCodeResult
+    - MessageQueueConfigBody
+    - MessageQueueConfigEnvelope
+    - MessageQueueConfiguration
+    - MessageQueueSubscription
+    - MessageQueueTopic
+    - QRCodeEnvelope
+    - QRCodeResult
+    - RTCOfferBody
+    - RTCSessionEnvelope
+    - RTCSessionResult
+    - RawDeviceManagementBizData
+    - RawDeviceManagementData
+    - RawDeviceReportData
+    - RawDeviceStatusChange
+    - RawSharingMessage
+    - RawSharingMessageData
+    - RefreshTokenEnvelope
+    - RefreshedTokenResult
+    - StringResultEnvelope
+    - TuyaErrorEnvelope
+  include-operation-ids:
+    - getDeviceDetails
+    - deleteDevice
+    - updateDeviceName
+    - getDevicesByUser
+    - getDeviceList
+    - updateDeviceFunctionName
+    - getDeviceLogs
+    - resetDeviceFactory
+    - getSubDevices
+    - getFactoryInfos
+    - addDeviceUser
+    - deleteDeviceUser
+    - updateDeviceUser
+    - getDeviceUser
+    - listDeviceUsers
+    - updateMultiOutletName
+    - listMultiOutletNames
+    - sendDeviceCommands
+    - queryDeviceStatus
+    - queryDeviceSpecification
+  skip-prune: true
+package: tuyamodels

@@ -19,11 +19,14 @@ func main() {
 	}
 
 	ctx := context.Background()
+
 	base, err := tuya.NewClient()
 	if err != nil {
 		log.Fatal("could not configure the Tuya client")
 	}
-	client := base.NewSession(tuya.Tokens{})
+
+	client := base.NewSession(tuya.Tokens{AccessToken: "", RefreshToken: "", ExpireTime: 0})
+
 	login, err := client.AuthService.GenerateQrCodeForLogin(ctx, tuya.LoginRequest{
 		AccessCode: accessCode,
 		Schema:     tuya.AuthenticationSchema,
@@ -32,24 +35,32 @@ func main() {
 		log.Fatal("could not start QR-code login; redact credentials before inspecting diagnostics")
 	}
 
-	fmt.Println("Scan the QR code with the Tuya or Smart Life app and approve the login.")
+	_, _ = fmt.Fprintln(os.Stdout, "Scan the QR code with the Tuya or Smart Life app and approve the login.")
+
 	qr, err := qrcode.New(login.QrFormattedCode)
 	if err != nil {
 		log.Fatal("could not render the login QR code")
 	}
-	if err := qr.Save(terminal.New()); err != nil {
+
+	err = qr.Save(terminal.New())
+	if err != nil {
 		log.Fatal("could not display the login QR code")
 	}
-	fmt.Println("After the app confirms, press Enter to finish authentication.")
+
+	_, _ = fmt.Fprintln(os.Stdout, "After the app confirms, press Enter to finish authentication.")
 	_, _ = fmt.Scanln()
 
+	var request tuya.Request
+
 	tokens, err := client.AuthService.ValidateLoginCode(ctx, tuya.ValidateLoginCodeRequest{
+		Request:   request,
 		LoginCode: login.Code,
 		UserCode:  accessCode,
 	})
 	if err != nil {
 		log.Fatal("could not validate the login; redact credentials before inspecting diagnostics")
 	}
+
 	_ = tokens // Store token values with application-managed secret storage; do not print them.
-	fmt.Println("Login succeeded. Persist the returned tokens in secure application storage.")
+	_, _ = fmt.Fprintln(os.Stdout, "Login succeeded. Persist the returned tokens in secure application storage.")
 }

@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 const (

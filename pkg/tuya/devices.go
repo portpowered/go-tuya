@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // DevicesService provides methods for managing smart devices.
@@ -71,11 +71,11 @@ func mapWireDevices(records []wire.DeviceRecord) []Device {
 			Category:     dereference(record.Category),
 			ProductID:    dereference(record.ProductId),
 			ProductName:  dereference(record.ProductName),
-			SubCategory:  additionalString(record.AdditionalProperties, "subCategory"),
+			SubCategory:  dereference(record.SubCategory),
 			Icon:         dereference(record.Icon),
 			IP:           dereference(record.Ip),
-			Lat:          additionalString(record.AdditionalProperties, "lat"),
-			Lon:          additionalString(record.AdditionalProperties, "lon"),
+			Lat:          dereference(record.Lat),
+			Lon:          dereference(record.Lon),
 			Model:        dereference(record.Model),
 			TimeZone:     dereference(record.TimeZone),
 			ActiveTime:   dereference(record.ActiveTime),
@@ -101,12 +101,6 @@ func mapGeneratedDeviceStatus(statuses *[]wire.DeviceStatus) []Status {
 	}
 
 	return result
-}
-
-func additionalString(properties map[string]any, name string) string {
-	value, _ := properties[name].(string)
-
-	return value
 }
 
 func dereference[T any](value *T) T { //nolint:ireturn // This generic helper returns the pointed-to concrete wire field type.
@@ -196,9 +190,9 @@ func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevices
 // SendCommands sends control commands to a device
 // https://developer.tuya.com/en/docs/cloud/device-control?id=K95zu01ksols7
 func (c *DevicesService) SendCommands(ctx context.Context, req SendCommandsRequest) (SendCommandsResponse, error) {
-	commands := make([]wire.SendCommandsBody_Commands_Item, len(req.Commands))
+	commands := make([]wire.DeviceCommand, len(req.Commands))
 	for i, command := range req.Commands {
-		commands[i] = wire.SendCommandsBody_Commands_Item{Code: command.Code, Value: command.Value, AdditionalProperties: nil}
+		commands[i] = wire.DeviceCommand{Code: command.Code, Value: command.Value, AdditionalProperties: nil}
 	}
 
 	body, err := wireRequestMap(wire.SendCommandsBody{Commands: commands, AdditionalProperties: nil})
