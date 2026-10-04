@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/format"
 	"go/token"
 	"sort"
 	"strings"
@@ -60,7 +61,12 @@ func generatePropertyConstants(bundle map[string]any) ([]byte, error) {
 	writeKnownKeyPredicate(&output, "QueryParam", "IsKnownQueryParam", queryValues)
 	writeKnownKeyPredicate(&output, "Header", "IsKnownHeader", headerValues)
 
-	return []byte(strings.TrimRight(output.String(), "\n") + "\n"), nil
+	formatted, err := format.Source([]byte(output.String()))
+	if err != nil {
+		return nil, fmt.Errorf("format generated property constants: %w", err)
+	}
+
+	return formatted, nil
 }
 
 type propertyConstantWriter struct {

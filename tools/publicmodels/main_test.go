@@ -60,7 +60,7 @@ func TestGenerateUntypedConstantsUsesSchemaNamesAndValues(t *testing.T) {
 		`CapabilityTypeColorTemperature = "color-temperature"`,
 		`ProjectionPropertyColorCapabilityHue = "hue"`,
 	} {
-		if !strings.Contains(string(generated), expected) {
+		if !strings.Contains(strings.Join(strings.Fields(string(generated)), " "), expected) {
 			t.Fatalf("generated constants omit %q:\n%s", expected, generated)
 		}
 	}

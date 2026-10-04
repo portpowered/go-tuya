@@ -49,7 +49,7 @@ func TestGeneratePropertyConstantsQualifiesKeysBySchema(t *testing.T) {
 		"PropertyRawSharingMessageData = " + strconv.Quote("data"),
 		"PropertyRawSharingMessageProtocol = " + strconv.Quote("protocol"),
 	} {
-		if !strings.Contains(string(generated), expected) {
+		if !strings.Contains(strings.Join(strings.Fields(string(generated)), " "), expected) {
 			t.Fatalf("property constants omit %q:\n%s", expected, generated)
 		}
 	}
@@ -98,7 +98,7 @@ func TestGeneratePropertyConstantsIncludesQueryAndHeaderKeys(t *testing.T) {
 		`HeaderXRequestId = "X-requestId"`,
 		`HeaderXAppKey = "X-appKey"`,
 	} {
-		if !strings.Contains(string(generated), expected) {
+		if !strings.Contains(strings.Join(strings.Fields(string(generated)), " "), expected) {
 			t.Fatalf("generated key constants omit %q:\n%s", expected, generated)
 		}
 	}

@@ -11,24 +11,24 @@ const (
 )
 
 const (
-	CapabilityTypePower = "power"
-	CapabilityTypeBrightness = "brightness"
-	CapabilityTypeColor = "color"
-	CapabilityTypeColorTemperature = "color-temperature"
+	CapabilityTypePower             = "power"
+	CapabilityTypeBrightness        = "brightness"
+	CapabilityTypeColor             = "color"
+	CapabilityTypeColorTemperature  = "color-temperature"
 	CapabilityTypeTemperatureSensor = "temperature-sensor"
-	CapabilityTypeHumiditySensor = "humidity-sensor"
-	CapabilityTypeFanSpeed = "fan-speed"
-	CapabilityTypeLock = "lock"
-	CapabilityTypeContactSensor = "contact-sensor"
-	CapabilityTypeWindowCovering = "window-covering"
-	CapabilityTypeCamera = "camera"
-	CapabilityTypeRTCSession = "rtc-session"
+	CapabilityTypeHumiditySensor    = "humidity-sensor"
+	CapabilityTypeFanSpeed          = "fan-speed"
+	CapabilityTypeLock              = "lock"
+	CapabilityTypeContactSensor     = "contact-sensor"
+	CapabilityTypeWindowCovering    = "window-covering"
+	CapabilityTypeCamera            = "camera"
+	CapabilityTypeRTCSession        = "rtc-session"
 )
 
 const (
-	ProjectionPropertyColorCapabilityHue = "hue"
+	ProjectionPropertyColorCapabilityHue        = "hue"
 	ProjectionPropertyColorCapabilitySaturation = "saturation"
-	ProjectionPropertyColorCapabilityValue = "value"
+	ProjectionPropertyColorCapabilityValue      = "value"
 )
 
 const (
@@ -40,53 +40,53 @@ const (
 )
 
 const (
-	ContactSensorTextValueTrue = "true"
-	ContactSensorTextValueOpen = "open"
-	ContactSensorTextValueFalse = "false"
+	ContactSensorTextValueTrue   = "true"
+	ContactSensorTextValueOpen   = "open"
+	ContactSensorTextValueFalse  = "false"
 	ContactSensorTextValueClosed = "closed"
 )
 
 const (
-	ProjectionPropertyDeviceDeleteEventDevId = "devId"
+	ProjectionPropertyDeviceDeleteEventDevId      = "devId"
 	ProjectionPropertyDeviceDeleteEventProductKey = "productKey"
-	ProjectionPropertyDeviceDeleteEventUid = "uid"
+	ProjectionPropertyDeviceDeleteEventUid        = "uid"
 )
 
 const (
-	ProjectionPropertyDeviceManagementEventBizCode = "bizCode"
-	ProjectionPropertyDeviceManagementEventBizData = "bizData"
-	ProjectionPropertyDeviceManagementEventDevId = "devId"
+	ProjectionPropertyDeviceManagementEventBizCode    = "bizCode"
+	ProjectionPropertyDeviceManagementEventBizData    = "bizData"
+	ProjectionPropertyDeviceManagementEventDevId      = "devId"
 	ProjectionPropertyDeviceManagementEventProductKey = "productKey"
 )
 
 const (
-	ProjectionPropertyDeviceNameUpdateEventDevId = "devId"
-	ProjectionPropertyDeviceNameUpdateEventName = "name"
+	ProjectionPropertyDeviceNameUpdateEventDevId      = "devId"
+	ProjectionPropertyDeviceNameUpdateEventName       = "name"
 	ProjectionPropertyDeviceNameUpdateEventProductKey = "productKey"
 )
 
 const (
-	ProjectionPropertyDeviceOfflineEventDevId = "devId"
+	ProjectionPropertyDeviceOfflineEventDevId      = "devId"
 	ProjectionPropertyDeviceOfflineEventProductKey = "productKey"
-	ProjectionPropertyDeviceOfflineEventTime = "time"
+	ProjectionPropertyDeviceOfflineEventTime       = "time"
 )
 
 const (
-	ProjectionPropertyDeviceOnlineEventDevId = "devId"
+	ProjectionPropertyDeviceOnlineEventDevId      = "devId"
 	ProjectionPropertyDeviceOnlineEventProductKey = "productKey"
-	ProjectionPropertyDeviceOnlineEventTime = "time"
+	ProjectionPropertyDeviceOnlineEventTime       = "time"
 )
 
 const (
-	ProjectionPropertyDeviceStateChangeEventDataId = "dataId"
-	ProjectionPropertyDeviceStateChangeEventDevId = "devId"
+	ProjectionPropertyDeviceStateChangeEventDataId     = "dataId"
+	ProjectionPropertyDeviceStateChangeEventDevId      = "devId"
 	ProjectionPropertyDeviceStateChangeEventProductKey = "productKey"
-	ProjectionPropertyDeviceStateChangeEventStatus = "status"
+	ProjectionPropertyDeviceStateChangeEventStatus     = "status"
 )
 
 const (
-	ProjectionPropertyDeviceStatusChangeCode = "code"
-	ProjectionPropertyDeviceStatusChangeT = "t"
+	ProjectionPropertyDeviceStatusChangeCode  = "code"
+	ProjectionPropertyDeviceStatusChangeT     = "t"
 	ProjectionPropertyDeviceStatusChangeValue = "value"
 )
 
@@ -109,20 +109,20 @@ const (
 type RTCSessionCapability struct{}
 
 const (
-	SDKEventTypeDeviceStateChange = "device_state_change"
+	SDKEventTypeDeviceStateChange      = "device_state_change"
 	SDKEventTypeDeviceManagementPrefix = "device_management_"
-	SDKEventTypeDeviceOnline = "device_online"
-	SDKEventTypeDeviceOffline = "device_offline"
-	SDKEventTypeDeviceNameUpdate = "device_name_update"
-	SDKEventTypeDeviceDelete = "device_delete"
+	SDKEventTypeDeviceOnline           = "device_online"
+	SDKEventTypeDeviceOffline          = "device_offline"
+	SDKEventTypeDeviceNameUpdate       = "device_name_update"
+	SDKEventTypeDeviceDelete           = "device_delete"
 )
 
 const (
 	ProjectionPropertyStandardizedDeviceStateEventCapabilities = "capabilities"
-	ProjectionPropertyStandardizedDeviceStateEventCategory = "category"
-	ProjectionPropertyStandardizedDeviceStateEventDeviceId = "deviceId"
-	ProjectionPropertyStandardizedDeviceStateEventProductKey = "productKey"
-	ProjectionPropertyStandardizedDeviceStateEventTimestamp = "timestamp"
+	ProjectionPropertyStandardizedDeviceStateEventCategory     = "category"
+	ProjectionPropertyStandardizedDeviceStateEventDeviceId     = "deviceId"
+	ProjectionPropertyStandardizedDeviceStateEventProductKey   = "productKey"
+	ProjectionPropertyStandardizedDeviceStateEventTimestamp    = "timestamp"
 )
 
 const (

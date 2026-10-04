@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/format"
 	"go/token"
 	"os"
 	"os/exec"
@@ -175,7 +176,12 @@ func generateUntypedConstants(document map[string]any) ([]byte, error) {
 		return nil, fmt.Errorf("no schemas opted in to untyped constant generation: %w", errInvalidProjectionSchema)
 	}
 
-	return []byte(strings.TrimRight(output.String(), "\n") + "\n"), nil
+	formatted, err := format.Source([]byte(output.String()))
+	if err != nil {
+		return nil, fmt.Errorf("format generated public values: %w", err)
+	}
+
+	return formatted, nil
 }
 
 func projectionSchemas(document map[string]any) (map[string]any, error) {
