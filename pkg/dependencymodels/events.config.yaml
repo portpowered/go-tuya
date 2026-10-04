@@ -26,11 +26,13 @@ output-options:
     - EncryptedDataEnvelope
     - EncryptedHTTPResponseEnvelope
     - EncryptedRequestHeaders
+    - EncryptedRequestQuery
     - FactoryInfoRecord
     - FactoryInfosEnvelope
     - HomeDevicesEnvelope
     - HomeListEnvelope
     - HomeRecord
+    - JSONMediaType
     - LoginCodeEnvelope
     - LoginCodeResult
     - MessageQueueConfigBody
@@ -53,6 +55,8 @@ output-options:
     - StringResultEnvelope
     - SubDeviceRecord
     - SubDevicesEnvelope
+    - TuyaDataPointCode
+    - TuyaDeviceCategory
     - TuyaErrorEnvelope
     - UpdateMultiOutletNameBody
     - UpdateNameBody

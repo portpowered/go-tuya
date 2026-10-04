@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: go-tuya public semantic projections
+  version: 0.1.0
+  description: >-
+    Public event and capability shapes returned by the SDK. These are library
+    projections over Tuya wire contracts, not additional provider endpoints.
+paths: {}
+components:
+  schemas:
+    CapabilityType:
+      type: string
+      x-go-type: string
+      x-go-tuya-generate-untyped-constants: true
+      description: Stable semantic capability identifiers exposed by this SDK.
+      enum:
+      - power
+      - brightness
+      - color
+      - color-temperature
+      - temperature-sensor
+      - humidity-sensor
+      - fan-speed
+      - lock
+      - contact-sensor
+      - window-covering
+      - camera
+      - rtc-session
+      x-enum-varnames:
+      - CapabilityTypePower
+      - CapabilityTypeBrightness
+      - CapabilityTypeColor
+      - CapabilityTypeColorTemperature
+      - CapabilityTypeTemperatureSensor
+      - CapabilityTypeHumiditySensor
+      - CapabilityTypeFanSpeed
+      - CapabilityTypeLock
+      - CapabilityTypeContactSensor
+      - CapabilityTypeWindowCovering
+      - CapabilityTypeCamera
+      - CapabilityTypeRTCSession
+    SDKEventType:
+      type: string
+      description: Stable event labels returned by the SDK event projection methods.
+      x-go-tuya-generate-untyped-constants: true
+      enum:
+      - device_state_change
+      - device_management_
+      - device_online
+      - device_offline
+      - device_name_update
+      - device_delete
+      x-enum-varnames:
+      - SDKEventTypeDeviceStateChange
+      - SDKEventTypeDeviceManagementPrefix
+      - SDKEventTypeDeviceOnline
+      - SDKEventTypeDeviceOffline
+      - SDKEventTypeDeviceNameUpdate
+      - SDKEventTypeDeviceDelete
+    ContactSensorTextValue:
+      type: string
+      description: Text spellings accepted by the SDK when normalizing contact-sensor values.
+      x-go-tuya-generate-untyped-constants: true
+      enum: ["true", open, "false", closed]
+      x-enum-varnames:
+      - ContactSensorTextValueTrue
+      - ContactSensorTextValueOpen
+      - ContactSensorTextValueFalse
+      - ContactSensorTextValueClosed
+    PowerState:
+      type: string
+      enum: [on, off]
+      x-enum-varnames: [PowerStateOn, PowerStateOff]
+    LockState:
+      type: string
+      enum: [locked, unlocked]
+      x-enum-varnames: [LockStateLocked, LockStateUnlocked]
+    StreamingState:
+      type: string
+      enum: [idle, streaming]
+      x-enum-varnames: [StreamingStateIdle, StreamingStateStreaming]
+    DeviceStateChangeEvent:
+      type: object
+      description: Public projection of a Tuya device status-change event.
+      required: [dataId, devId, productKey, status]
+      properties:
+        dataId:
+          type: string
+          x-go-name: DataID
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatusChange'
+    DeviceStatusChange:
+      type: object
+      description: Public projection of one status entry in a Tuya device report.
+      required: [code, value, t]
+      properties:
+        code:
+          type: string
+          x-go-name: Code
+        value: {}
+        t:
+          type: integer
+          format: int64
+          x-go-name: Timestamp
+    DeviceManagementEvent:
+      type: object
+      description: Public projection of a Tuya device-management event.
+      required: [devId, productKey, bizCode, bizData]
+      properties:
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        bizCode:
+          type: string
+          x-go-name: BizCode
+        bizData:
+          type: object
+          additionalProperties: {}
+          x-go-name: BizData
+    DeviceOnlineEvent:
+      type: object
+      required: [devId, productKey, time]
+      properties:
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        time:
+          type: integer
+          format: int64
+          x-go-name: Time
+    DeviceOfflineEvent:
+      type: object
+      required: [devId, productKey, time]
+      properties:
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        time:
+          type: integer
+          format: int64
+          x-go-name: Time
+    DeviceNameUpdateEvent:
+      type: object
+      required: [devId, productKey, name]
+      properties:
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        name:
+          type: string
+          x-go-name: NewName
+    DeviceDeleteEvent:
+      type: object
+      required: [devId, productKey, uid]
+      properties:
+        devId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        uid:
+          type: string
+          x-go-name: UID
+    PowerCapability:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: '#/components/schemas/PowerState'
+          x-go-name: State
+    BrightnessCapability:
+      type: object
+      required: [level]
+      properties:
+        level:
+          type: integer
+          x-go-name: Level
+    ColorCapability:
+      type: object
+      required: [hue, saturation, value]
+      properties:
+        hue:
+          type: integer
+          x-go-name: Hue
+        saturation:
+          type: integer
+          x-go-name: Saturation
+        value:
+          type: integer
+          x-go-name: Value
+    ColorTemperatureCapability:
+      type: object
+      required: [mireds]
+      properties:
+        mireds:
+          type: integer
+          x-go-name: Mireds
+    TemperatureSensorCapability:
+      type: object
+      required: [temperature]
+      properties:
+        temperature:
+          type: number
+          format: double
+          x-go-name: Temperature
+    HumiditySensorCapability:
+      type: object
+      required: [humidity]
+      properties:
+        humidity:
+          type: integer
+          x-go-name: Humidity
+    FanSpeedCapability:
+      type: object
+      required: [speed]
+      properties:
+        speed:
+          type: integer
+          x-go-name: Speed
+    LockCapability:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: '#/components/schemas/LockState'
+          x-go-name: State
+    ContactSensorCapability:
+      type: object
+      required: [isOpen]
+      properties:
+        isOpen:
+          type: boolean
+          x-go-name: IsOpen
+    WindowCoveringCapability:
+      type: object
+      required: [position]
+      properties:
+        position:
+          type: integer
+          x-go-name: Position
+    CameraCapability:
+      type: object
+      required: [streamingState]
+      properties:
+        streamingState:
+          $ref: '#/components/schemas/StreamingState'
+          x-go-name: StreamingState
+    RTCSessionCapability:
+      type: object
+      description: SDK capability marker for camera devices with RTC support; it carries no serialized state.
+      x-go-tuya-generate-empty-struct: true
+    StandardizedDeviceStateEvent:
+      type: object
+      required: [deviceId, productKey, category, capabilities, timestamp]
+      properties:
+        deviceId:
+          type: string
+          x-go-name: DeviceID
+        productKey:
+          type: string
+          x-go-name: ProductKey
+        category:
+          type: string
+          x-go-name: Category
+        capabilities:
+          type: array
+          items:
+            type: object
+            x-go-type: Capability
+          x-go-name: Capabilities
+        timestamp:
+          type: integer
+          format: int64
+          x-go-name: Timestamp

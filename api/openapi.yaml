@@ -193,6 +193,7 @@ components:
         category:
           description: Product category in the example response.
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         create_time:
           description: Creation timestamp value in the example response.
           format: int64
@@ -266,6 +267,7 @@ components:
       properties:
         category:
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         functions:
           items:
             $ref: '#/components/schemas/SpecificationFunction'
@@ -305,6 +307,7 @@ components:
         code:
           description: Status code in the example response.
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         type:
           description: Status data-point type where returned.
           type: string
@@ -339,10 +342,12 @@ components:
       properties:
         dpCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         dpId:
           type: integer
         statusCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         supportLocal:
           type: boolean
         valueConvert:
@@ -356,6 +361,7 @@ components:
       properties:
         category:
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         dpStatusRelationDTOS:
           items:
             $ref: '#/components/schemas/DeviceStatusMapping'
@@ -504,6 +510,19 @@ components:
         - X-sign
       type: object
       x-go-tuya-evidence: implementation-derived
+      x-go-tuya-header-keys: true
+    EncryptedRequestQuery:
+      additionalProperties: false
+      description: Implementation-derived query keys emitted by encrypted requests.
+      properties:
+        encdata:
+          description: Base64-encoded encrypted query payload.
+          type: string
+      required:
+        - encdata
+      type: object
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-query-keys: true
     FactoryInfoRecord:
       additionalProperties: true
       description: Factory information fields represented by the library.
@@ -620,6 +639,14 @@ components:
         uid:
           type: string
       type: object
+    JSONMediaType:
+      description: Implementation-derived JSON media type used by the QR authentication headers.
+      enum:
+        - application/json
+      type: string
+      x-enum-varnames:
+        - JSONMediaTypeApplicationJSON
+      x-go-tuya-evidence: implementation-derived
     LoginCodeEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
@@ -860,6 +887,7 @@ components:
       properties:
         bizCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
         bizData:
           $ref: '#/components/schemas/RawDeviceManagementBizData'
         devId:
@@ -893,6 +921,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         t:
           format: int64
           type: integer
@@ -925,6 +954,7 @@ components:
       properties:
         bizCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
         bizData:
           $ref: '#/components/schemas/RawDeviceManagementBizData'
         dataId:
@@ -996,6 +1026,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         desc:
           type: string
         name:
@@ -1010,6 +1041,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         name:
           type: string
         type:
@@ -1087,6 +1119,114 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+    TuyaBizCode:
+      description: Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
+      enum:
+        - online
+        - offline
+        - nameUpdate
+        - delete
+        - bindUser
+        - dpNameUpdate
+      type: string
+      x-enum-varnames:
+        - TuyaBizCodeOnline
+        - TuyaBizCodeOffline
+        - TuyaBizCodeNameUpdate
+        - TuyaBizCodeDelete
+        - TuyaBizCodeBindUser
+        - TuyaBizCodeDpNameUpdate
+      x-go-tuya-evidence: implementation-derived
+    TuyaDataPointCode:
+      description: Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
+      enum:
+        - switch_led
+        - bright_value
+        - temp_value
+        - colour_data
+        - switch_1
+        - switch_led_1
+        - bright_value_1
+        - bright_value_v2
+        - colour_data_v2
+        - va_temperature
+        - va_humidity
+        - doorcontact_state
+        - switch_fan
+        - fan_speed_percent
+        - control
+        - percent_control
+        - closed_opened
+        - basic_indicator
+        - camera
+        - rtc_session
+      type: string
+      x-enum-varnames:
+        - TuyaDataPointCodeSwitchLed
+        - TuyaDataPointCodeBrightValue
+        - TuyaDataPointCodeTempValue
+        - TuyaDataPointCodeColourData
+        - TuyaDataPointCodeSwitch1
+        - TuyaDataPointCodeSwitchLed1
+        - TuyaDataPointCodeBrightValue1
+        - TuyaDataPointCodeBrightValueV2
+        - TuyaDataPointCodeColourDataV2
+        - TuyaDataPointCodeVaTemperature
+        - TuyaDataPointCodeVaHumidity
+        - TuyaDataPointCodeDoorcontactState
+        - TuyaDataPointCodeSwitchFan
+        - TuyaDataPointCodeFanSpeedPercent
+        - TuyaDataPointCodeControl
+        - TuyaDataPointCodePercentControl
+        - TuyaDataPointCodeClosedOpened
+        - TuyaDataPointCodeBasicIndicator
+        - TuyaDataPointCodeCamera
+        - TuyaDataPointCodeRtcSession
+      x-go-tuya-evidence: implementation-derived
+    TuyaDeviceCategory:
+      description: Device categories used by the standard capability mappings in this client.
+      enum:
+        - tgkg
+        - tgq
+        - dj
+        - dd
+        - kg
+        - cz
+        - pc
+        - wsdcg
+        - mcs
+        - dc
+        - fwd
+        - fs
+        - fsd
+        - cl
+        - clkg
+        - ms
+        - jtmspro
+        - sp
+        - ipc
+      type: string
+      x-enum-varnames:
+        - TuyaDeviceCategoryTgkg
+        - TuyaDeviceCategoryTgq
+        - TuyaDeviceCategoryDj
+        - TuyaDeviceCategoryDd
+        - TuyaDeviceCategoryKg
+        - TuyaDeviceCategoryCz
+        - TuyaDeviceCategoryPc
+        - TuyaDeviceCategoryWsdcg
+        - TuyaDeviceCategoryMcs
+        - TuyaDeviceCategoryDc
+        - TuyaDeviceCategoryFwd
+        - TuyaDeviceCategoryFs
+        - TuyaDeviceCategoryFsd
+        - TuyaDeviceCategoryCl
+        - TuyaDeviceCategoryClkg
+        - TuyaDeviceCategoryMs
+        - TuyaDeviceCategoryJtmspro
+        - TuyaDeviceCategorySp
+        - TuyaDeviceCategoryIpc
+      x-go-tuya-evidence: implementation-derived
     TuyaErrorEnvelope:
       additionalProperties: true
       description: Extensible Tuya error response. Error fields vary by endpoint.
@@ -1891,6 +2031,12 @@ paths:
           required: true
           schema:
             type: string
+        - description: JSON response content type requested by this implementation.
+          in: header
+          name: Content-Type
+          required: true
+          schema:
+            $ref: '#/components/schemas/JSONMediaType'
       responses:
         "200":
           content:
@@ -1934,6 +2080,12 @@ paths:
           required: true
           schema:
             type: string
+        - description: JSON response content type requested by this implementation.
+          in: header
+          name: Content-Type
+          required: true
+          schema:
+            $ref: '#/components/schemas/JSONMediaType'
       responses:
         "200":
           content:

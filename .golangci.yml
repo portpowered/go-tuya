@@ -123,6 +123,10 @@ linters:
       - path: pkg/tuya/route_synthetic_test\.go
         text: "package should be `tuya_test` instead of `tuya`"
         linters: [testpackage]
+      # Wire key validation tests exercise the private JSON-to-query/header converter.
+      - path: pkg/tuya/wire_decode_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
       # The SID argument stays available for provider authorization context; current Tuya requests set it empty.
       - path: pkg/tuya/encryption\.go
         text: 'sid always receives ""'

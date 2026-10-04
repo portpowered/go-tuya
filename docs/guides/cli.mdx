@@ -114,6 +114,5 @@ For offline and local integration testing, the CLI accepts `--cloud-api-url`,
 local machines and avoid passing credentials to untrusted services. Normal
 cloud and MQTT traffic uses TLS by default.
 
-The CLI tests use synthetic request-response pairs and a local fake MQTT
-client. They do not require Tuya credentials or contact Tuya services. See the
-[verification guide](/docs/guides/testing) for the library's broader evidence limits.
+The CLI can use custom endpoints for local development. Keep credentials out
+of arguments and avoid sending them to untrusted endpoints.

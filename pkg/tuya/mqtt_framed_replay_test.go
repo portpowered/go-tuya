@@ -39,7 +39,14 @@ type mqttBinaryTranscript struct {
 func loadMQTTBinaryTranscript(t *testing.T) mqttBinaryTranscript {
 	t.Helper()
 
-	data, err := os.ReadFile("../../tests/replay/fixtures/mqtt/synthetic/paho-framed-session.synthetic.json")
+	return loadMQTTBinaryTranscriptFrom(t, "../../tests/replay/fixtures/mqtt/synthetic/paho-framed-session.synthetic.json")
+}
+
+func loadMQTTBinaryTranscriptFrom(t *testing.T, path string) mqttBinaryTranscript {
+	t.Helper()
+
+	// #nosec G304 -- callers supply only the two fixed checked-in synthetic MQTT transcript paths.
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +312,16 @@ func stopMQTTFramedSession(
 		t.Fatal(err)
 	}
 
-	err = session.Close(ctx)
+	assertMQTTFramedSessionClosed(ctx, t, session, brokerDone, httpTranscript, httpReplay)
+}
+
+func assertMQTTFramedSessionClosed(
+	ctx context.Context, t *testing.T, session *Session, brokerDone <-chan error,
+	httpTranscript *mqttReplayTranscript, httpReplay *mqttHTTPReplay,
+) {
+	t.Helper()
+
+	err := session.Close(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +336,9 @@ func stopMQTTFramedSession(
 	}
 
 	err = httpTranscript.verifyConsumed()
-	if err != nil || !httpReplay.consumed || queue.Status().Running || queue.Status().Connected {
+
+	status := session.MessageQueue.Status()
+	if err != nil || !httpReplay.consumed || status.Running || status.Connected {
 		t.Fatalf("unconsumed exchange or active queue after teardown: %v", err)
 	}
 }
@@ -349,6 +367,35 @@ func TestPahoMQTTFramedPairedReplay(t *testing.T) {
 
 	assertMQTTFramedEvents(ctx, t, events)
 	stopMQTTFramedSession(ctx, t, session, brokerDone, &httpTranscript, httpReplay)
+}
+
+func TestPahoMQTTFramedDeniedConnectReplay(t *testing.T) {
+	t.Parallel()
+
+	transcript := loadMQTTBinaryTranscriptFrom(t, "../../tests/replay/fixtures/mqtt/synthetic/paho-framed-denied.synthetic.json")
+	httpTranscript, configPair := loadSyntheticMQTTReplay(t)
+	httpTranscript.Frames = httpTranscript.Frames[:2]
+	httpReplay := &mqttHTTPReplay{transcript: &httpTranscript, pair: configPair, consumed: false}
+	connection, brokerDone := newMQTTFramedConnections(t, transcript)
+	session := newMQTTFramedSession(t, httpReplay, connection)
+
+	ctx, cancel := context.WithTimeout(context.Background(), mqttFramedTimeout)
+	defer cancel()
+
+	var startRequest MessageQueueStartRequest
+
+	response, err := session.MessageQueue.Start(ctx, startRequest)
+	if err == nil || response.Success {
+		t.Fatalf("denied CONNECT response = %+v, error = %v; want typed start failure", response, err)
+	}
+
+	var clientErr *ClientError
+
+	if !errors.As(err, &clientErr) || clientErr.Kind != ErrorTransport {
+		t.Fatalf("denied CONNECT error = %v, want typed transport error", err)
+	}
+
+	assertMQTTFramedSessionClosed(ctx, t, session, brokerDone, &httpTranscript, httpReplay)
 }
 
 func TestMQTTBinaryMatcherRejectsMutations(t *testing.T) {

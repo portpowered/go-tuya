@@ -1,5 +1,13 @@
 components:
   schemas:
+    JSONMediaType:
+      type: string
+      description: Implementation-derived JSON media type used by the QR authentication headers.
+      enum:
+      - application/json
+      x-enum-varnames:
+      - JSONMediaTypeApplicationJSON
+      x-go-tuya-evidence: implementation-derived
     QRCodeResult:
       type: object
       description: QR login payload observed by the library.

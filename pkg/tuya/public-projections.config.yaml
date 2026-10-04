@@ -1,0 +1,14 @@
+package: tuya
+generate:
+  models: true
+output: pkg/tuya/public_projections.gen.go
+output-options:
+  exclude-schemas:
+  - ContactSensorTextValue
+  - RTCSessionCapability
+  - SDKEventType
+  skip-prune: true
+  prefer-skip-optional-pointer: true
+  prefer-skip-optional-pointer-on-container-types: true
+  user-templates:
+    imports.tmpl: tools/publicmodels/templates/imports.tmpl

@@ -1,4 +1,4 @@
-// Package tuya provides a Go client library for interacting with Tuya smart devices via the Tuya Device Sharing SDK.
+// Package tuya provides clients and caller-owned sessions for Tuya devices.
 package tuya
 
 import (
@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"sync"
 )
-
-// This file contains the client interfaces for using the Tuya API client.
 
 // Auth defines the interface for Tuya authentication operations.
 type Auth interface {

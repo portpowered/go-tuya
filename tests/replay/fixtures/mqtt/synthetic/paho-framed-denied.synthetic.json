@@ -1,0 +1,15 @@
+{
+  "provenance": "Hand-authored synthetic MQTT 3.1.1 CONNECT and denied CONNACK bytes for Paho v1.5.1; not a broker or account capture.",
+  "frames": [
+    {
+      "direction": "client",
+      "hex": "104500044d51545404c2001e001573796e7468657469632d6d7174742d636c69656e74000e73796e7468657469632d75736572001273796e7468657469632d70617373776f7264",
+      "packet_id": false
+    },
+    {
+      "direction": "server",
+      "hex": "20020005",
+      "packet_id": false
+    }
+  ]
+}

@@ -13,44 +13,26 @@ import (
 // Protocol constants.
 const (
 	// ProtocolDeviceReport represents device state change reports (protocol 4).
-	ProtocolDeviceReport = 4
+	ProtocolDeviceReport = int(wire.N4)
 	// ProtocolOther represents device management events (protocol 20).
-	ProtocolOther = 20
+	ProtocolOther = int(wire.N20)
 )
 
 // Business code constants for device management events.
 const (
-	BizcodeOnline     = "online"
-	BizcodeOffline    = "offline"
-	BizcodeNameUpdate = "nameUpdate"
-	BizcodeDelete     = "delete"
-	BizcodeBindUser   = "bindUser"
+	BizcodeOnline     = string(wire.TuyaBizCodeOnline)
+	BizcodeOffline    = string(wire.TuyaBizCodeOffline)
+	BizcodeNameUpdate = string(wire.TuyaBizCodeNameUpdate)
+	BizcodeDelete     = string(wire.TuyaBizCodeDelete)
+	BizcodeBindUser   = string(wire.TuyaBizCodeBindUser)
 	// BizcodeDpNameUpdate represents a device point name update, such as led_dimmer_1 to led_dimmer_2.
-	BizcodeDpNameUpdate = "dpNameUpdate"
+	BizcodeDpNameUpdate = string(wire.TuyaBizCodeDpNameUpdate)
 )
 
 // Event represents the base interface for all event types.
 type Event interface {
 	GetDeviceID() string
 	GetEventType() string
-}
-
-// DeviceStateChangeEvent represents a device state change event (protocol 4).
-type DeviceStateChangeEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DataID string `json:"dataId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string               `json:"productKey"`
-	Status     []DeviceStatusChange `json:"status"`
-}
-
-// DeviceStatusChange represents a single status change within a device state change event.
-type DeviceStatusChange struct {
-	Code      string `json:"code"`
-	Value     any    `json:"value"`
-	Timestamp int64  `json:"t"`
 }
 
 // GetDeviceID returns the device ID for the state change event.
@@ -60,7 +42,7 @@ func (e *DeviceStateChangeEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceStateChangeEvent) GetEventType() string {
-	return "device_state_change"
+	return SDKEventTypeDeviceStateChange
 }
 
 // HasStatusCode checks if the event contains a specific status code change.
@@ -107,18 +89,6 @@ func (e *DeviceStateChangeEvent) GetBooleanStatusValue(code string) bool {
 	}
 }
 
-// DeviceManagementEvent represents a device management event (protocol 20).
-type DeviceManagementEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	BizCode string `json:"bizCode"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	BizData map[string]any `json:"bizData"`
-}
-
 // GetDeviceID returns the device ID for the management event.
 func (e *DeviceManagementEvent) GetDeviceID() string {
 	return e.DeviceID
@@ -126,16 +96,7 @@ func (e *DeviceManagementEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceManagementEvent) GetEventType() string {
-	return "device_management_" + e.BizCode
-}
-
-// DeviceOnlineEvent represents a device coming online.
-type DeviceOnlineEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	Time       int64  `json:"time"`
+	return SDKEventTypeDeviceManagementPrefix + e.BizCode
 }
 
 // GetDeviceID returns the device ID.
@@ -145,16 +106,7 @@ func (e *DeviceOnlineEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceOnlineEvent) GetEventType() string {
-	return "device_online"
-}
-
-// DeviceOfflineEvent represents a device going offline.
-type DeviceOfflineEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	Time       int64  `json:"time"`
+	return SDKEventTypeDeviceOnline
 }
 
 // GetDeviceID returns the device ID.
@@ -164,16 +116,7 @@ func (e *DeviceOfflineEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceOfflineEvent) GetEventType() string {
-	return "device_offline"
-}
-
-// DeviceNameUpdateEvent represents a device name change.
-type DeviceNameUpdateEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	NewName    string `json:"name"`
+	return SDKEventTypeDeviceOffline
 }
 
 // GetDeviceID returns the device ID.
@@ -183,16 +126,7 @@ func (e *DeviceNameUpdateEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceNameUpdateEvent) GetEventType() string {
-	return "device_name_update"
-}
-
-// DeviceDeleteEvent represents a device being deleted.
-type DeviceDeleteEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	UID        string `json:"uid"`
+	return SDKEventTypeDeviceNameUpdate
 }
 
 // GetDeviceID returns the device ID.
@@ -202,13 +136,13 @@ func (e *DeviceDeleteEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceDeleteEvent) GetEventType() string {
-	return "device_delete"
+	return SDKEventTypeDeviceDelete
 }
 
 // ParseEvent parses a raw MQTT message into the appropriate event type.
 func ParseEvent(rawMessage map[string]any) (Event, error) { //nolint:ireturn // Protocol variants share the public Event interface.
 	// Extract protocol number
-	protocolFloat, protocolOK := rawMessage["protocol"].(float64)
+	protocolFloat, protocolOK := rawMessage[wire.PropertyRawSharingMessageProtocol].(float64)
 	if !protocolOK {
 		return nil, errProtocolFieldInvalid
 	}
@@ -217,7 +151,7 @@ func ParseEvent(rawMessage map[string]any) (Event, error) { //nolint:ireturn // 
 
 	// Preserve the existing public validation errors before converting to the
 	// schema-generated transport and protocol data models.
-	_, protocolOK = rawMessage["data"].(map[string]any)
+	_, protocolOK = rawMessage[wire.PropertyRawSharingMessageData].(map[string]any)
 	if !protocolOK {
 		return nil, errDataFieldInvalid
 	}

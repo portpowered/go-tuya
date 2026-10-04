@@ -4,28 +4,16 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
-// Capability type constants.
 const (
-	CapabilityTypePower             = "power"
-	CapabilityTypeBrightness        = "brightness"
-	CapabilityTypeColor             = "color"
-	CapabilityTypeColorTemperature  = "color-temperature"
-	CapabilityTypeTemperatureSensor = "temperature-sensor"
-	CapabilityTypeHumiditySensor    = "humidity-sensor"
-	CapabilityTypeFanSpeed          = "fan-speed"
-	CapabilityTypeLock              = "lock"
-	CapabilityTypeContactSensor     = "contact-sensor"
-	CapabilityTypeWindowCovering    = "window-covering"
-	CapabilityTypeCamera            = "camera"
-	CapabilityTypeRTCSession        = "rtc-session"
-
-	dpCodeSwitchLED   = "switch_led"
-	dpCodeBrightness  = "bright_value"
-	dpCodeTemperature = "temp_value"
-	dpCodeColor       = "colour_data"
-	dpCodeSwitch      = "switch_1"
+	dpCodeSwitchLED   = string(wire.TuyaDataPointCodeSwitchLed)
+	dpCodeBrightness  = string(wire.TuyaDataPointCodeBrightValue)
+	dpCodeTemperature = string(wire.TuyaDataPointCodeTempValue)
+	dpCodeColor       = string(wire.TuyaDataPointCodeColourData)
+	dpCodeSwitch      = string(wire.TuyaDataPointCodeSwitch1)
 )
 
 const (
@@ -49,25 +37,9 @@ type Capability interface {
 	SetValue(value any) error
 }
 
-// PowerState represents the power state of a device.
-type PowerState string
-
-// Power state constants.
-const (
-	// PowerStateOn indicates the device is powered on.
-	PowerStateOn PowerState = "on"
-	// PowerStateOff indicates the device is powered off.
-	PowerStateOff PowerState = "off"
-)
-
-// PowerCapability represents power on/off capability.
-type PowerCapability struct {
-	State PowerState `json:"state"` // "on" or "off"
-}
-
 // GetCapabilityType returns the capability type for power.
 func (p *PowerCapability) GetCapabilityType() string {
-	return CapabilityTypePower
+	return string(CapabilityTypePower)
 }
 
 // GetValue returns the current power state.
@@ -97,14 +69,9 @@ func (p *PowerCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v", errInvalidPowerStateValue, value)
 }
 
-// BrightnessCapability represents brightness adjustment capability.
-type BrightnessCapability struct {
-	Level int `json:"level"` // 0-100 percentage
-}
-
 // GetCapabilityType returns the capability type for brightness.
 func (b *BrightnessCapability) GetCapabilityType() string {
-	return CapabilityTypeBrightness
+	return string(CapabilityTypeBrightness)
 }
 
 // GetValue returns the current brightness level.
@@ -124,24 +91,17 @@ func (b *BrightnessCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidBrightnessLevel, value)
 }
 
-// ColorCapability represents color control capability (HSV).
-type ColorCapability struct {
-	Hue        int `json:"hue"`        // 0-360 degrees
-	Saturation int `json:"saturation"` // 0-100 percentage
-	Value      int `json:"value"`      // 0-100 percentage (brightness in HSV)
-}
-
 // GetCapabilityType returns the capability type for color.
 func (c *ColorCapability) GetCapabilityType() string {
-	return CapabilityTypeColor
+	return string(CapabilityTypeColor)
 }
 
 // GetValue returns the current color values as an HSV map.
 func (c *ColorCapability) GetValue() any {
 	return map[string]int{
-		"hue":        c.Hue,
-		"saturation": c.Saturation,
-		"value":      c.Value,
+		ProjectionPropertyColorCapabilityHue:        c.Hue,
+		ProjectionPropertyColorCapabilitySaturation: c.Saturation,
+		ProjectionPropertyColorCapabilityValue:      c.Value,
 	}
 }
 
@@ -162,41 +122,36 @@ func (c *ColorCapability) SetValue(value any) error {
 }
 
 func (c *ColorCapability) setFloatValues(values map[string]any) {
-	if hue, ok := values["hue"].(float64); ok {
+	if hue, ok := values[ProjectionPropertyColorCapabilityHue].(float64); ok {
 		c.Hue = int(hue) % hueCycleDegrees
 	}
 
-	if saturation, ok := values["saturation"].(float64); ok && saturation >= 0 && saturation <= 100 {
+	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation].(float64); ok && saturation >= 0 && saturation <= 100 {
 		c.Saturation = int(saturation)
 	}
 
-	if value, ok := values["value"].(float64); ok && value >= 0 && value <= 100 {
+	if value, ok := values[ProjectionPropertyColorCapabilityValue].(float64); ok && value >= 0 && value <= 100 {
 		c.Value = int(value)
 	}
 }
 
 func (c *ColorCapability) setIntValues(values map[string]int) {
-	if hue, ok := values["hue"]; ok {
+	if hue, ok := values[ProjectionPropertyColorCapabilityHue]; ok {
 		c.Hue = hue % hueCycleDegrees
 	}
 
-	if saturation, ok := values["saturation"]; ok && saturation >= 0 && saturation <= 100 {
+	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation]; ok && saturation >= 0 && saturation <= 100 {
 		c.Saturation = saturation
 	}
 
-	if value, ok := values["value"]; ok && value >= 0 && value <= 100 {
+	if value, ok := values[ProjectionPropertyColorCapabilityValue]; ok && value >= 0 && value <= 100 {
 		c.Value = value
 	}
 }
 
-// ColorTemperatureCapability represents color temperature control capability.
-type ColorTemperatureCapability struct {
-	Mireds int `json:"mireds"` // Color temperature in mireds (153-500, i.e. 2000-6500K)
-}
-
 // GetCapabilityType returns the capability type for color temperature.
 func (ct *ColorTemperatureCapability) GetCapabilityType() string {
-	return CapabilityTypeColorTemperature
+	return string(CapabilityTypeColorTemperature)
 }
 
 // GetValue returns the current color temperature in mireds.
@@ -216,14 +171,9 @@ func (ct *ColorTemperatureCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v (must be 153-500 mireds)", errInvalidColorTemperature, value)
 }
 
-// TemperatureSensorCapability represents a temperature sensor reading.
-type TemperatureSensorCapability struct {
-	Temperature float64 `json:"temperature"` // Temperature in Celsius
-}
-
 // GetCapabilityType returns the capability type for temperature sensor.
 func (ts *TemperatureSensorCapability) GetCapabilityType() string {
-	return CapabilityTypeTemperatureSensor
+	return string(CapabilityTypeTemperatureSensor)
 }
 
 // GetValue returns the current temperature in Celsius.
@@ -254,14 +204,9 @@ func (ts *TemperatureSensorCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v", errInvalidTemperatureValue, value)
 }
 
-// HumiditySensorCapability represents a humidity sensor reading.
-type HumiditySensorCapability struct {
-	Humidity int `json:"humidity"` // Humidity percentage (0-100)
-}
-
 // GetCapabilityType returns the capability type for humidity sensor.
 func (hs *HumiditySensorCapability) GetCapabilityType() string {
-	return CapabilityTypeHumiditySensor
+	return string(CapabilityTypeHumiditySensor)
 }
 
 // GetValue returns the current humidity percentage.
@@ -281,14 +226,9 @@ func (hs *HumiditySensorCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidHumidityValue, value)
 }
 
-// FanSpeedCapability represents fan speed control capability.
-type FanSpeedCapability struct {
-	Speed int `json:"speed"` // Fan speed percentage (0-100)
-}
-
 // GetCapabilityType returns the capability type for fan speed.
 func (fs *FanSpeedCapability) GetCapabilityType() string {
-	return CapabilityTypeFanSpeed
+	return string(CapabilityTypeFanSpeed)
 }
 
 // GetValue returns the current fan speed percentage.
@@ -308,23 +248,9 @@ func (fs *FanSpeedCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidFanSpeedValue, value)
 }
 
-// LockState represents the lock state of a device.
-type LockState string
-
-// Lock state constants.
-const (
-	LockStateLocked   LockState = "locked"
-	LockStateUnlocked LockState = "unlocked"
-)
-
-// LockCapability represents lock/unlock capability.
-type LockCapability struct {
-	State LockState `json:"state"` // "locked" or "unlocked"
-}
-
 // GetCapabilityType returns the capability type for lock.
 func (l *LockCapability) GetCapabilityType() string {
-	return CapabilityTypeLock
+	return string(CapabilityTypeLock)
 }
 
 // GetValue returns the current lock state.
@@ -355,15 +281,9 @@ func (l *LockCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v", errInvalidLockStateValue, value)
 }
 
-// ContactSensorCapability represents a contact (door/window) sensor reading.
-type ContactSensorCapability struct {
-	//nolint:tagliatelle // Preserve the public capability model's established JSON key.
-	IsOpen bool `json:"isOpen"` // true if the contact is open (door/window open)
-}
-
 // GetCapabilityType returns the capability type for contact sensor.
 func (cs *ContactSensorCapability) GetCapabilityType() string {
-	return CapabilityTypeContactSensor
+	return string(CapabilityTypeContactSensor)
 }
 
 // GetValue returns whether the contact is open.
@@ -380,11 +300,11 @@ func (cs *ContactSensorCapability) SetValue(value any) error {
 		return nil
 	case string:
 		switch typedValue {
-		case "true", "open":
+		case ContactSensorTextValueTrue, ContactSensorTextValueOpen:
 			cs.IsOpen = true
 
 			return nil
-		case "false", "closed":
+		case ContactSensorTextValueFalse, ContactSensorTextValueClosed:
 			cs.IsOpen = false
 
 			return nil
@@ -394,14 +314,9 @@ func (cs *ContactSensorCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v", errInvalidContactSensorValue, value)
 }
 
-// WindowCoveringCapability represents window covering (curtain/blind) position.
-type WindowCoveringCapability struct {
-	Position int `json:"position"` // Position percentage (0-100, where 0=closed, 100=fully open)
-}
-
 // GetCapabilityType returns the capability type for window covering.
 func (wc *WindowCoveringCapability) GetCapabilityType() string {
-	return CapabilityTypeWindowCovering
+	return string(CapabilityTypeWindowCovering)
 }
 
 // GetValue returns the current position percentage.
@@ -443,26 +358,9 @@ func withinIntRange(value, minimum, maximum int) (int, bool) {
 	return value, value >= minimum && value <= maximum
 }
 
-// StreamingState represents the streaming state of a camera.
-type StreamingState string
-
-// Streaming state constants for camera capability.
-const (
-	// StreamingStateIdle indicates the camera is not actively streaming.
-	StreamingStateIdle StreamingState = "idle"
-	// StreamingStateStreaming indicates the camera is actively streaming.
-	StreamingStateStreaming StreamingState = "streaming"
-)
-
-// CameraCapability represents camera functionality.
-type CameraCapability struct {
-	//nolint:tagliatelle // Preserve the public capability model's established JSON key.
-	StreamingState StreamingState `json:"streamingState"`
-}
-
 // GetCapabilityType returns the capability type for camera.
 func (c *CameraCapability) GetCapabilityType() string {
-	return CapabilityTypeCamera
+	return string(CapabilityTypeCamera)
 }
 
 // GetValue returns the current streaming state.
@@ -489,12 +387,9 @@ func (c *CameraCapability) SetValue(value any) error {
 	return fmt.Errorf("%w: %v (must be 'idle' or 'streaming')", errInvalidStreamingState, value)
 }
 
-// RTCSessionCapability represents WebRTC session capability.
-type RTCSessionCapability struct{}
-
 // GetCapabilityType returns the capability type for RTC session.
 func (r *RTCSessionCapability) GetCapabilityType() string {
-	return CapabilityTypeRTCSession
+	return string(CapabilityTypeRTCSession)
 }
 
 // GetValue returns nil as RTC session has no persistent value.
@@ -532,7 +427,7 @@ func NewDeviceCapabilityMap() *DeviceCapabilityMap {
 // Helper functions for common mappings to reduce duplication.
 func createPowerMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypePower,
+		CapabilityType: string(CapabilityTypePower),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &PowerCapability{State: ""}
 			err := capability.SetValue(value)
@@ -551,7 +446,7 @@ func createPowerMapping(tuyaCode string) CapabilityMapping {
 
 func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeBrightness,
+		CapabilityType: string(CapabilityTypeBrightness),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &BrightnessCapability{Level: 0}
 
@@ -591,7 +486,7 @@ func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMappin
 
 func createColorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeColor,
+		CapabilityType: string(CapabilityTypeColor),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &ColorCapability{Hue: 0, Saturation: 0, Value: 0}
 
@@ -638,7 +533,7 @@ func createColorMapping(tuyaCode string) CapabilityMapping {
 
 func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeColorTemperature,
+		CapabilityType: string(CapabilityTypeColorTemperature),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &ColorTemperatureCapability{Mireds: 0}
 
@@ -674,7 +569,7 @@ func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) Capabi
 
 func createTemperatureSensorMapping(tuyaCode string, scaleDivisor float64) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeTemperatureSensor,
+		CapabilityType: string(CapabilityTypeTemperatureSensor),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &TemperatureSensorCapability{Temperature: 0}
 
@@ -701,7 +596,7 @@ func createTemperatureSensorMapping(tuyaCode string, scaleDivisor float64) Capab
 
 func createHumiditySensorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeHumiditySensor,
+		CapabilityType: string(CapabilityTypeHumiditySensor),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &HumiditySensorCapability{Humidity: 0}
 			if val, ok := value.(float64); ok {
@@ -724,7 +619,7 @@ func createHumiditySensorMapping(tuyaCode string) CapabilityMapping {
 
 func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeFanSpeed,
+		CapabilityType: string(CapabilityTypeFanSpeed),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &FanSpeedCapability{Speed: 0}
 
@@ -754,7 +649,7 @@ func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMappin
 
 func createLockMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeLock,
+		CapabilityType: string(CapabilityTypeLock),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &LockCapability{State: ""}
 			// Tuya locks use boolean: true = locked (closed), false = unlocked (opened)
@@ -774,7 +669,7 @@ func createLockMapping(tuyaCode string) CapabilityMapping {
 
 func createContactSensorMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeContactSensor,
+		CapabilityType: string(CapabilityTypeContactSensor),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &ContactSensorCapability{IsOpen: false}
 			// Tuya contact sensors: true = open, false = closed
@@ -794,7 +689,7 @@ func createContactSensorMapping(tuyaCode string) CapabilityMapping {
 
 func createWindowCoveringMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeWindowCovering,
+		CapabilityType: string(CapabilityTypeWindowCovering),
 		TuyaToCapability: func(value any) (Capability, error) {
 			capability := &WindowCoveringCapability{Position: 0}
 			if val, ok := value.(float64); ok {
@@ -818,7 +713,7 @@ func createWindowCoveringMapping(tuyaCode string) CapabilityMapping {
 // createCameraMapping creates a mapping for camera capability (marker mapping for device discovery).
 func createCameraMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeCamera,
+		CapabilityType: string(CapabilityTypeCamera),
 		TuyaToCapability: func(_ any) (Capability, error) {
 			capability := &CameraCapability{StreamingState: StreamingStateIdle}
 
@@ -837,7 +732,7 @@ func createCameraMapping(tuyaCode string) CapabilityMapping {
 // createRTCSessionMapping creates a mapping for RTC session capability (marker mapping for device discovery).
 func createRTCSessionMapping(tuyaCode string) CapabilityMapping {
 	return CapabilityMapping{
-		CapabilityType: CapabilityTypeRTCSession,
+		CapabilityType: string(CapabilityTypeRTCSession),
 		TuyaToCapability: func(_ any) (Capability, error) {
 			return &RTCSessionCapability{}, nil
 		},
@@ -853,102 +748,106 @@ func createRTCSessionMapping(tuyaCode string) CapabilityMapping {
 func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 	dcm.mappings = map[string]map[string]CapabilityMapping{
 		// Wall Switch Dimmer (tgkg) category mappings
-		"tgkg": {
-			"switch_led_1":   createPowerMapping("switch_led_1"),
-			"bright_value_1": createBrightnessMapping("bright_value_1", tgqBrightnessRange), // Range 10-1000
+		string(wire.TuyaDeviceCategoryTgkg): {
+			string(wire.TuyaDataPointCodeSwitchLed1):   createPowerMapping(string(wire.TuyaDataPointCodeSwitchLed1)),
+			string(wire.TuyaDataPointCodeBrightValue1): createBrightnessMapping(string(wire.TuyaDataPointCodeBrightValue1), tgqBrightnessRange), // Range 10-1000
 		},
 		// Dimmer (tgq) category mappings
-		"tgq": {
-			"switch_led_1":    createPowerMapping("switch_led_1"),
-			"bright_value_v2": createBrightnessMapping("bright_value_v2", tgqBrightnessRange), // Special range 10-1000
+		string(wire.TuyaDeviceCategoryTgq): {
+			string(wire.TuyaDataPointCodeSwitchLed1): createPowerMapping(string(wire.TuyaDataPointCodeSwitchLed1)),
+			string(wire.TuyaDataPointCodeBrightValueV2): createBrightnessMapping(
+				string(wire.TuyaDataPointCodeBrightValueV2), tgqBrightnessRange,
+			), // Special range 10-1000
 		},
 		// Light (dj) category mappings
-		"dj": {
-			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
-			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
-			"colour_data_v2":  createColorMapping("colour_data_v2"),
-			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
+		string(wire.TuyaDeviceCategoryDj): {
+			dpCodeSwitchLED:  createPowerMapping(dpCodeSwitchLED),
+			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			string(wire.TuyaDataPointCodeColourDataV2): createColorMapping(string(wire.TuyaDataPointCodeColourDataV2)),
+			dpCodeTemperature:                          createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Strip Light (dd) category mappings
-		"dd": {
+		string(wire.TuyaDeviceCategoryDd): {
 			dpCodeSwitchLED:  createPowerMapping(dpCodeSwitchLED),
 			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
 			dpCodeColor:      createColorMapping(dpCodeColor),
 		},
 		// Switch (kg) category mappings
-		"kg": {
+		string(wire.TuyaDeviceCategoryKg): {
 			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Socket (cz) category mappings
-		"cz": {
+		string(wire.TuyaDeviceCategoryCz): {
 			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Power Strip (pc) category mappings
-		"pc": {
+		string(wire.TuyaDeviceCategoryPc): {
 			dpCodeSwitch: createPowerMapping(dpCodeSwitch),
 		},
 		// Temperature + Humidity Sensor (wsdcg) category mappings
-		"wsdcg": {
-			"va_temperature": createTemperatureSensorMapping("va_temperature", tuyaTemperatureTenthsScale), // Tuya reports tenths of degree
-			"va_humidity":    createHumiditySensorMapping("va_humidity"),
+		string(wire.TuyaDeviceCategoryWsdcg): {
+			string(wire.TuyaDataPointCodeVaTemperature): createTemperatureSensorMapping(
+				string(wire.TuyaDataPointCodeVaTemperature), tuyaTemperatureTenthsScale,
+			), // Tuya reports tenths of degree
+			string(wire.TuyaDataPointCodeVaHumidity): createHumiditySensorMapping(string(wire.TuyaDataPointCodeVaHumidity)),
 		},
 		// Contact Sensor (mcs) — door/window sensor category mappings
-		"mcs": {
-			"doorcontact_state": createContactSensorMapping("doorcontact_state"),
+		string(wire.TuyaDeviceCategoryMcs): {
+			string(wire.TuyaDataPointCodeDoorcontactState): createContactSensorMapping(string(wire.TuyaDataPointCodeDoorcontactState)),
 		},
 		// String Lights (dc) category mappings
-		"dc": {
+		string(wire.TuyaDeviceCategoryDc): {
 			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
 			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
 			dpCodeColor:       createColorMapping(dpCodeColor),
 			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Ambient Light (fwd) category mappings
-		"fwd": {
+		string(wire.TuyaDeviceCategoryFwd): {
 			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
 			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
 			dpCodeColor:       createColorMapping(dpCodeColor),
 			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
 		},
 		// Fan (fs) category mappings
-		"fs": {
-			"switch_fan":        createPowerMapping("switch_fan"),
-			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", percentageScale),
+		string(wire.TuyaDeviceCategoryFs): {
+			string(wire.TuyaDataPointCodeSwitchFan):       createPowerMapping(string(wire.TuyaDataPointCodeSwitchFan)),
+			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), percentageScale),
 		},
 		// Ceiling Fan Light (fsd) category mappings
-		"fsd": {
-			"switch_fan":        createPowerMapping("switch_fan"),
-			"fan_speed_percent": createFanSpeedMapping("fan_speed_percent", percentageScale),
+		string(wire.TuyaDeviceCategoryFsd): {
+			string(wire.TuyaDataPointCodeSwitchFan):       createPowerMapping(string(wire.TuyaDataPointCodeSwitchFan)),
+			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), percentageScale),
 		},
 		// Curtain (cl) category mappings
-		"cl": {
-			"control":         createPowerMapping("control"),
-			"percent_control": createWindowCoveringMapping("percent_control"),
+		string(wire.TuyaDeviceCategoryCl): {
+			string(wire.TuyaDataPointCodeControl):        createPowerMapping(string(wire.TuyaDataPointCodeControl)),
+			string(wire.TuyaDataPointCodePercentControl): createWindowCoveringMapping(string(wire.TuyaDataPointCodePercentControl)),
 		},
 		// Curtain Switch (clkg) category mappings
-		"clkg": {
-			"control":         createPowerMapping("control"),
-			"percent_control": createWindowCoveringMapping("percent_control"),
+		string(wire.TuyaDeviceCategoryClkg): {
+			string(wire.TuyaDataPointCodeControl):        createPowerMapping(string(wire.TuyaDataPointCodeControl)),
+			string(wire.TuyaDataPointCodePercentControl): createWindowCoveringMapping(string(wire.TuyaDataPointCodePercentControl)),
 		},
 		// Lock (ms) category mappings
-		"ms": {
-			"closed_opened": createLockMapping("closed_opened"),
+		string(wire.TuyaDeviceCategoryMs): {
+			string(wire.TuyaDataPointCodeClosedOpened): createLockMapping(string(wire.TuyaDataPointCodeClosedOpened)),
 		},
 		// Smart Lock (jtmspro) category mappings
-		"jtmspro": {
-			"closed_opened": createLockMapping("closed_opened"),
+		string(wire.TuyaDeviceCategoryJtmspro): {
+			string(wire.TuyaDataPointCodeClosedOpened): createLockMapping(string(wire.TuyaDataPointCodeClosedOpened)),
 		},
 		// Smart Camera (sp) category mappings
-		"sp": {
-			"basic_indicator": createPowerMapping("basic_indicator"),
-			"camera":          createCameraMapping("camera"),
-			"rtc_session":     createRTCSessionMapping("rtc_session"),
+		string(wire.TuyaDeviceCategorySp): {
+			string(wire.TuyaDataPointCodeBasicIndicator): createPowerMapping(string(wire.TuyaDataPointCodeBasicIndicator)),
+			string(wire.TuyaDataPointCodeCamera):         createCameraMapping(string(wire.TuyaDataPointCodeCamera)),
+			string(wire.TuyaDataPointCodeRtcSession):     createRTCSessionMapping(string(wire.TuyaDataPointCodeRtcSession)),
 		},
 		// IP Camera (ipc) category mappings
-		"ipc": {
-			"basic_indicator": createPowerMapping("basic_indicator"),
-			"camera":          createCameraMapping("camera"),
-			"rtc_session":     createRTCSessionMapping("rtc_session"),
+		string(wire.TuyaDeviceCategoryIpc): {
+			string(wire.TuyaDataPointCodeBasicIndicator): createPowerMapping(string(wire.TuyaDataPointCodeBasicIndicator)),
+			string(wire.TuyaDataPointCodeCamera):         createCameraMapping(string(wire.TuyaDataPointCodeCamera)),
+			string(wire.TuyaDataPointCodeRtcSession):     createRTCSessionMapping(string(wire.TuyaDataPointCodeRtcSession)),
 		},
 	}
 }
@@ -996,17 +895,6 @@ func (dcm *DeviceCapabilityMap) GetTuyaCommandFromCapability(category string, ca
 // GetCapabilityFromTuyaEvent extracts capabilities from a device state change event.
 func (dcm *DeviceCapabilityMap) GetCapabilityFromTuyaEvent(event *DeviceStateChangeEvent, category string) ([]Capability, error) {
 	return dcm.GetCapabilitiesFromTuyaStatus(category, event.Status)
-}
-
-// StandardizedDeviceStateEvent represents a device state change with standardized capabilities.
-type StandardizedDeviceStateEvent struct {
-	//nolint:tagliatelle // This public event model preserves its established JSON key.
-	DeviceID string `json:"deviceId"`
-	//nolint:tagliatelle // This public event model preserves its established JSON key.
-	ProductKey   string       `json:"productKey"`
-	Category     string       `json:"category"`
-	Capabilities []Capability `json:"capabilities"`
-	Timestamp    int64        `json:"timestamp"`
 }
 
 // ConvertToStandardizedEvent converts a Tuya device state change event to standardized format.
@@ -1061,7 +949,7 @@ func (dcm *DeviceCapabilityMap) GetSupportedCodesForCategory(category string) []
 func (dcm *DeviceCapabilityMap) HasPowerCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypePower {
+			if mapping.CapabilityType == string(CapabilityTypePower) {
 				return true
 			}
 		}
@@ -1074,7 +962,7 @@ func (dcm *DeviceCapabilityMap) HasPowerCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasBrightnessCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeBrightness {
+			if mapping.CapabilityType == string(CapabilityTypeBrightness) {
 				return true
 			}
 		}
@@ -1087,7 +975,7 @@ func (dcm *DeviceCapabilityMap) HasBrightnessCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasColorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeColor {
+			if mapping.CapabilityType == string(CapabilityTypeColor) {
 				return true
 			}
 		}
@@ -1100,7 +988,7 @@ func (dcm *DeviceCapabilityMap) HasColorCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasColorTemperatureCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeColorTemperature {
+			if mapping.CapabilityType == string(CapabilityTypeColorTemperature) {
 				return true
 			}
 		}
@@ -1113,7 +1001,7 @@ func (dcm *DeviceCapabilityMap) HasColorTemperatureCapability(category string) b
 func (dcm *DeviceCapabilityMap) HasTemperatureSensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeTemperatureSensor {
+			if mapping.CapabilityType == string(CapabilityTypeTemperatureSensor) {
 				return true
 			}
 		}
@@ -1126,7 +1014,7 @@ func (dcm *DeviceCapabilityMap) HasTemperatureSensorCapability(category string) 
 func (dcm *DeviceCapabilityMap) HasHumiditySensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeHumiditySensor {
+			if mapping.CapabilityType == string(CapabilityTypeHumiditySensor) {
 				return true
 			}
 		}
@@ -1139,7 +1027,7 @@ func (dcm *DeviceCapabilityMap) HasHumiditySensorCapability(category string) boo
 func (dcm *DeviceCapabilityMap) HasFanSpeedCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeFanSpeed {
+			if mapping.CapabilityType == string(CapabilityTypeFanSpeed) {
 				return true
 			}
 		}
@@ -1152,7 +1040,7 @@ func (dcm *DeviceCapabilityMap) HasFanSpeedCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasLockCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeLock {
+			if mapping.CapabilityType == string(CapabilityTypeLock) {
 				return true
 			}
 		}
@@ -1165,7 +1053,7 @@ func (dcm *DeviceCapabilityMap) HasLockCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasContactSensorCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeContactSensor {
+			if mapping.CapabilityType == string(CapabilityTypeContactSensor) {
 				return true
 			}
 		}
@@ -1178,7 +1066,7 @@ func (dcm *DeviceCapabilityMap) HasContactSensorCapability(category string) bool
 func (dcm *DeviceCapabilityMap) HasWindowCoveringCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeWindowCovering {
+			if mapping.CapabilityType == string(CapabilityTypeWindowCovering) {
 				return true
 			}
 		}
@@ -1191,7 +1079,7 @@ func (dcm *DeviceCapabilityMap) HasWindowCoveringCapability(category string) boo
 func (dcm *DeviceCapabilityMap) HasCameraCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeCamera {
+			if mapping.CapabilityType == string(CapabilityTypeCamera) {
 				return true
 			}
 		}
@@ -1204,7 +1092,7 @@ func (dcm *DeviceCapabilityMap) HasCameraCapability(category string) bool {
 func (dcm *DeviceCapabilityMap) HasRTCSessionCapability(category string) bool {
 	if categoryMappings, exists := dcm.mappings[category]; exists {
 		for _, mapping := range categoryMappings {
-			if mapping.CapabilityType == CapabilityTypeRTCSession {
+			if mapping.CapabilityType == string(CapabilityTypeRTCSession) {
 				return true
 			}
 		}

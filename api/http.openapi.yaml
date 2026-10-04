@@ -817,6 +817,12 @@ paths:
         description: Authentication schema; defaults to the package constant.
         schema:
           type: string
+      - name: Content-Type
+        in: header
+        required: true
+        description: JSON response content type requested by this implementation.
+        schema:
+          $ref: '#/components/schemas/JSONMediaType'
       responses:
         '200':
           description: Successful response envelope.
@@ -863,6 +869,12 @@ paths:
         description: Home Assistant authorization access code.
         schema:
           type: string
+      - name: Content-Type
+        in: header
+        required: true
+        description: JSON response content type requested by this implementation.
+        schema:
+          $ref: '#/components/schemas/JSONMediaType'
       responses:
         '200':
           description: Successful response envelope.

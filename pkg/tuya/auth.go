@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 
 	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
@@ -89,26 +87,27 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 	}
 
 	query, err := wireQueryValues(wire.GenerateLoginQRCodeParams{
-		Clientid: c.client.ClientID,
-		Usercode: req.AccessCode,
-		Schema:   schema,
+		Clientid:    c.client.ClientID,
+		Usercode:    req.AccessCode,
+		Schema:      schema,
+		ContentType: wire.JSONMediaTypeApplicationJSON,
 	})
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
 
-	endpoint := c.client.AuthenticationURL + wire.RouteGenerateLoginQRCode + "?" + query.Encode()
-
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, endpoint, nil)
+	response, err := doHTTP(
+		ctx,
+		c.client.HTTPClient,
+		c.client.AuthenticationURL,
+		wire.OperationGenerateLoginQRCode(),
+		nil,
+		query,
+		map[string]string{wire.HeaderContentType: string(wire.JSONMediaTypeApplicationJSON)},
+		nil,
+	)
 	if err != nil {
-		return LoginResponse{}, clientError(ErrorInvalidOperation, err)
-	}
-
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	response, err := c.client.HTTPClient.Do(httpRequest)
-	if err != nil {
-		return LoginResponse{}, clientError(ErrorTransport, err)
+		return LoginResponse{}, err
 	}
 
 	defer func() {
@@ -152,26 +151,26 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 // "terminal_id":"1231231","uid":"1231","username":"123123","endpoint":"https://apigw.tuyaus.com"}}
 func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCodeRequest) (ValidateLoginCodeResponse, error) {
 	query, err := wireQueryValues(wire.ValidateLoginCodeParams{
-		Clientid: c.client.ClientID,
-		Usercode: req.UserCode,
+		Clientid:    c.client.ClientID,
+		Usercode:    req.UserCode,
+		ContentType: wire.JSONMediaTypeApplicationJSON,
 	})
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
 
-	path := fmt.Sprintf(wire.RouteValidateLoginCode, url.PathEscape(req.LoginCode))
-	endpoint := c.client.AuthenticationURL + path + "?" + query.Encode()
-
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, endpoint, nil)
+	response, err := doHTTP(
+		ctx,
+		c.client.HTTPClient,
+		c.client.AuthenticationURL,
+		wire.OperationValidateLoginCode(),
+		[]any{req.LoginCode},
+		query,
+		map[string]string{wire.HeaderContentType: string(wire.JSONMediaTypeApplicationJSON)},
+		nil,
+	)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorInvalidOperation, err)
-	}
-
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	response, err := c.client.HTTPClient.Do(httpRequest)
-	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorTransport, err)
+		return ValidateLoginCodeResponse{}, err
 	}
 
 	defer func() {

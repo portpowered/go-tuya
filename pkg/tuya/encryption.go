@@ -1,7 +1,6 @@
 package tuya
 
 import (
-	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -16,6 +15,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +39,7 @@ type EncryptedClient struct {
 
 // Get performs an encrypted GET request.
 func (c *EncryptedClient) Get(ctx context.Context, path string, params map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "GET", path, params, nil, operationRequest)
+	return c.makeRequest(ctx, wire.Operation{Method: http.MethodGet, Path: path}, nil, params, nil, operationRequest)
 }
 
 // Post performs an encrypted POST request.
@@ -49,17 +49,17 @@ func (c *EncryptedClient) Post(
 	params, body map[string]any,
 	operationRequest OperationRequest,
 ) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "POST", path, params, body, operationRequest)
+	return c.makeRequest(ctx, wire.Operation{Method: http.MethodPost, Path: path}, nil, params, body, operationRequest)
 }
 
 // Put performs an encrypted PUT request.
 func (c *EncryptedClient) Put(ctx context.Context, path string, body map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "PUT", path, nil, body, operationRequest)
+	return c.makeRequest(ctx, wire.Operation{Method: http.MethodPut, Path: path}, nil, nil, body, operationRequest)
 }
 
 // Delete performs an encrypted DELETE request.
 func (c *EncryptedClient) Delete(ctx context.Context, path string, params map[string]any, operationRequest OperationRequest) (*EncryptedAPIResponse, error) {
-	return c.makeRequest(ctx, "DELETE", path, params, nil, operationRequest)
+	return c.makeRequest(ctx, wire.Operation{Method: http.MethodDelete, Path: path}, nil, params, nil, operationRequest)
 }
 
 // requestOperation dispatches an inventoried operation using its generated
@@ -71,12 +71,7 @@ func (c *EncryptedClient) requestOperation(
 	params, body map[string]any,
 	request OperationRequest,
 ) (*EncryptedAPIResponse, error) {
-	path := operation.Path
-	if len(pathArgs) > 0 {
-		path = fmt.Sprintf(path, pathArgs...)
-	}
-
-	return c.makeRequest(ctx, operation.Method, path, params, body, request)
+	return c.makeRequest(ctx, operation, pathArgs, params, body, request)
 }
 
 // makeRequest performs the actual encrypted HTTP request
@@ -86,14 +81,55 @@ func (c *EncryptedClient) requestOperation(
 // Responses contain a result, success, code, message, timestamp, and request ID.
 func (c *EncryptedClient) makeRequest(
 	ctx context.Context,
-	method, path string,
+	operation wire.Operation,
+	pathArguments []any,
 	params, body map[string]any,
 	operationRequest OperationRequest,
 ) (*EncryptedAPIResponse, error) {
-	if !wire.IsKnownOperation(method, path) {
-		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("operation %s %s %w", method, path, errUnschematizedOperation))
+	if !wire.IsKnownOperation(operation.Method, operation.Path) {
+		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("operation %s %s %w", operation.Method, operation.Path, errUnschematizedOperation))
 	}
 
+	prepared, err := c.prepareEncryptedRequest(params, body, operationRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := doHTTP(
+		ctx,
+		c.Client.HTTPClient,
+		c.Client.CloudAPIURL,
+		operation,
+		pathArguments,
+		prepared.query,
+		prepared.headers,
+		prepared.body,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+
+	defer func() {
+		closeErr := response.Body.Close()
+		if closeErr != nil {
+			log.Printf("failed to close response body: %v", closeErr) // Do not override the request result.
+		}
+	}()
+
+	return decodeEncryptedResponse(response, prepared.secret)
+}
+
+type preparedEncryptedRequest struct {
+	secret  string
+	query   url.Values
+	headers map[string]string
+	body    []byte
+}
+
+func (c *EncryptedClient) prepareEncryptedRequest(
+	params, body map[string]any,
+	operationRequest OperationRequest,
+) (preparedEncryptedRequest, error) {
 	rid := GenerateRID()
 	sid := ""
 	authContext := requestAuthorizationContext(operationRequest)
@@ -101,7 +137,7 @@ func (c *EncryptedClient) makeRequest(
 
 	refreshToken, err := requiredRefreshToken(authContext, tokens)
 	if err != nil {
-		return nil, err
+		return preparedEncryptedRequest{}, err
 	}
 
 	// #nosec G401 - MD5 is required by Tuya API protocol
@@ -112,37 +148,33 @@ func (c *EncryptedClient) makeRequest(
 
 	payload, err := encryptRequestPayload(params, body, secret)
 	if err != nil {
-		return nil, err
+		return preparedEncryptedRequest{}, err
 	}
 
 	accessToken, err := requiredAccessToken(authContext, tokens)
 	if err != nil {
-		return nil, err
+		return preparedEncryptedRequest{}, err
 	}
 
 	headers, err := signedRequestHeaders(c.Client.ClientID, rid, sid, accessToken, hashKey, payload)
 	if err != nil {
-		return nil, err
+		return preparedEncryptedRequest{}, err
 	}
 
-	request, err := c.newEncryptedRequest(ctx, method, path, payload, headers)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := c.Client.HTTPClient.Do(request)
-	if err != nil {
-		return nil, clientError(ErrorTransport, fmt.Errorf("failed to make request: %w", err))
-	}
-
-	defer func() {
-		closeErr := response.Body.Close()
-		if closeErr != nil {
-			log.Printf("failed to close response body: %v", closeErr) // Do not override the request result.
+	query := make(url.Values)
+	if payload.queryEncdata != "" {
+		query, err = wireQueryValues(wire.EncryptedRequestQuery{Encdata: payload.queryEncdata})
+		if err != nil {
+			return preparedEncryptedRequest{}, clientError(ErrorProtocol, fmt.Errorf("failed to encode encrypted query envelope: %w", err))
 		}
-	}()
+	}
 
-	return decodeEncryptedResponse(response, secret)
+	return preparedEncryptedRequest{
+		secret:  secret,
+		query:   query,
+		headers: headers,
+		body:    payload.finalBody,
+	}, nil
 }
 
 type encryptedRequestPayload struct {
@@ -247,47 +279,6 @@ func signedRequestHeaders(clientID, rid, sid, accessToken, hashKey string, paylo
 	}
 
 	return headers, nil
-}
-
-func (c *EncryptedClient) newEncryptedRequest(
-	ctx context.Context,
-	method, path string,
-	payload encryptedRequestPayload,
-	headers map[string]string,
-) (*http.Request, error) {
-	var body io.Reader
-	if payload.finalBody != nil {
-		body = bytes.NewBuffer(payload.finalBody)
-	}
-
-	request, err := http.NewRequestWithContext(ctx, method, c.Client.CloudAPIURL+path, body)
-	if err != nil {
-		return nil, clientError(ErrorInvalidOperation, fmt.Errorf("failed to create request: %w", err))
-	}
-
-	queryValues := request.URL.Query()
-
-	if payload.queryEncdata != "" {
-		queryEnvelope := wire.EncryptedDataEnvelope{Encdata: payload.queryEncdata}
-
-		encodedParams, err := wireQueryValues(queryEnvelope)
-		if err != nil {
-			return nil, clientError(ErrorProtocol, fmt.Errorf("failed to encode encrypted query envelope: %w", err))
-		}
-
-		for key, values := range encodedParams {
-			for _, value := range values {
-				queryValues.Add(key, value)
-			}
-		}
-	}
-
-	request.URL.RawQuery = queryValues.Encode()
-	for key, value := range headers {
-		request.Header.Set(key, value)
-	}
-
-	return request, nil
 }
 
 func decodeEncryptedResponse(resp *http.Response, secret string) (*EncryptedAPIResponse, error) {
@@ -568,7 +559,13 @@ func secretGenerating(rid, sid, hashKey string) string {
 
 // restfulSign generates the signature for the request.
 func restfulSign(hashKey, queryEncdata, bodyEncdata string, headers map[string]string) string {
-	headerKeys := []string{"X-appKey", "X-requestId", "X-sid", "X-time", "X-token"}
+	headerKeys := []string{
+		wire.HeaderXAppKey,
+		wire.HeaderXRequestId,
+		wire.HeaderXSid,
+		wire.HeaderXTime,
+		wire.HeaderXToken,
+	}
 	headerSignStr := ""
 
 	var headerSignStrSb464 strings.Builder

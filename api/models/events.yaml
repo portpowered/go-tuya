@@ -23,6 +23,24 @@ components:
           format: int64
       additionalProperties: true
       x-go-tuya-evidence: implementation-derived
+    TuyaBizCode:
+      type: string
+      description: Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
+      enum:
+      - online
+      - offline
+      - nameUpdate
+      - delete
+      - bindUser
+      - dpNameUpdate
+      x-enum-varnames:
+      - TuyaBizCodeOnline
+      - TuyaBizCodeOffline
+      - TuyaBizCodeNameUpdate
+      - TuyaBizCodeDelete
+      - TuyaBizCodeBindUser
+      - TuyaBizCodeDpNameUpdate
+      x-go-tuya-evidence: implementation-derived
     RawSharingMessageData:
       type: object
       description: Implementation-derived fields shared across the two MQTT data variants;
@@ -41,6 +59,7 @@ components:
             $ref: '#/components/schemas/RawDeviceStatusChange'
         bizCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
         bizData:
           $ref: '#/components/schemas/RawDeviceManagementBizData'
         ts:
@@ -71,6 +90,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         value: {}
         t:
           type: integer
@@ -88,6 +108,7 @@ components:
           type: string
         bizCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
         bizData:
           $ref: '#/components/schemas/RawDeviceManagementBizData'
         ts:

@@ -28,6 +28,7 @@ output-options:
     - HomeDevicesEnvelope
     - HomeListEnvelope
     - HomeRecord
+    - JSONMediaType
     - LoginCodeEnvelope
     - LoginCodeResult
     - MessageQueueConfigBody
@@ -56,6 +57,9 @@ output-options:
     - StringResultEnvelope
     - SubDeviceRecord
     - SubDevicesEnvelope
+    - TuyaBizCode
+    - TuyaDataPointCode
+    - TuyaDeviceCategory
     - TuyaErrorEnvelope
     - UpdateMultiOutletNameBody
     - UpdateNameBody

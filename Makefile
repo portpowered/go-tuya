@@ -11,10 +11,12 @@ check: lint wire-routes build test check-cli check-example
 
 wire-routes:
 	$(GO) run ./tools/wiremodels -check
+	$(GO) run ./tools/publicmodels -check
 	$(GO) run ./tools/wireroutes -check
 
 generate-wire:
 	$(GO) run ./tools/wiremodels -generate
+	$(GO) run ./tools/publicmodels -generate
 	$(GO) run ./tools/wireroutes
 
 build:
@@ -25,7 +27,7 @@ test:
 
 lint:
 	$(GO) vet ./...
-	$(GOLANGCI_LINT) run --config .golangci.yml --timeout=5m ./...
+	$(GOLANGCI_LINT) run --allow-parallel-runners --config .golangci.yml --timeout=5m ./...
 	$(MAKE) lint-cli
 	$(MAKE) lint-example
 
@@ -39,7 +41,7 @@ vet-cli:
 	$(GO) -C cmd/go-tuya vet ./...
 
 lint-cli:
-	$(GO) -C cmd/go-tuya run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --config ../../.golangci.yml --timeout=5m ./...
+	$(GO) -C cmd/go-tuya run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --allow-parallel-runners --config ../../.golangci.yml --timeout=5m ./...
 
 module-cli:
 	$(GO) -C cmd/go-tuya mod tidy -diff
@@ -60,7 +62,7 @@ coverage:
 
 .PHONY: lint-example check-example
 lint-example:
-	$(GO) -C examples/auth run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --config ../../.golangci.yml --timeout=5m ./...
+	$(GO) -C examples/auth run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --allow-parallel-runners --config ../../.golangci.yml --timeout=5m ./...
 
 check-example:
 	$(GO) -C examples/auth mod tidy -diff

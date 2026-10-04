@@ -7,9 +7,11 @@ output-options:
     - EncryptedDataEnvelope
     - EncryptedHTTPResponseEnvelope
     - EncryptedRequestHeaders
+    - EncryptedRequestQuery
     - HomeDevicesEnvelope
     - HomeListEnvelope
     - HomeRecord
+    - JSONMediaType
     - LoginCodeEnvelope
     - LoginCodeResult
     - MessageQueueConfigBody
@@ -31,6 +33,7 @@ output-options:
     - RefreshTokenEnvelope
     - RefreshedTokenResult
     - StringResultEnvelope
+    - TuyaBizCode
     - TuyaErrorEnvelope
   include-operation-ids:
     - getDeviceDetails

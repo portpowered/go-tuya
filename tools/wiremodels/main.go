@@ -18,6 +18,7 @@ import (
 
 const sourceMode = 0o644
 const yamlIndent = 2
+const inventoryPath = "docs/wire-model-inventory.md"
 
 var (
 	errDuplicateSchema    = errors.New("schema appears in more than one model group")
@@ -75,7 +76,22 @@ func run(check, generate bool) error {
 		}
 	}
 
-	return nil
+	propertyConstants, err := generatePropertyConstants(sources.bundle)
+	if err != nil {
+		return err
+	}
+
+	err = writeOrCheck("pkg/dependencymodels/properties.gen.go", propertyConstants, check)
+	if err != nil {
+		return err
+	}
+
+	inventory, err := generateWireModelInventory(sources)
+	if err != nil {
+		return err
+	}
+
+	return writeOrCheck(inventoryPath, inventory, check)
 }
 
 func readJSONManifest() (modelManifest, error) {

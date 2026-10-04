@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/portpowered/go-tuya/cmd/go-tuya/internal/cli"
+	mqtt "github.com/portpowered/go-tuya/pkg/dependencies/mqtttransport"
 )
 
 const (

@@ -26,6 +26,36 @@ func (e RawSharingMessageProtocol) Valid() bool {
 	}
 }
 
+// Defines values for TuyaBizCode.
+const (
+	TuyaBizCodeBindUser     TuyaBizCode = "bindUser"
+	TuyaBizCodeDelete       TuyaBizCode = "delete"
+	TuyaBizCodeDpNameUpdate TuyaBizCode = "dpNameUpdate"
+	TuyaBizCodeNameUpdate   TuyaBizCode = "nameUpdate"
+	TuyaBizCodeOffline      TuyaBizCode = "offline"
+	TuyaBizCodeOnline       TuyaBizCode = "online"
+)
+
+// Valid indicates whether the value is a known member of the TuyaBizCode enum.
+func (e TuyaBizCode) Valid() bool {
+	switch e {
+	case TuyaBizCodeBindUser:
+		return true
+	case TuyaBizCodeDelete:
+		return true
+	case TuyaBizCodeDpNameUpdate:
+		return true
+	case TuyaBizCodeNameUpdate:
+		return true
+	case TuyaBizCodeOffline:
+		return true
+	case TuyaBizCodeOnline:
+		return true
+	default:
+		return false
+	}
+}
+
 // RawDeviceManagementBizData Implementation-derived, extensible business payload for MQTT management events.
 type RawDeviceManagementBizData struct {
 	DevId                *string                `json:"devId,omitempty"`
@@ -91,6 +121,9 @@ type RawSharingMessageData struct {
 	Ts                   *int64                      `json:"ts,omitempty"`
 	AdditionalProperties map[string]interface{}      `json:"-"`
 }
+
+// TuyaBizCode Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
+type TuyaBizCode string
 
 // Getter for additional properties for RawDeviceManagementBizData. Returns the specified
 // element and whether it was found

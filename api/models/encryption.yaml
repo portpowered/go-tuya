@@ -12,6 +12,18 @@ components:
           description: Base64-encoded nonce and AES-GCM ciphertext.
       additionalProperties: false
       x-go-tuya-evidence: implementation-derived
+    EncryptedRequestQuery:
+      type: object
+      description: Implementation-derived query keys emitted by encrypted requests.
+      required:
+      - encdata
+      properties:
+        encdata:
+          type: string
+          description: Base64-encoded encrypted query payload.
+      additionalProperties: false
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-query-keys: true
     EncryptedRequestHeaders:
       type: object
       description: Implementation-derived authentication and signing headers emitted
@@ -38,6 +50,7 @@ components:
           type: string
       additionalProperties: false
       x-go-tuya-evidence: implementation-derived
+      x-go-tuya-header-keys: true
     EncryptedHTTPResponseEnvelope:
       type: object
       description: Implementation-derived outer response envelope received before

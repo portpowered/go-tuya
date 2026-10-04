@@ -8,6 +8,24 @@ import (
 	"fmt"
 )
 
+// Defines values for JSONMediaType.
+const (
+	JSONMediaTypeApplicationJSON JSONMediaType = "application/json"
+)
+
+// Valid indicates whether the value is a known member of the JSONMediaType enum.
+func (e JSONMediaType) Valid() bool {
+	switch e {
+	case JSONMediaTypeApplicationJSON:
+		return true
+	default:
+		return false
+	}
+}
+
+// JSONMediaType Implementation-derived JSON media type used by the QR authentication headers.
+type JSONMediaType string
+
 // LoginCodeEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
 type LoginCodeEnvelope struct {
 	// Code Provider response code when present.
@@ -111,6 +129,9 @@ type GenerateLoginQRCodeParams struct {
 
 	// Schema Authentication schema; defaults to the package constant.
 	Schema string `form:"schema" json:"schema"`
+
+	// ContentType JSON response content type requested by this implementation.
+	ContentType JSONMediaType `json:"Content-Type"`
 }
 
 // ValidateLoginCodeParams defines parameters for ValidateLoginCode.
@@ -120,6 +141,9 @@ type ValidateLoginCodeParams struct {
 
 	// Usercode Home Assistant authorization access code.
 	Usercode string `form:"usercode" json:"usercode"`
+
+	// ContentType JSON response content type requested by this implementation.
+	ContentType JSONMediaType `json:"Content-Type"`
 }
 
 // Getter for additional properties for LoginCodeEnvelope. Returns the specified

@@ -2,25 +2,23 @@
 
 ## Provider evidence review
 
-The maintainer reports that the implemented API flows worked with real Tuya
-accounts. Those tests were not documented with sanitized exchanges or
-route-by-route provenance, so the repository cannot independently reproduce
-or inspect them. The README and [provider evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence)
-record this limit. The OpenAPI inventory includes the routes used by the client
-and labels each operation as provider-documented or implementation-derived.
-Keep that distinction in release notes and customer documentation.
+No sanitized Tuya account captures are checked in. The HTTP and MQTT schemas
+label provider-documented and implementation-derived behavior separately.
+See [verification and evidence](verification.md) and the generated
+[wire-model inventory](wire-model-inventory.md) when reviewing route coverage.
 
 Follow the pre-release review in the template's
-[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/main/docs/releasing.md),
+[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/987b9c34a6b927472c21604617b6842a4238746b/docs/releasing.md),
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
 [`template-checklist.md`](template-checklist.md) as a separate sign-off. The
 first clean-history release was `v0.1.0`; `v0.2.0` introduced `pkg/tuya`.
-Checklist item 3 records the latest badge and Go Reference checks.
+The v0.3.0 migration history below records the compatibility break and package
+baseline used for that release.
 
-## v0.3.0 migration
+## v0.3.0 compatibility history
 
-The next release removes nine unused exported legacy wire structs:
+The v0.3.0 release removed nine unused exported legacy wire structs:
 `DeviceResponseResult`, `DeviceResponseResultElement`, `HomeResponse`,
 `HomeResponseResult`, `HomeResponseResultElement`, `RawMQTTMessage`,
 `MessageQueueConfigResponse`, `MessageQueueConfigTopicInfo`, and
@@ -62,12 +60,12 @@ After publication, verify the package independently with the released tag:
 mkdir module-check
 cd module-check
 go mod init example.com/tuya-module-check
-GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@v0.2.0
+GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@vX.Y.Z
 ```
 
 Then compile a consumer importing
-`github.com/portpowered/go-tuya/pkg/tuya`. Replace `v0.2.0` with a later
-version when checking a subsequent release.
+`github.com/portpowered/go-tuya/pkg/tuya`. Replace `vX.Y.Z` with the exact
+SDK release being verified.
 
 ## Standalone CLI module
 

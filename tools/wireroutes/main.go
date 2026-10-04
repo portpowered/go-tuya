@@ -11,7 +11,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -25,6 +24,10 @@ const (
 	routeTarget   = "pkg/dependencymodels/routes.gen.go"
 	mqttSource    = "api/mqtt.asyncapi.yaml"
 	mqttTarget    = "pkg/dependencymodels/mqtt.gen.go"
+	wireImport    = "github.com/portpowered/go-tuya/pkg/dependencymodels"
+	pahoImport    = "github.com/eclipse/paho.mqtt.golang"
+	httpBoundary  = "pkg/dependencies/httptransport/http.go"
+	mqttBoundary  = "pkg/dependencies/mqtttransport/paho.go"
 )
 
 var parameter = regexp.MustCompile(`\{[^{}]+\}`)
@@ -124,6 +127,11 @@ func checkGeneratedFiles(routes []route, channels []channel, target, mqttTarget 
 		return err
 	}
 
+	err = validateExternalMQTTContract()
+	if err != nil {
+		return err
+	}
+
 	// #nosec G304 -- target is the fixed generated route file path.
 	current, err := os.ReadFile(target)
 	if err != nil {
@@ -158,17 +166,13 @@ func checkSourceCallSites(routes []route, channels []channel) error {
 		knownChannels["MQTTChannel"+strings.ToUpper(channel.id[:1])+channel.id[1:]] = true
 	}
 
-	files, err := filepath.Glob("pkg/tuya/*.go")
+	files, err := productionGoFiles()
 	if err != nil {
-		return fmt.Errorf("find Tuya package Go files: %w", err)
+		return fmt.Errorf("find production Go files: %w", err)
 	}
 
 	for _, filename := range files {
-		if strings.HasSuffix(filename, "_test.go") {
-			continue
-		}
-
-		// #nosec G304 -- filename comes from the fixed pkg/tuya/*.go repository glob.
+		// #nosec G304 -- filename is discovered beneath fixed production roots.
 		content, err := os.ReadFile(filename)
 		if err != nil {
 			return fmt.Errorf("read Go file %q: %w", filename, err)
@@ -177,6 +181,11 @@ func checkSourceCallSites(routes []route, channels []channel) error {
 		validationErr := validateCallSites(filename, content, operations, knownChannels)
 		if validationErr != nil {
 			return fmt.Errorf("check wire call sites in %q: %w", filename, validationErr)
+		}
+
+		validationErr = validateSourceNetworkBoundary(filename, content)
+		if validationErr != nil {
+			return fmt.Errorf("check network boundary in %q: %w", filename, validationErr)
 		}
 	}
 
@@ -191,13 +200,22 @@ func validateCallSites(filename string, source []byte, operations, channels map[
 
 	var findings []string
 
+	modelAlias := importAlias(file, wireImport)
+
 	for _, declaration := range file.Decls {
 		function, ok := declaration.(*ast.FuncDecl)
 		if !ok || function.Body == nil {
 			continue
 		}
 
-		functionMethods, functionRoutes, callFindings := inspectFunctionCallSites(function, operations, channels)
+		functionAliasShadowed := modelAlias != "" && functionAliasShadowed(function, modelAlias)
+		callSiteOptions := functionCallSiteOptions{
+			operations:         operations,
+			channels:           channels,
+			modelAlias:         modelAlias,
+			modelAliasShadowed: functionAliasShadowed,
+		}
+		functionMethods, functionRoutes, callFindings := inspectFunctionCallSites(function, callSiteOptions)
 		findings = append(findings, callFindings...)
 
 		for operation := range functionMethods {
@@ -214,21 +232,28 @@ func validateCallSites(filename string, source []byte, operations, channels map[
 	return nil
 }
 
-func inspectFunctionCallSites(function *ast.FuncDecl, operations, channels map[string]bool) (map[string]bool, map[string]bool, []string) {
+type functionCallSiteOptions struct {
+	operations         map[string]bool
+	channels           map[string]bool
+	modelAlias         string
+	modelAliasShadowed bool
+}
+
+func inspectFunctionCallSites(function *ast.FuncDecl, options functionCallSiteOptions) (map[string]bool, map[string]bool, []string) {
 	methods := make(map[string]bool)
 	routes := make(map[string]bool)
 
 	var findings []string
 
 	ast.Inspect(function.Body, func(node ast.Node) bool {
-		recordWireReference(node, methods, routes)
+		recordWireReference(node, methods, routes, options.modelAlias, options.modelAliasShadowed)
 
 		call, isCall := node.(*ast.CallExpr)
 		if !isCall {
 			return true
 		}
 
-		finding := inspectCall(function.Name.Name, call, operations, channels)
+		finding := inspectCall(function.Name.Name, call, options.operations, options.channels, options.modelAlias, options.modelAliasShadowed)
 		if finding != "" {
 			findings = append(findings, finding)
 		}
@@ -239,14 +264,14 @@ func inspectFunctionCallSites(function *ast.FuncDecl, operations, channels map[s
 	return methods, routes, findings
 }
 
-func recordWireReference(node ast.Node, methods, routes map[string]bool) {
+func recordWireReference(node ast.Node, methods, routes map[string]bool, modelAlias string, modelAliasShadowed bool) {
 	selector, isSelector := node.(*ast.SelectorExpr)
 	if !isSelector {
 		return
 	}
 
 	name, isIdentifier := selector.X.(*ast.Ident)
-	if !isIdentifier || name.Name != "wire" {
+	if !isIdentifier || modelAlias == "" || name.Name != modelAlias || modelAliasShadowed {
 		return
 	}
 
@@ -259,21 +284,17 @@ func recordWireReference(node ast.Node, methods, routes map[string]bool) {
 	}
 }
 
-func inspectCall(functionName string, call *ast.CallExpr, operations, channels map[string]bool) string {
+func inspectCall(functionName string, call *ast.CallExpr, operations, channels map[string]bool, modelAlias string, modelAliasShadowed bool) string {
 	selector, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
-		return inspectChannelHelperCall(call, channels)
+		return inspectChannelHelperCall(call, channels, modelAlias)
 	}
 
 	switch selector.Sel.Name {
 	case "requestOperation":
-		return inspectOperationCall(call, operations)
-	case "Get", "Post", "Put", "Delete":
-		return inspectHTTPCall(selector)
+		return inspectOperationCall(call, operations, modelAlias, modelAliasShadowed)
 	case "Subscribe", "Unsubscribe":
 		return inspectSubscriptionCall(functionName, selector.Sel.Name, call)
-	case "NewRequestWithContext":
-		return inspectRequestConstruction(functionName, call)
 	case "newEncryptedRequest":
 		if functionName != "makeRequest" {
 			return "encrypted request builder must only be called by makeRequest"
@@ -283,18 +304,9 @@ func inspectCall(functionName string, call *ast.CallExpr, operations, channels m
 	return ""
 }
 
-func inspectOperationCall(call *ast.CallExpr, operations map[string]bool) string {
-	if len(call.Args) < 2 || !isWireOperation(call.Args[1], operations) {
+func inspectOperationCall(call *ast.CallExpr, operations map[string]bool, modelAlias string, modelAliasShadowed bool) string {
+	if modelAliasShadowed || len(call.Args) < 2 || !isWireOperation(call.Args[1], operations, modelAlias) {
 		return "encrypted operation must use a generated operation descriptor"
-	}
-
-	return ""
-}
-
-func inspectHTTPCall(selector *ast.SelectorExpr) string {
-	clientExpression := exprString(selector.X)
-	if strings.Contains(clientExpression, "EncryptedClient") || strings.HasSuffix(clientExpression, ".client") {
-		return "internal encrypted calls must use generated operation descriptors"
 	}
 
 	return ""
@@ -309,21 +321,13 @@ func inspectSubscriptionCall(functionName, methodName string, call *ast.CallExpr
 	return ""
 }
 
-func inspectRequestConstruction(functionName string, call *ast.CallExpr) string {
-	if functionName != "makeRequest" && functionName != "newEncryptedRequest" && !hasGeneratedMethodArgument(call) {
-		return "direct HTTP request must use a generated operation method"
-	}
-
-	return ""
-}
-
-func inspectChannelHelperCall(call *ast.CallExpr, channels map[string]bool) string {
+func inspectChannelHelperCall(call *ast.CallExpr, channels map[string]bool, modelAlias string) string {
 	identifier, ok := call.Fun.(*ast.Ident)
 	if !ok || (identifier.Name != "subscribeChannel" && identifier.Name != "unsubscribeChannel") {
 		return ""
 	}
 
-	if len(call.Args) < 2 || !isWireSelector(call.Args[1], channels) {
+	if len(call.Args) < 2 || !isWireSelector(call.Args[1], channels, modelAlias) {
 		return "MQTT subscription lifecycle must use a schema channel"
 	}
 
@@ -334,11 +338,7 @@ func hasGeneratedChannelArgument(call *ast.CallExpr) bool {
 	return len(call.Args) > 0 && exprString(call.Args[0]) == "channelAddress(channel, runtimeTopic)"
 }
 
-func hasGeneratedMethodArgument(call *ast.CallExpr) bool {
-	return len(call.Args) >= 2 && strings.HasPrefix(exprString(call.Args[1]), "wire.Method")
-}
-
-func isWireSelector(expression ast.Expr, known map[string]bool) bool {
+func isWireSelector(expression ast.Expr, known map[string]bool, modelAlias string) bool {
 	selector, isSelector := expression.(*ast.SelectorExpr)
 	if !isSelector {
 		return false
@@ -346,13 +346,13 @@ func isWireSelector(expression ast.Expr, known map[string]bool) bool {
 
 	identifier, isIdentifier := selector.X.(*ast.Ident)
 
-	return isIdentifier && identifier.Name == "wire" && known[selector.Sel.Name]
+	return isIdentifier && identifier.Name == modelAlias && modelAlias != "" && known[selector.Sel.Name]
 }
 
-func isWireOperation(expression ast.Expr, known map[string]bool) bool {
+func isWireOperation(expression ast.Expr, known map[string]bool, modelAlias string) bool {
 	call, ok := expression.(*ast.CallExpr)
 
-	return ok && len(call.Args) == 0 && isWireSelector(call.Fun, known)
+	return ok && len(call.Args) == 0 && isWireSelector(call.Fun, known, modelAlias)
 }
 
 func exprString(expression ast.Expr) string {
@@ -487,17 +487,13 @@ func checkSourceRoutes(routes []route) error {
 		known[normalizeRoute(route.path)] = true
 	}
 
-	files, err := filepath.Glob("pkg/tuya/*.go")
+	files, err := productionGoFiles()
 	if err != nil {
-		return fmt.Errorf("find Tuya package Go files: %w", err)
+		return fmt.Errorf("find production Go files: %w", err)
 	}
 
 	for _, filename := range files {
-		if strings.HasSuffix(filename, "_test.go") {
-			continue
-		}
-
-		// #nosec G304 -- filename comes from the fixed pkg/tuya/*.go repository glob.
+		// #nosec G304 -- filename is discovered beneath fixed production roots.
 		content, err := os.ReadFile(filename)
 		if err != nil {
 			return fmt.Errorf("read Go file %q: %w", filename, err)

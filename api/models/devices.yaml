@@ -1,5 +1,95 @@
 components:
   schemas:
+    TuyaDeviceCategory:
+      type: string
+      description: Device categories used by the standard capability mappings in this client.
+      enum:
+      - tgkg
+      - tgq
+      - dj
+      - dd
+      - kg
+      - cz
+      - pc
+      - wsdcg
+      - mcs
+      - dc
+      - fwd
+      - fs
+      - fsd
+      - cl
+      - clkg
+      - ms
+      - jtmspro
+      - sp
+      - ipc
+      x-enum-varnames:
+      - TuyaDeviceCategoryTgkg
+      - TuyaDeviceCategoryTgq
+      - TuyaDeviceCategoryDj
+      - TuyaDeviceCategoryDd
+      - TuyaDeviceCategoryKg
+      - TuyaDeviceCategoryCz
+      - TuyaDeviceCategoryPc
+      - TuyaDeviceCategoryWsdcg
+      - TuyaDeviceCategoryMcs
+      - TuyaDeviceCategoryDc
+      - TuyaDeviceCategoryFwd
+      - TuyaDeviceCategoryFs
+      - TuyaDeviceCategoryFsd
+      - TuyaDeviceCategoryCl
+      - TuyaDeviceCategoryClkg
+      - TuyaDeviceCategoryMs
+      - TuyaDeviceCategoryJtmspro
+      - TuyaDeviceCategorySp
+      - TuyaDeviceCategoryIpc
+      x-go-tuya-evidence: implementation-derived
+    TuyaDataPointCode:
+      type: string
+      description: Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
+      enum:
+      - switch_led
+      - bright_value
+      - temp_value
+      - colour_data
+      - switch_1
+      - switch_led_1
+      - bright_value_1
+      - bright_value_v2
+      - colour_data_v2
+      - va_temperature
+      - va_humidity
+      - doorcontact_state
+      - switch_fan
+      - fan_speed_percent
+      - control
+      - percent_control
+      - closed_opened
+      - basic_indicator
+      - camera
+      - rtc_session
+      x-enum-varnames:
+      - TuyaDataPointCodeSwitchLed
+      - TuyaDataPointCodeBrightValue
+      - TuyaDataPointCodeTempValue
+      - TuyaDataPointCodeColourData
+      - TuyaDataPointCodeSwitch1
+      - TuyaDataPointCodeSwitchLed1
+      - TuyaDataPointCodeBrightValue1
+      - TuyaDataPointCodeBrightValueV2
+      - TuyaDataPointCodeColourDataV2
+      - TuyaDataPointCodeVaTemperature
+      - TuyaDataPointCodeVaHumidity
+      - TuyaDataPointCodeDoorcontactState
+      - TuyaDataPointCodeSwitchFan
+      - TuyaDataPointCodeFanSpeedPercent
+      - TuyaDataPointCodeControl
+      - TuyaDataPointCodePercentControl
+      - TuyaDataPointCodeClosedOpened
+      - TuyaDataPointCodeBasicIndicator
+      - TuyaDataPointCodeCamera
+      - TuyaDataPointCodeRtcSession
+      x-go-tuya-evidence: implementation-derived
     DeviceListEnvelope:
       type: object
       description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
@@ -65,6 +155,7 @@ components:
         category:
           type: string
           description: Product category in the example response.
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         icon:
           type: string
           description: Device icon path in the example response.
@@ -130,6 +221,7 @@ components:
         code:
           type: string
           description: Status code in the example response.
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         value: {}
         type:
           type: string
@@ -248,10 +340,12 @@ components:
       properties:
         dpCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         dpId:
           type: integer
         statusCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         supportLocal:
           type: boolean
         valueConvert:
@@ -265,6 +359,7 @@ components:
       properties:
         category:
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         dpStatusRelationDTOS:
           type: array
           items:
@@ -276,6 +371,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         name:
           type: string
         desc:
@@ -290,6 +386,7 @@ components:
       properties:
         code:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         name:
           type: string
         type:
@@ -310,6 +407,7 @@ components:
             $ref: '#/components/schemas/SpecificationStatus'
         category:
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
     DeviceUserBody:
       type: object
       description: Fields sent by AddDeviceUser and UpdateDeviceUser.

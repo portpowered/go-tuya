@@ -66,9 +66,6 @@ an environment variable:
 TUYA_ACCESS_CODE="<access-code>" go run .
 ```
 
-The example suppresses token values. Store the returned token pair in a
-secret manager or OS keychain. Do not log the access code, QR challenge, tokens,
-request URLs, or unredacted errors.
 Use `WithHTTPClient` or `WithHTTPTransport` to set a timeout or custom
 transport; the options cannot be combined. The default HTTP client has no
 timeout. HTTP and authentication failures return `*tuya.ClientError`. Use
@@ -76,8 +73,6 @@ timeout. HTTP and authentication failures return `*tuya.ClientError`. Use
 the underlying cause. Handle `tuya.ErrorUnauthorized` by asking the caller to
 refresh credentials explicitly.
 
-Access codes, QR challenges, and tokens are credentials. Keep them out of
-source control and logs. Authentication requests may include credentials in
-URLs, so redact request URLs and errors before sharing diagnostics. See the
-[authentication example](https://github.com/portpowered/go-tuya/tree/main/examples/auth)
-and [token refresh example](https://github.com/portpowered/go-tuya/tree/main/examples/token_refresh).
+Keep access codes, QR challenges, and tokens in secure application storage.
+Authentication requests may include credentials in URLs, so redact URLs and
+errors before sharing diagnostics. The terminal example suppresses token values.

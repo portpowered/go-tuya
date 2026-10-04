@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 
+	mqtt "github.com/portpowered/go-tuya/pkg/dependencies/mqtttransport"
 	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 

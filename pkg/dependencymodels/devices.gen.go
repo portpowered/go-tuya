@@ -8,6 +8,147 @@ import (
 	"fmt"
 )
 
+// Defines values for TuyaDataPointCode.
+const (
+	TuyaDataPointCodeBasicIndicator   TuyaDataPointCode = "basic_indicator"
+	TuyaDataPointCodeBrightValue      TuyaDataPointCode = "bright_value"
+	TuyaDataPointCodeBrightValue1     TuyaDataPointCode = "bright_value_1"
+	TuyaDataPointCodeBrightValueV2    TuyaDataPointCode = "bright_value_v2"
+	TuyaDataPointCodeCamera           TuyaDataPointCode = "camera"
+	TuyaDataPointCodeClosedOpened     TuyaDataPointCode = "closed_opened"
+	TuyaDataPointCodeColourData       TuyaDataPointCode = "colour_data"
+	TuyaDataPointCodeColourDataV2     TuyaDataPointCode = "colour_data_v2"
+	TuyaDataPointCodeControl          TuyaDataPointCode = "control"
+	TuyaDataPointCodeDoorcontactState TuyaDataPointCode = "doorcontact_state"
+	TuyaDataPointCodeFanSpeedPercent  TuyaDataPointCode = "fan_speed_percent"
+	TuyaDataPointCodePercentControl   TuyaDataPointCode = "percent_control"
+	TuyaDataPointCodeRtcSession       TuyaDataPointCode = "rtc_session"
+	TuyaDataPointCodeSwitch1          TuyaDataPointCode = "switch_1"
+	TuyaDataPointCodeSwitchFan        TuyaDataPointCode = "switch_fan"
+	TuyaDataPointCodeSwitchLed        TuyaDataPointCode = "switch_led"
+	TuyaDataPointCodeSwitchLed1       TuyaDataPointCode = "switch_led_1"
+	TuyaDataPointCodeTempValue        TuyaDataPointCode = "temp_value"
+	TuyaDataPointCodeVaHumidity       TuyaDataPointCode = "va_humidity"
+	TuyaDataPointCodeVaTemperature    TuyaDataPointCode = "va_temperature"
+)
+
+// Valid indicates whether the value is a known member of the TuyaDataPointCode enum.
+func (e TuyaDataPointCode) Valid() bool {
+	switch e {
+	case TuyaDataPointCodeBasicIndicator:
+		return true
+	case TuyaDataPointCodeBrightValue:
+		return true
+	case TuyaDataPointCodeBrightValue1:
+		return true
+	case TuyaDataPointCodeBrightValueV2:
+		return true
+	case TuyaDataPointCodeCamera:
+		return true
+	case TuyaDataPointCodeClosedOpened:
+		return true
+	case TuyaDataPointCodeColourData:
+		return true
+	case TuyaDataPointCodeColourDataV2:
+		return true
+	case TuyaDataPointCodeControl:
+		return true
+	case TuyaDataPointCodeDoorcontactState:
+		return true
+	case TuyaDataPointCodeFanSpeedPercent:
+		return true
+	case TuyaDataPointCodePercentControl:
+		return true
+	case TuyaDataPointCodeRtcSession:
+		return true
+	case TuyaDataPointCodeSwitch1:
+		return true
+	case TuyaDataPointCodeSwitchFan:
+		return true
+	case TuyaDataPointCodeSwitchLed:
+		return true
+	case TuyaDataPointCodeSwitchLed1:
+		return true
+	case TuyaDataPointCodeTempValue:
+		return true
+	case TuyaDataPointCodeVaHumidity:
+		return true
+	case TuyaDataPointCodeVaTemperature:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TuyaDeviceCategory.
+const (
+	TuyaDeviceCategoryCl      TuyaDeviceCategory = "cl"
+	TuyaDeviceCategoryClkg    TuyaDeviceCategory = "clkg"
+	TuyaDeviceCategoryCz      TuyaDeviceCategory = "cz"
+	TuyaDeviceCategoryDc      TuyaDeviceCategory = "dc"
+	TuyaDeviceCategoryDd      TuyaDeviceCategory = "dd"
+	TuyaDeviceCategoryDj      TuyaDeviceCategory = "dj"
+	TuyaDeviceCategoryFs      TuyaDeviceCategory = "fs"
+	TuyaDeviceCategoryFsd     TuyaDeviceCategory = "fsd"
+	TuyaDeviceCategoryFwd     TuyaDeviceCategory = "fwd"
+	TuyaDeviceCategoryIpc     TuyaDeviceCategory = "ipc"
+	TuyaDeviceCategoryJtmspro TuyaDeviceCategory = "jtmspro"
+	TuyaDeviceCategoryKg      TuyaDeviceCategory = "kg"
+	TuyaDeviceCategoryMcs     TuyaDeviceCategory = "mcs"
+	TuyaDeviceCategoryMs      TuyaDeviceCategory = "ms"
+	TuyaDeviceCategoryPc      TuyaDeviceCategory = "pc"
+	TuyaDeviceCategorySp      TuyaDeviceCategory = "sp"
+	TuyaDeviceCategoryTgkg    TuyaDeviceCategory = "tgkg"
+	TuyaDeviceCategoryTgq     TuyaDeviceCategory = "tgq"
+	TuyaDeviceCategoryWsdcg   TuyaDeviceCategory = "wsdcg"
+)
+
+// Valid indicates whether the value is a known member of the TuyaDeviceCategory enum.
+func (e TuyaDeviceCategory) Valid() bool {
+	switch e {
+	case TuyaDeviceCategoryCl:
+		return true
+	case TuyaDeviceCategoryClkg:
+		return true
+	case TuyaDeviceCategoryCz:
+		return true
+	case TuyaDeviceCategoryDc:
+		return true
+	case TuyaDeviceCategoryDd:
+		return true
+	case TuyaDeviceCategoryDj:
+		return true
+	case TuyaDeviceCategoryFs:
+		return true
+	case TuyaDeviceCategoryFsd:
+		return true
+	case TuyaDeviceCategoryFwd:
+		return true
+	case TuyaDeviceCategoryIpc:
+		return true
+	case TuyaDeviceCategoryJtmspro:
+		return true
+	case TuyaDeviceCategoryKg:
+		return true
+	case TuyaDeviceCategoryMcs:
+		return true
+	case TuyaDeviceCategoryMs:
+		return true
+	case TuyaDeviceCategoryPc:
+		return true
+	case TuyaDeviceCategorySp:
+		return true
+	case TuyaDeviceCategoryTgkg:
+		return true
+	case TuyaDeviceCategoryTgq:
+		return true
+	case TuyaDeviceCategoryWsdcg:
+		return true
+	default:
+		return false
+	}
+}
+
 // DeviceCommand A device command. The value is device-specific.
 type DeviceCommand struct {
 	Code                 string                 `json:"code"`
@@ -458,6 +599,12 @@ type SubDevicesEnvelope struct {
 	Tid                  *string                `json:"tid,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// TuyaDataPointCode Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
+type TuyaDataPointCode string
+
+// TuyaDeviceCategory Device categories used by the standard capability mappings in this client.
+type TuyaDeviceCategory string
 
 // UpdateMultiOutletNameBody Payload sent to rename one outlet.
 type UpdateMultiOutletNameBody struct {

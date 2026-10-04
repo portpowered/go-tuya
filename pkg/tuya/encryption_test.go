@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
@@ -23,6 +25,7 @@ const (
 	encryptionFixtureRetained          = "retained"
 	encryptionFixtureSyntheticAccess   = "synthetic-access"
 	encryptionFixtureSyntheticClientID = "synthetic-client-id"
+	encryptionFixtureMarker            = "synthetic"
 	encryptionFixtureValue             = "value"
 )
 
@@ -138,8 +141,21 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 			t.Fatalf("unexpected X-sign header, expected %s got %s", expectedSign, gotSign)
 		}
 
+		responseBody, err := json.Marshal(map[string]any{
+			"success":       true,
+			"code":          200,
+			"msg":           "ok",
+			"result":        map[string]any{"marker": encryptionFixtureMarker},
+			"providerField": encryptionFixtureRetained,
+		})
+		if err != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
 		responseWriter.WriteHeader(http.StatusOK)
-		_, _ = responseWriter.Write([]byte(`{"success":true,"code":200,"msg":"ok","result":{"marker":"synthetic"},"providerField":"retained"}`))
+		_, _ = responseWriter.Write(responseBody)
 	}))
 	defer server.Close()
 
@@ -160,7 +176,7 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	}
 
 	result, ok := response.Body["result"].(map[string]any)
-	if !ok || result["marker"] != "synthetic" || response.Body["providerField"] != encryptionFixtureRetained {
+	if !ok || result["marker"] != encryptionFixtureMarker || response.Body["providerField"] != encryptionFixtureRetained {
 		t.Fatalf("open transport response fields were not retained: %#v", response.Body)
 	}
 
@@ -202,7 +218,7 @@ func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
 	session.EncryptedClient = &EncryptedClient{Client: session}
 
 	_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
-	if err == nil || !strings.Contains(err.Error(), "failed to create request") {
+	if err == nil || !strings.Contains(err.Error(), "origin") {
 		t.Fatalf("request error = %v, want URL construction error", err)
 	}
 }
@@ -219,7 +235,14 @@ func TestEncryptedClientRejectsUnschematizedOperation(t *testing.T) {
 		{http.MethodPost, "/v1.0/devices"},
 		{http.MethodGet, "/v1.0/devices?unexpected=1"},
 	} {
-		_, err := session.EncryptedClient.makeRequest(context.Background(), candidate.method, candidate.path, nil, nil, testOperationRequest{})
+		_, err := session.EncryptedClient.makeRequest(
+			context.Background(),
+			wire.Operation{Method: candidate.method, Path: candidate.path},
+			nil,
+			nil,
+			nil,
+			testOperationRequest{},
+		)
 		if err == nil || !strings.Contains(err.Error(), "not in api/openapi.yaml") {
 			t.Fatalf("%s %s: got %v, want schema rejection", candidate.method, candidate.path, err)
 		}

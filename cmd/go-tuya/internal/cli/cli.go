@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/portpowered/go-tuya/pkg/dependencies/mqtttransport"
 	"github.com/portpowered/go-tuya/pkg/tuya"
 )
 

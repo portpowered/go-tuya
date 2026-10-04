@@ -7,9 +7,6 @@
     "device-list",
     "device-control",
     "events",
-    "testing",
-    "provider-evidence",
-    "schema",
     "tuya"
   ]
 }

@@ -35,6 +35,12 @@ type EncryptedRequestHeaders struct {
 	XToken     string `json:"X-token"`
 }
 
+// EncryptedRequestQuery Implementation-derived query keys emitted by encrypted requests.
+type EncryptedRequestQuery struct {
+	// Encdata Base64-encoded encrypted query payload.
+	Encdata string `json:"encdata"`
+}
+
 // Getter for additional properties for EncryptedHTTPResponseEnvelope. Returns the specified
 // element and whether it was found
 func (a EncryptedHTTPResponseEnvelope) Get(fieldName string) (value interface{}, found bool) {

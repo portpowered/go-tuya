@@ -1,24 +1,27 @@
 ---
-title: Tuya service notes
-description: Regions, device support, and implementation limits.
+title: Regions and endpoints
+description: Configure the cloud and authentication endpoints.
 ---
 
-# Tuya service notes
+# Regions and endpoints
 
-The client defaults to the US cloud endpoint. Select a built-in region with
-`tuya.WithRegion`, or provide custom cloud and authentication endpoints with
-`tuya.WithCloudAPIURL` and `tuya.WithAuthenticationURL` when creating the
-reusable client.
+The client defaults to the US Device Sharing cloud endpoint. Use
+`WithRegion` to select a built-in region, or set custom cloud and
+authentication endpoints when creating the reusable client:
 
-Available operations depend on the account, region, and device. Command codes
-and values are device-specific; inspect a device's specification before
-sending commands. The library does not control devices on the local network.
-Some declared surfaces remain placeholders, including the scene service and
-`Unload`. Check the [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
-and the root README's supported-operation list before depending on an
-operation.
+```go
+client, err := tuya.NewClient(
+    tuya.WithCloudAPIURL(cloudURL),
+    tuya.WithAuthenticationURL(authenticationURL),
+)
+if err != nil {
+    return err
+}
+```
 
-Compare implementation behavior with Tuya's [Device Sharing SDK](https://github.com/tuya/tuya-device-sharing-sdk)
-and [cloud API reference](https://developer.tuya.com/en/docs/cloud/api-reference).
-For the limits of checked-in evidence, see
-[provider evidence](../provider-evidence).
+Operations depend on the account, region, and device. Check a device's
+specification before sending commands. The client does not control devices on
+the local network.
+
+See the [Go API reference](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya)
+for the available options and services.
