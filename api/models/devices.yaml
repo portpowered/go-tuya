@@ -1,0 +1,616 @@
+components:
+  schemas:
+    DeviceListEnvelope:
+      type: object
+      description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        success:
+          type: boolean
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceListResult'
+    DeviceListResult:
+      type: object
+      description: Official Tuya device-list result. The reference documents total, devices, and last_id
+        but does not define requiredness for every response.
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of entries.
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+        last_id:
+          type: string
+          description: Last query ID for device pagination.
+      additionalProperties: true
+    DeviceRecord:
+      type: object
+      description: Fields below appear in Tuya's official example response for this operation. The reference
+        does not define requiredness or an exhaustive field set. Additional properties are retained for
+        forward compatibility.
+      properties:
+        id:
+          type: string
+          description: Device identifier in the example response.
+        uuid:
+          type: string
+          description: Device UUID in the example response.
+        name:
+          type: string
+          description: Device name in the example response.
+        owner_id:
+          type: string
+          description: Device owner identifier in the example response.
+        uid:
+          type: string
+          description: User identifier in the example response.
+        product_id:
+          type: string
+          description: Product identifier in the example response.
+        product_name:
+          type: string
+          description: Product name in the example response.
+        category:
+          type: string
+          description: Product category in the example response.
+        icon:
+          type: string
+          description: Device icon path in the example response.
+        ip:
+          type: string
+          description: IP address in the example response.
+        local_key:
+          type: string
+          description: Local key field shown in Tuya's example. Treat values as secrets and never log
+            or publish them.
+        online:
+          type: boolean
+          description: Online state in the example response.
+        sub:
+          type: boolean
+          description: Whether the device is a sub-device in the example response.
+        biz_type:
+          type: integer
+          description: Business type value in the example response.
+        active_time:
+          type: integer
+          format: int64
+          description: Activation timestamp value in the example response.
+        create_time:
+          type: integer
+          format: int64
+          description: Creation timestamp value in the example response.
+        update_time:
+          type: integer
+          format: int64
+          description: Update timestamp value in the example response.
+        time_zone:
+          type: string
+          description: Time zone string in the example response.
+        model:
+          type: string
+          description: Product model in the example response.
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatus'
+        subCategory:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+        lat:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+        lon:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+      additionalProperties: true
+    DeviceStatus:
+      type: object
+      description: A status entry in Tuya's example response. The example uses a string value; the reference
+        does not constrain the value type, so it remains an unconstrained JSON value.
+      properties:
+        code:
+          type: string
+          description: Status code in the example response.
+        value: {}
+        type:
+          type: string
+          description: Status data-point type where returned.
+      additionalProperties: true
+    DeviceLogRecord:
+      type: object
+      description: Log record fields consumed or exposed by the library.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+        event_time:
+          type: integer
+          format: int64
+        event_from:
+          type: string
+        event_id:
+          type: integer
+        status:
+          type: string
+        row:
+          type: string
+    DeviceLogsResult:
+      type: object
+      description: Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+      additionalProperties: true
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceLogRecord'
+        has_next:
+          type: boolean
+        device_id:
+          type: string
+        current_row_key:
+          type: string
+        next_row_key:
+          type: string
+        count:
+          type: integer
+          format: int64
+    SubDeviceRecord:
+      type: object
+      description: Sub-device fields represented by the library.
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        online:
+          type: boolean
+        owner_id:
+          type: string
+        category:
+          type: string
+        product_id:
+          type: string
+        active_time:
+          type: integer
+          format: int64
+        update_time:
+          type: integer
+          format: int64
+    FactoryInfoRecord:
+      type: object
+      description: Factory information fields represented by the library.
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        uuid:
+          type: string
+        sn:
+          type: string
+        mac:
+          type: string
+    DeviceUserRecord:
+      type: object
+      description: Device-user fields represented by the library.
+      additionalProperties: true
+      properties:
+        device_id:
+          type: string
+        nick_name:
+          type: string
+        sex:
+          type: integer
+        birthday:
+          type: integer
+          format: int64
+        height:
+          type: integer
+        weight:
+          type: integer
+        contact:
+          type: string
+        user_id:
+          type: string
+    MultiOutletNameRecord:
+      type: object
+      description: Multi-outlet identifier and display name represented by the library.
+      additionalProperties: true
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+    DeviceStatusMapping:
+      type: object
+      description: Device status mapping fields consumed by the library.
+      additionalProperties: true
+      properties:
+        dpCode:
+          type: string
+        dpId:
+          type: integer
+        statusCode:
+          type: string
+        supportLocal:
+          type: boolean
+        valueConvert:
+          type: string
+        valueType:
+          type: string
+    DeviceStatusResult:
+      type: object
+      description: Device-status result consumed by the library.
+      additionalProperties: true
+      properties:
+        category:
+          type: string
+        dpStatusRelationDTOS:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatusMapping'
+    SpecificationFunction:
+      type: object
+      description: Function fields represented by the library; values are provider-defined.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        desc:
+          type: string
+        type:
+          type: string
+        values: {}
+    SpecificationStatus:
+      type: object
+      description: Status fields represented by the library; values are provider-defined.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        values: {}
+    DeviceSpecification:
+      type: object
+      description: Specification result consumed by the library; category-specific fields are open.
+      additionalProperties: true
+      properties:
+        functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecificationFunction'
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecificationStatus'
+        category:
+          type: string
+    DeviceUserBody:
+      type: object
+      description: Fields sent by AddDeviceUser and UpdateDeviceUser.
+      additionalProperties: true
+      properties:
+        nick_name:
+          type: string
+        sex:
+          type: integer
+        birthday:
+          type: integer
+          format: int64
+        height:
+          type: integer
+        weight:
+          type: integer
+        contact:
+          type: string
+      required:
+      - nick_name
+      - sex
+    SendCommandsBody:
+      type: object
+      description: Command payload sent by SendCommands.
+      additionalProperties: true
+      properties:
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceCommand'
+      required:
+      - commands
+    UpdateNameBody:
+      type: object
+      description: Name payload sent by device and data-point rename operations.
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+      required:
+      - name
+    UpdateMultiOutletNameBody:
+      type: object
+      description: Payload sent to rename one outlet.
+      additionalProperties: true
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      required:
+      - identifier
+      - name
+    DeviceDetailsEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceRecord'
+    DeviceListByUserEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+    DeviceLogsEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceLogsResult'
+    SubDevicesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubDeviceRecord'
+    FactoryInfosEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactoryInfoRecord'
+    DeviceUserEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceUserRecord'
+    DeviceUsersEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceUserRecord'
+    MultiOutletNamesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/MultiOutletNameRecord'
+    DeviceStatusEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceStatusResult'
+    DeviceSpecificationEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceSpecification'
+    DeviceCommand:
+      type: object
+      description: A device command. The value is device-specific.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+      required:
+      - code
+      - value

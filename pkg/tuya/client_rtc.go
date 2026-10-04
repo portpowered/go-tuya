@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // RTCStream represents an active WebRTC stream with a Tuya camera device.

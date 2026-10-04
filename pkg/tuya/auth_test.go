@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.

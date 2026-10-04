@@ -1,0 +1,49 @@
+components:
+  schemas:
+    RTCSessionResult:
+      type: object
+      description: WebRTC signaling response fields consumed by the library.
+      additionalProperties: true
+      properties:
+        session_id:
+          type: string
+        sdp:
+          type: string
+    RTCOfferBody:
+      type: object
+      description: WebRTC offer payload sent to Tuya signaling.
+      additionalProperties: true
+      properties:
+        sdp:
+          type: string
+        type:
+          type: string
+          enum:
+          - offer
+      required:
+      - sdp
+      - type
+    RTCSessionEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/RTCSessionResult'

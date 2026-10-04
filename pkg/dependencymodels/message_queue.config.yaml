@@ -1,0 +1,63 @@
+generate:
+  models: true
+output: pkg/dependencymodels/message_queue.gen.go
+output-options:
+  exclude-schemas:
+    - BooleanResultEnvelope
+    - DeviceCommand
+    - DeviceDetailsEnvelope
+    - DeviceListByUserEnvelope
+    - DeviceListEnvelope
+    - DeviceListResult
+    - DeviceLogRecord
+    - DeviceLogsEnvelope
+    - DeviceLogsResult
+    - DeviceRecord
+    - DeviceSpecification
+    - DeviceSpecificationEnvelope
+    - DeviceStatus
+    - DeviceStatusEnvelope
+    - DeviceStatusMapping
+    - DeviceStatusResult
+    - DeviceUserBody
+    - DeviceUserEnvelope
+    - DeviceUserRecord
+    - DeviceUsersEnvelope
+    - EncryptedDataEnvelope
+    - EncryptedHTTPResponseEnvelope
+    - EncryptedRequestHeaders
+    - FactoryInfoRecord
+    - FactoryInfosEnvelope
+    - HomeDevicesEnvelope
+    - HomeListEnvelope
+    - HomeRecord
+    - LoginCodeEnvelope
+    - LoginCodeResult
+    - MultiOutletNameRecord
+    - MultiOutletNamesEnvelope
+    - QRCodeEnvelope
+    - QRCodeResult
+    - RTCOfferBody
+    - RTCSessionEnvelope
+    - RTCSessionResult
+    - RawDeviceManagementBizData
+    - RawDeviceManagementData
+    - RawDeviceReportData
+    - RawDeviceStatusChange
+    - RawSharingMessage
+    - RawSharingMessageData
+    - RefreshTokenEnvelope
+    - RefreshedTokenResult
+    - SendCommandsBody
+    - SpecificationFunction
+    - SpecificationStatus
+    - StringResultEnvelope
+    - SubDeviceRecord
+    - SubDevicesEnvelope
+    - TuyaErrorEnvelope
+    - UpdateMultiOutletNameBody
+    - UpdateNameBody
+  include-operation-ids:
+    - getMessageQueueConfig
+  skip-prune: true
+package: tuyamodels

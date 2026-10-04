@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // This describes the overall message protocol that is sent over via MQTT to the client.

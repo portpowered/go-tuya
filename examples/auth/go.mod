@@ -3,11 +3,9 @@ module github.com/portpowered/go-tuya/examples/auth
 go 1.24.0
 
 require (
-	github.com/portpowered/go-tuya v0.0.0
+	github.com/portpowered/go-tuya v0.3.4
 	github.com/yeqown/go-qrcode/writer/terminal v1.1.2
 )
-
-replace github.com/portpowered/go-tuya => ../..
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.1 // indirect

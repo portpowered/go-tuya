@@ -1,0 +1,112 @@
+components:
+  schemas:
+    RawSharingMessage:
+      type: object
+      description: Implementation-derived MQTT message envelope consumed by pkg/tuya.
+        It is aligned with api/mqtt.asyncapi.yaml and is not a provider-verified payload
+        schema.
+      required:
+      - protocol
+      - data
+      properties:
+        protocol:
+          type: integer
+          enum:
+          - 4
+          - 20
+          description: Legacy device report (4) or management event (20) handled by
+            this client.
+        data:
+          $ref: '#/components/schemas/RawSharingMessageData'
+        t:
+          type: integer
+          format: int64
+      additionalProperties: true
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessageData:
+      type: object
+      description: Implementation-derived fields shared across the two MQTT data variants;
+        unrecognized fields remain open.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+        bizCode:
+          type: string
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 4 device
+        reports.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceStatusChange:
+      type: object
+      description: Implementation-derived status item in an MQTT protocol 4 report.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+        t:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 20 management
+        events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        productKey:
+          type: string
+        bizCode:
+          type: string
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementBizData:
+      type: object
+      description: Implementation-derived, extensible business payload for MQTT management
+        events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        time:
+          type: integer
+          format: int64
+        name:
+          type: string
+        uid:
+          type: string
+      x-go-tuya-evidence: implementation-derived

@@ -1,0 +1,66 @@
+components:
+  schemas:
+    TuyaErrorEnvelope:
+      type: object
+      description: Extensible Tuya error response. Error fields vary by endpoint.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        success:
+          type: boolean
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+    BooleanResultEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: boolean
+    StringResultEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: string

@@ -1,0 +1,115 @@
+components:
+  schemas:
+    QRCodeResult:
+      type: object
+      description: QR login payload observed by the library.
+      additionalProperties: true
+      properties:
+        qrcode:
+          type: string
+    LoginCodeResult:
+      type: object
+      description: Login token payload observed by the library.
+      additionalProperties: true
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expire_time:
+          type: integer
+          format: int64
+        terminal_id:
+          type: string
+        uid:
+          type: string
+        username:
+          type: string
+        endpoint:
+          type: string
+    RefreshedTokenResult:
+      type: object
+      description: Refresh-token payload observed by the library.
+      additionalProperties: true
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expireTime:
+          type: integer
+          format: int64
+        uid:
+          type: string
+    QRCodeEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/QRCodeResult'
+    LoginCodeEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/LoginCodeResult'
+    RefreshTokenEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/RefreshedTokenResult'
