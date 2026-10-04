@@ -45,7 +45,7 @@ jobs:
             exit 1
           fi
           sdk_version="$(go list -m -f '{{.Version}}' "$SDK_MODULE")"
-          test "$sdk_version" = "v0.3.5"
+          test "$sdk_version" = "v0.4.0"
       - name: Check tag matches nested module version
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}

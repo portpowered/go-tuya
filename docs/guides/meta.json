@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "cli",
+    "upgrading",
     "authentication",
     "device-list",
     "device-control",

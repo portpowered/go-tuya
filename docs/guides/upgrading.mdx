@@ -1,0 +1,30 @@
+---
+title: Upgrade to v0.4
+description: Adapt typed event constants when upgrading from v0.3.4.
+---
+
+# Upgrade to v0.4
+
+The v0.4 release generates the SDK's public event and capability models from
+schemas. Eight existing constants now have explicit types; their values are
+unchanged:
+
+- `BizcodeBindUser`, `BizcodeDelete`, `BizcodeDpNameUpdate`, `BizcodeNameUpdate`,
+  `BizcodeOffline`, and `BizcodeOnline` are `string` constants.
+- `ProtocolDeviceReport` and `ProtocolOther` are `int` constants.
+
+Code using ordinary `string` or `int` values needs no change. When assigning
+these constants to a distinct named type, convert explicitly:
+
+```go
+type EventCode string
+type Protocol int
+
+const online EventCode = EventCode(tuya.BizcodeOnline)
+const report Protocol = Protocol(tuya.ProtocolDeviceReport)
+```
+
+Import `tuya` from
+[`github.com/portpowered/go-tuya/pkg/tuya`](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya).
+Review [event handling](./events) and the [standalone CLI](./cli) before updating
+an application.

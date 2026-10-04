@@ -3,7 +3,7 @@ module github.com/portpowered/go-tuya/cmd/go-tuya
 go 1.24.0
 
 require (
-	github.com/portpowered/go-tuya v0.3.5
+	github.com/portpowered/go-tuya v0.4.0
 	github.com/yeqown/go-qrcode/v2 v2.2.5
 	github.com/yeqown/go-qrcode/writer/terminal v1.1.2
 	golang.org/x/sys v0.40.0
