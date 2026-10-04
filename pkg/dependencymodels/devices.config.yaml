@@ -3,7 +3,10 @@ generate:
 output: pkg/dependencymodels/devices.gen.go
 output-options:
   exclude-schemas:
+    - AuthenticationOrigin
     - BooleanResultEnvelope
+    - CloudAPIOrigin
+    - CloudRegion
     - EncryptedDataEnvelope
     - EncryptedHTTPResponseEnvelope
     - EncryptedRequestHeaders
@@ -21,6 +24,7 @@ output-options:
     - MessageQueueTopic
     - QRCodeEnvelope
     - QRCodeResult
+    - QRCodeTokenPrefix
     - RTCOfferBody
     - RTCSessionEnvelope
     - RTCSessionResult

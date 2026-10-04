@@ -220,7 +220,7 @@ func newMQTTFramedConnections(t *testing.T, transcript mqttBinaryTranscript) (ne
 func newMQTTFramedSession(t *testing.T, httpReplay *mqttHTTPReplay, clientConnection net.Conn) *Session {
 	t.Helper()
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPTransport(httpReplay), WithClientID("synthetic-client-id"), WithCloudAPIURL("https://api.example.invalid"),
 		WithMQTTClientFactory(func(options *mqtt.ClientOptions) mqtt.Client {
 			options.SetCustomOpenConnectionFn(func(uri *url.URL, actual mqtt.ClientOptions) (net.Conn, error) {

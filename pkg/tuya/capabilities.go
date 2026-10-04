@@ -17,17 +17,7 @@ const (
 )
 
 const (
-	hueCycleDegrees               = 360
-	minimumPercentage             = 0
-	percentageScale               = 100
-	tuyaDataPointScale            = 1000
-	tgqBrightnessOffset           = 10
-	tgqBrightnessRange            = 990
-	colorHexComponentWidth        = 4
-	minimumColorTemperatureMireds = 153
-	maximumColorTemperatureMireds = 500
-	colorTemperatureMiredsRange   = maximumColorTemperatureMireds - minimumColorTemperatureMireds
-	tuyaTemperatureTenthsScale    = 10
+	colorTemperatureMiredsRange = CapabilityScaleMaximumColorTemperatureMireds - CapabilityScaleMinimumColorTemperatureMireds
 )
 
 // Capability represents a standardized device capability interface.
@@ -81,14 +71,14 @@ func (b *BrightnessCapability) GetValue() any {
 
 // SetValue sets the brightness level from various input types.
 func (b *BrightnessCapability) SetValue(value any) error {
-	level, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	level, ok := parseBoundedInt(value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 	if ok {
 		b.Level = level
 
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidBrightnessLevel, value)
+	return fmt.Errorf("%w: %v (must be %d-%d)", errInvalidBrightnessLevel, value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 }
 
 // GetCapabilityType returns the capability type for color.
@@ -123,28 +113,31 @@ func (c *ColorCapability) SetValue(value any) error {
 
 func (c *ColorCapability) setFloatValues(values map[string]any) {
 	if hue, ok := values[ProjectionPropertyColorCapabilityHue].(float64); ok {
-		c.Hue = int(hue) % hueCycleDegrees
+		c.Hue = int(hue) % CapabilityScaleHueCycleDegrees
 	}
 
-	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation].(float64); ok && saturation >= 0 && saturation <= 100 {
+	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation].(float64); ok &&
+		saturation >= float64(CapabilityScalePercentMinimum) && saturation <= float64(CapabilityScalePercentMaximum) {
 		c.Saturation = int(saturation)
 	}
 
-	if value, ok := values[ProjectionPropertyColorCapabilityValue].(float64); ok && value >= 0 && value <= 100 {
+	if value, ok := values[ProjectionPropertyColorCapabilityValue].(float64); ok &&
+		value >= float64(CapabilityScalePercentMinimum) && value <= float64(CapabilityScalePercentMaximum) {
 		c.Value = int(value)
 	}
 }
 
 func (c *ColorCapability) setIntValues(values map[string]int) {
 	if hue, ok := values[ProjectionPropertyColorCapabilityHue]; ok {
-		c.Hue = hue % hueCycleDegrees
+		c.Hue = hue % CapabilityScaleHueCycleDegrees
 	}
 
-	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation]; ok && saturation >= 0 && saturation <= 100 {
+	if saturation, ok := values[ProjectionPropertyColorCapabilitySaturation]; ok &&
+		saturation >= CapabilityScalePercentMinimum && saturation <= CapabilityScalePercentMaximum {
 		c.Saturation = saturation
 	}
 
-	if value, ok := values[ProjectionPropertyColorCapabilityValue]; ok && value >= 0 && value <= 100 {
+	if value, ok := values[ProjectionPropertyColorCapabilityValue]; ok && value >= CapabilityScalePercentMinimum && value <= CapabilityScalePercentMaximum {
 		c.Value = value
 	}
 }
@@ -161,14 +154,17 @@ func (ct *ColorTemperatureCapability) GetValue() any {
 
 // SetValue sets the color temperature from various input types.
 func (ct *ColorTemperatureCapability) SetValue(value any) error {
-	mireds, ok := parseBoundedInt(value, minimumColorTemperatureMireds, maximumColorTemperatureMireds)
+	mireds, ok := parseBoundedInt(value, CapabilityScaleMinimumColorTemperatureMireds, CapabilityScaleMaximumColorTemperatureMireds)
 	if ok {
 		ct.Mireds = mireds
 
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v (must be 153-500 mireds)", errInvalidColorTemperature, value)
+	return fmt.Errorf(
+		"%w: %v (must be %d-%d mireds)", errInvalidColorTemperature, value,
+		CapabilityScaleMinimumColorTemperatureMireds, CapabilityScaleMaximumColorTemperatureMireds,
+	)
 }
 
 // GetCapabilityType returns the capability type for temperature sensor.
@@ -216,14 +212,14 @@ func (hs *HumiditySensorCapability) GetValue() any {
 
 // SetValue sets the humidity from various input types.
 func (hs *HumiditySensorCapability) SetValue(value any) error {
-	humidity, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	humidity, ok := parseBoundedInt(value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 	if ok {
 		hs.Humidity = humidity
 
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidHumidityValue, value)
+	return fmt.Errorf("%w: %v (must be %d-%d)", errInvalidHumidityValue, value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 }
 
 // GetCapabilityType returns the capability type for fan speed.
@@ -238,14 +234,14 @@ func (fs *FanSpeedCapability) GetValue() any {
 
 // SetValue sets the fan speed from various input types.
 func (fs *FanSpeedCapability) SetValue(value any) error {
-	speed, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	speed, ok := parseBoundedInt(value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 	if ok {
 		fs.Speed = speed
 
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidFanSpeedValue, value)
+	return fmt.Errorf("%w: %v (must be %d-%d)", errInvalidFanSpeedValue, value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 }
 
 // GetCapabilityType returns the capability type for lock.
@@ -326,14 +322,14 @@ func (wc *WindowCoveringCapability) GetValue() any {
 
 // SetValue sets the window covering position from various input types.
 func (wc *WindowCoveringCapability) SetValue(value any) error {
-	position, ok := parseBoundedInt(value, minimumPercentage, percentageScale)
+	position, ok := parseBoundedInt(value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 	if ok {
 		wc.Position = position
 
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v (must be 0-100)", errInvalidWindowCoveringPosition, value)
+	return fmt.Errorf("%w: %v (must be %d-%d)", errInvalidWindowCoveringPosition, value, CapabilityScalePercentMinimum, CapabilityScalePercentMaximum)
 }
 
 func parseBoundedInt(value any, minimum, maximum int) (int, bool) {
@@ -452,11 +448,12 @@ func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMappin
 
 			if val, ok := value.(float64); ok {
 				var percentage int
-				if maxValue == tuyaDataPointScale {
-					percentage = int(val / tuyaDataPointScale * percentageScale)
+				if maxValue == CapabilityScaleTuyaDataPointMaximum {
+					percentage = int(val / CapabilityScaleTuyaDataPointMaximum * CapabilityScalePercentMaximum)
 				} else {
-					// For tgq category: range 10-1000
-					percentage = min(max(int((val-tgqBrightnessOffset)/tgqBrightnessRange*percentageScale), 0), percentageScale)
+					normalized := (val - CapabilityScaleExtendedBrightnessMinimum) / CapabilityScaleExtendedBrightnessRange
+					percentage = min(max(int(normalized*CapabilityScalePercentMaximum), CapabilityScalePercentMinimum),
+						CapabilityScalePercentMaximum)
 				}
 
 				err := capability.SetValue(percentage)
@@ -469,11 +466,10 @@ func createBrightnessMapping(tuyaCode string, maxValue float64) CapabilityMappin
 		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if brightness, ok := capability.(*BrightnessCapability); ok {
 				var tuyaValue int
-				if maxValue == tuyaDataPointScale {
-					tuyaValue = int(float64(brightness.Level) / percentageScale * tuyaDataPointScale)
+				if maxValue == CapabilityScaleTuyaDataPointMaximum {
+					tuyaValue = int(float64(brightness.Level) / CapabilityScalePercentMaximum * CapabilityScaleTuyaDataPointMaximum)
 				} else {
-					// For tgq category: range 10-1000
-					tuyaValue = int(float64(brightness.Level)/percentageScale*tgqBrightnessRange + tgqBrightnessOffset)
+					tuyaValue = int(float64(brightness.Level)/CapabilityScalePercentMaximum*CapabilityScaleExtendedBrightnessRange + CapabilityScaleExtendedBrightnessMinimum)
 				}
 
 				return tuyaCode, tuyaValue, nil
@@ -491,13 +487,13 @@ func createColorMapping(tuyaCode string) CapabilityMapping {
 			capability := &ColorCapability{Hue: 0, Saturation: 0, Value: 0}
 
 			colorString, ok := value.(string)
-			if !ok || len(colorString) < 3*colorHexComponentWidth {
+			if !ok || len(colorString) < 3*CapabilityScaleColorHexComponentWidth {
 				return capability, nil
 			}
 
-			hueHex := colorString[0:colorHexComponentWidth]
-			saturationHex := colorString[colorHexComponentWidth : 2*colorHexComponentWidth]
-			valueHex := colorString[2*colorHexComponentWidth : 3*colorHexComponentWidth]
+			hueHex := colorString[0:CapabilityScaleColorHexComponentWidth]
+			saturationHex := colorString[CapabilityScaleColorHexComponentWidth : 2*CapabilityScaleColorHexComponentWidth]
+			valueHex := colorString[2*CapabilityScaleColorHexComponentWidth : 3*CapabilityScaleColorHexComponentWidth]
 
 			hue, err := strconv.ParseInt(hueHex, 16, 32)
 			if err == nil {
@@ -506,12 +502,12 @@ func createColorMapping(tuyaCode string) CapabilityMapping {
 
 			saturation, err := strconv.ParseInt(saturationHex, 16, 32)
 			if err == nil {
-				capability.Saturation = int(saturation / tuyaDataPointScale * percentageScale)
+				capability.Saturation = int(saturation / CapabilityScaleTuyaDataPointMaximum * CapabilityScalePercentMaximum)
 			}
 
 			valueNumber, err := strconv.ParseInt(valueHex, 16, 32)
 			if err == nil {
-				capability.Value = int(valueNumber / tuyaDataPointScale * percentageScale)
+				capability.Value = int(valueNumber / CapabilityScaleTuyaDataPointMaximum * CapabilityScalePercentMaximum)
 			}
 
 			return capability, nil
@@ -519,8 +515,8 @@ func createColorMapping(tuyaCode string) CapabilityMapping {
 		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if color, ok := capability.(*ColorCapability); ok {
 				hue := fmt.Sprintf("%04x", color.Hue)
-				sat := fmt.Sprintf("%04x", int(float64(color.Saturation)/percentageScale*tuyaDataPointScale))
-				val := fmt.Sprintf("%04x", int(float64(color.Value)/percentageScale*tuyaDataPointScale))
+				sat := fmt.Sprintf("%04x", int(float64(color.Saturation)/CapabilityScalePercentMaximum*CapabilityScaleTuyaDataPointMaximum))
+				val := fmt.Sprintf("%04x", int(float64(color.Value)/CapabilityScalePercentMaximum*CapabilityScaleTuyaDataPointMaximum))
 				colorData := hue + sat + val
 
 				return tuyaCode, colorData, nil
@@ -544,7 +540,11 @@ func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) Capabi
 				mireds := min(
 					max(
 
-						int(minimumColorTemperatureMireds+normalized*float64(colorTemperatureMiredsRange)), minimumColorTemperatureMireds), maximumColorTemperatureMireds)
+						int(CapabilityScaleMinimumColorTemperatureMireds+normalized*float64(colorTemperatureMiredsRange)),
+						CapabilityScaleMinimumColorTemperatureMireds,
+					),
+					CapabilityScaleMaximumColorTemperatureMireds,
+				)
 
 				err := capability.SetValue(mireds)
 
@@ -556,7 +556,7 @@ func createColorTemperatureMapping(tuyaCode string, tuyaMin, tuyaMax int) Capabi
 		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if ct, ok := capability.(*ColorTemperatureCapability); ok {
 				// Convert mireds to the Tuya range (tuyaMin-tuyaMax).
-				normalized := float64(ct.Mireds-minimumColorTemperatureMireds) / float64(colorTemperatureMiredsRange)
+				normalized := float64(ct.Mireds-CapabilityScaleMinimumColorTemperatureMireds) / float64(colorTemperatureMiredsRange)
 				tuyaValue := int(float64(tuyaMin) + normalized*float64(tuyaMax-tuyaMin))
 
 				return tuyaCode, tuyaValue, nil
@@ -625,7 +625,7 @@ func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMappin
 
 			if val, ok := value.(float64); ok {
 				// Convert discrete speed levels (1-maxSpeedLevels) to percentage (0-100)
-				percentage := min(max(int(val/float64(maxSpeedLevels)*percentageScale), 0), percentageScale)
+				percentage := min(max(int(val/float64(maxSpeedLevels)*CapabilityScalePercentMaximum), CapabilityScalePercentMinimum), CapabilityScalePercentMaximum)
 
 				err := capability.SetValue(percentage)
 
@@ -637,7 +637,7 @@ func createFanSpeedMapping(tuyaCode string, maxSpeedLevels int) CapabilityMappin
 		CapabilityToTuya: func(capability Capability) (string, any, error) {
 			if fs, ok := capability.(*FanSpeedCapability); ok {
 				// Convert percentage (0-100) to discrete speed levels (0-maxSpeedLevels)
-				tuyaValue := min(int(float64(fs.Speed)/percentageScale*float64(maxSpeedLevels)), maxSpeedLevels)
+				tuyaValue := min(int(float64(fs.Speed)/CapabilityScalePercentMaximum*float64(maxSpeedLevels)), maxSpeedLevels)
 
 				return tuyaCode, tuyaValue, nil
 			}
@@ -749,27 +749,29 @@ func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 	dcm.mappings = map[string]map[string]CapabilityMapping{
 		// Wall Switch Dimmer (tgkg) category mappings
 		string(wire.TuyaDeviceCategoryTgkg): {
-			string(wire.TuyaDataPointCodeSwitchLed1):   createPowerMapping(string(wire.TuyaDataPointCodeSwitchLed1)),
-			string(wire.TuyaDataPointCodeBrightValue1): createBrightnessMapping(string(wire.TuyaDataPointCodeBrightValue1), tgqBrightnessRange), // Range 10-1000
+			string(wire.TuyaDataPointCodeSwitchLed1): createPowerMapping(string(wire.TuyaDataPointCodeSwitchLed1)),
+			string(wire.TuyaDataPointCodeBrightValue1): createBrightnessMapping(
+				string(wire.TuyaDataPointCodeBrightValue1), CapabilityScaleExtendedBrightnessRange,
+			), // Range 10-1000
 		},
 		// Dimmer (tgq) category mappings
 		string(wire.TuyaDeviceCategoryTgq): {
 			string(wire.TuyaDataPointCodeSwitchLed1): createPowerMapping(string(wire.TuyaDataPointCodeSwitchLed1)),
 			string(wire.TuyaDataPointCodeBrightValueV2): createBrightnessMapping(
-				string(wire.TuyaDataPointCodeBrightValueV2), tgqBrightnessRange,
+				string(wire.TuyaDataPointCodeBrightValueV2), CapabilityScaleExtendedBrightnessRange,
 			), // Special range 10-1000
 		},
 		// Light (dj) category mappings
 		string(wire.TuyaDeviceCategoryDj): {
 			dpCodeSwitchLED:  createPowerMapping(dpCodeSwitchLED),
-			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, CapabilityScaleTuyaDataPointMaximum),
 			string(wire.TuyaDataPointCodeColourDataV2): createColorMapping(string(wire.TuyaDataPointCodeColourDataV2)),
-			dpCodeTemperature:                          createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
+			dpCodeTemperature:                          createColorTemperatureMapping(dpCodeTemperature, 0, CapabilityScaleTuyaDataPointMaximum),
 		},
 		// Strip Light (dd) category mappings
 		string(wire.TuyaDeviceCategoryDd): {
 			dpCodeSwitchLED:  createPowerMapping(dpCodeSwitchLED),
-			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeBrightness: createBrightnessMapping(dpCodeBrightness, CapabilityScaleTuyaDataPointMaximum),
 			dpCodeColor:      createColorMapping(dpCodeColor),
 		},
 		// Switch (kg) category mappings
@@ -787,7 +789,7 @@ func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 		// Temperature + Humidity Sensor (wsdcg) category mappings
 		string(wire.TuyaDeviceCategoryWsdcg): {
 			string(wire.TuyaDataPointCodeVaTemperature): createTemperatureSensorMapping(
-				string(wire.TuyaDataPointCodeVaTemperature), tuyaTemperatureTenthsScale,
+				string(wire.TuyaDataPointCodeVaTemperature), CapabilityScaleTemperatureTenths,
 			), // Tuya reports tenths of degree
 			string(wire.TuyaDataPointCodeVaHumidity): createHumiditySensorMapping(string(wire.TuyaDataPointCodeVaHumidity)),
 		},
@@ -798,26 +800,26 @@ func (dcm *DeviceCapabilityMap) initializeStandardMappings() {
 		// String Lights (dc) category mappings
 		string(wire.TuyaDeviceCategoryDc): {
 			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
-			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, CapabilityScaleTuyaDataPointMaximum),
 			dpCodeColor:       createColorMapping(dpCodeColor),
-			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
+			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, CapabilityScaleTuyaDataPointMaximum),
 		},
 		// Ambient Light (fwd) category mappings
 		string(wire.TuyaDeviceCategoryFwd): {
 			dpCodeSwitchLED:   createPowerMapping(dpCodeSwitchLED),
-			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, tuyaDataPointScale),
+			dpCodeBrightness:  createBrightnessMapping(dpCodeBrightness, CapabilityScaleTuyaDataPointMaximum),
 			dpCodeColor:       createColorMapping(dpCodeColor),
-			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, tuyaDataPointScale),
+			dpCodeTemperature: createColorTemperatureMapping(dpCodeTemperature, 0, CapabilityScaleTuyaDataPointMaximum),
 		},
 		// Fan (fs) category mappings
 		string(wire.TuyaDeviceCategoryFs): {
 			string(wire.TuyaDataPointCodeSwitchFan):       createPowerMapping(string(wire.TuyaDataPointCodeSwitchFan)),
-			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), percentageScale),
+			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), CapabilityScalePercentMaximum),
 		},
 		// Ceiling Fan Light (fsd) category mappings
 		string(wire.TuyaDeviceCategoryFsd): {
 			string(wire.TuyaDataPointCodeSwitchFan):       createPowerMapping(string(wire.TuyaDataPointCodeSwitchFan)),
-			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), percentageScale),
+			string(wire.TuyaDataPointCodeFanSpeedPercent): createFanSpeedMapping(string(wire.TuyaDataPointCodeFanSpeedPercent), CapabilityScalePercentMaximum),
 		},
 		// Curtain (cl) category mappings
 		string(wire.TuyaDeviceCategoryCl): {

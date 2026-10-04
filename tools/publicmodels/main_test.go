@@ -7,16 +7,18 @@ import (
 )
 
 const (
-	projectionComponentsKey = "components"
-	projectionSchemasKey    = "schemas"
-	capabilityTypeName      = "CapabilityType"
-	projectionStringType    = "string"
-	generateConstantsKey    = "x-go-tuya-generate-untyped-constants"
-	projectionEnumKey       = "enum"
-	capabilityPowerName     = "CapabilityTypePower"
-	projectionTypeKey       = "type"
-	projectionEnumNamesKey  = "x-enum-varnames"
-	capabilityPowerValue    = "power"
+	projectionComponentsKey     = "components"
+	projectionSchemasKey        = "schemas"
+	capabilityTypeName          = "CapabilityType"
+	projectionStringType        = "string"
+	generateConstantsKey        = "x-go-tuya-generate-untyped-constants"
+	projectionEnumKey           = "enum"
+	capabilityPowerName         = "CapabilityTypePower"
+	projectionTypeKey           = "type"
+	projectionEnumNamesKey      = "x-enum-varnames"
+	capabilityPowerValue        = "power"
+	projectionObjectType        = "object"
+	capabilityNormalizationName = "CapabilityNormalization"
 )
 
 func TestGenerateUntypedConstantsUsesSchemaNamesAndValues(t *testing.T) {
@@ -32,9 +34,16 @@ func TestGenerateUntypedConstantsUsesSchemaNamesAndValues(t *testing.T) {
 					projectionEnumNamesKey: []any{capabilityPowerName, "CapabilityTypeColorTemperature"},
 				},
 				"ColorCapability": map[string]any{
-					projectionTypeKey: "object",
+					projectionTypeKey: projectionObjectType,
 					"properties": map[string]any{
 						"hue": map[string]any{projectionTypeKey: "integer"},
+					},
+				},
+				capabilityNormalizationName: map[string]any{
+					projectionTypeKey: projectionObjectType,
+					"x-go-tuya-numeric-constants": map[string]any{
+						"CapabilityScalePercentMaximum":    100,
+						"CapabilityScaleTemperatureTenths": 10,
 					},
 				},
 			},
@@ -58,6 +67,8 @@ func TestGenerateUntypedConstantsUsesSchemaNamesAndValues(t *testing.T) {
 	for _, expected := range []string{
 		capabilityPowerName + ` = "power"`,
 		`CapabilityTypeColorTemperature = "color-temperature"`,
+		"CapabilityScalePercentMaximum = 100",
+		"CapabilityScaleTemperatureTenths = 10",
 		`ProjectionPropertyColorCapabilityHue = "hue"`,
 	} {
 		if !strings.Contains(strings.Join(strings.Fields(string(generated)), " "), expected) {
@@ -110,6 +121,36 @@ func TestGenerateUntypedConstantsRejectsDuplicateValues(t *testing.T) {
 	}
 }
 
+func TestGenerateNumericProjectionConstantsRejectsInvalidValuesAndNames(t *testing.T) {
+	t.Parallel()
+
+	for name, constants := range map[string]map[string]any{
+		"non-integer value": {"CapabilityScalePercentMaximum": 100.5},
+		"unexported name":   {"percentageMaximum": 100},
+		"keyword name":      {"type": 100},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			document := map[string]any{
+				projectionComponentsKey: map[string]any{
+					projectionSchemasKey: map[string]any{
+						capabilityNormalizationName: map[string]any{
+							projectionTypeKey:             projectionObjectType,
+							"x-go-tuya-numeric-constants": constants,
+						},
+					},
+				},
+			}
+
+			_, err := generateUntypedConstants(document)
+			if !errors.Is(err, errInvalidProjectionSchema) {
+				t.Fatalf("invalid numeric constants accepted: %v", err)
+			}
+		})
+	}
+}
+
 func TestValidateConfigRequiresNativeImportsTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -155,7 +196,7 @@ func validProjectionConfig() map[string]any {
 		"generate": map[string]any{"models": true},
 		"output":   modelOutputPath,
 		"output-options": map[string]any{
-			"exclude-schemas":              []any{"ContactSensorTextValue", "RTCSessionCapability", "SDKEventType"},
+			"exclude-schemas":              []any{capabilityNormalizationName, "ContactSensorTextValue", "RTCSessionCapability", "SDKEventType"},
 			"skip-prune":                   true,
 			"prefer-skip-optional-pointer": true,
 			"prefer-skip-optional-pointer-on-container-types": true,

@@ -81,7 +81,7 @@ func run(check, generate bool) error {
 		return err
 	}
 
-	err = writeOrCheck("pkg/dependencymodels/properties.gen.go", propertyConstants, check)
+	err = writeOrCheck(propertiesGeneratedPath, propertyConstants, check)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func configureModelGroup(sources modelSources, group modelGroup, check, generate
 
 	output := "pkg/dependencymodels/" + group.Name + ".gen.go"
 	configuration := map[string]any{
-		"package":  "tuyamodels",
+		"package":  generatedModelPackageName,
 		"generate": map[string]any{"models": true},
 		"output":   output,
 		"output-options": map[string]any{

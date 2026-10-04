@@ -3,7 +3,10 @@ generate:
 output: pkg/dependencymodels/homes.gen.go
 output-options:
   exclude-schemas:
+    - AuthenticationOrigin
     - BooleanResultEnvelope
+    - CloudAPIOrigin
+    - CloudRegion
     - DeviceCommand
     - DeviceDetailsEnvelope
     - DeviceListByUserEnvelope
@@ -41,6 +44,7 @@ output-options:
     - MultiOutletNamesEnvelope
     - QRCodeEnvelope
     - QRCodeResult
+    - QRCodeTokenPrefix
     - RTCOfferBody
     - RTCSessionEnvelope
     - RTCSessionResult

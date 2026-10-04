@@ -4,6 +4,8 @@ output: pkg/dependencymodels/authentication.gen.go
 output-options:
   exclude-schemas:
     - BooleanResultEnvelope
+    - CloudAPIOrigin
+    - CloudRegion
     - DeviceCommand
     - DeviceDetailsEnvelope
     - DeviceListByUserEnvelope

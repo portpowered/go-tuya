@@ -8,6 +8,21 @@ import (
 	"fmt"
 )
 
+// Defines values for AuthenticationOrigin.
+const (
+	AuthenticationOriginDefault AuthenticationOrigin = "https://apigw.iotbing.com"
+)
+
+// Valid indicates whether the value is a known member of the AuthenticationOrigin enum.
+func (e AuthenticationOrigin) Valid() bool {
+	switch e {
+	case AuthenticationOriginDefault:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JSONMediaType.
 const (
 	JSONMediaTypeApplicationJSON JSONMediaType = "application/json"
@@ -22,6 +37,24 @@ func (e JSONMediaType) Valid() bool {
 		return false
 	}
 }
+
+// Defines values for QRCodeTokenPrefix.
+const (
+	QRCodeTokenPrefixSmartLife QRCodeTokenPrefix = "tuyaSmart--qrLogin?token="
+)
+
+// Valid indicates whether the value is a known member of the QRCodeTokenPrefix enum.
+func (e QRCodeTokenPrefix) Valid() bool {
+	switch e {
+	case QRCodeTokenPrefixSmartLife:
+		return true
+	default:
+		return false
+	}
+}
+
+// AuthenticationOrigin Implementation-derived default QR authentication origin.
+type AuthenticationOrigin string
 
 // JSONMediaType Implementation-derived JSON media type used by the QR authentication headers.
 type JSONMediaType string
@@ -87,6 +120,9 @@ type QRCodeResult struct {
 	Qrcode               *string                `json:"qrcode,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// QRCodeTokenPrefix Implementation-derived Smart Life QR token prefix; append the returned login code unchanged.
+type QRCodeTokenPrefix string
 
 // RefreshTokenEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
 type RefreshTokenEnvelope struct {

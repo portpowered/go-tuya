@@ -7,6 +7,9 @@ import (
 	"testing"
 )
 
+const capabilityPercentMaximumName = "CapabilityScalePercentMaximum"
+const capabilityTemperatureTenthsName = "CapabilityScaleTemperatureTenths"
+
 const schemaFixtureEnumKey = "enum"
 
 func TestInventoryIncludesUnreferencedExportedJSONModel(t *testing.T) {
@@ -72,6 +75,46 @@ func TestInventoryRejectsGeneratedEnumValueDrift(t *testing.T) {
 	err = validateGeneratedEnumValues(schemas, generated)
 	if err == nil {
 		t.Fatal("generated enum value drift was accepted")
+	}
+}
+
+func TestPublicNumericConstantsRequireExactGeneratedValuesAndUses(t *testing.T) {
+	t.Parallel()
+
+	schema := map[string]any{
+		"x-go-tuya-numeric-constants": map[string]any{
+			capabilityPercentMaximumName:    100,
+			capabilityTemperatureTenthsName: 10,
+		},
+	}
+	constants := []generatedConstant{
+		{name: capabilityPercentMaximumName, typeName: "", value: "100", file: publicValuesGeneratedPath, numeric: true},
+		{name: capabilityTemperatureTenthsName, typeName: "", value: "10", file: publicValuesGeneratedPath, numeric: true},
+	}
+	uses := map[string][]modelUse{
+		capabilityPercentMaximumName:    {{path: "pkg/tuya/capabilities.go", line: 10, name: capabilityPercentMaximumName}},
+		capabilityTemperatureTenthsName: {{path: "pkg/tuya/capabilities.go", line: 20, name: capabilityTemperatureTenthsName}},
+	}
+
+	err := validatePublicNumericConstants("CapabilityNormalization", schema, constants, uses)
+	if err != nil {
+		t.Fatalf("matching generated constants and production uses were rejected: %v", err)
+	}
+
+	constants[0].value = "99"
+
+	err = validatePublicNumericConstants("CapabilityNormalization", schema, constants, uses)
+	if err == nil {
+		t.Fatal("numeric constant drift was accepted")
+	}
+
+	constants[0].value = "100"
+
+	delete(uses, capabilityTemperatureTenthsName)
+
+	err = validatePublicNumericConstants("CapabilityNormalization", schema, constants, uses)
+	if err == nil {
+		t.Fatal("unreferenced numeric constant was accepted")
 	}
 }
 

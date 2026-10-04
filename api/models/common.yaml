@@ -1,5 +1,20 @@
 components:
   schemas:
+    CloudRegion:
+      type: string
+      description: Built-in cloud region identifiers accepted by the SDK.
+      enum: [CN, US, EU, IN]
+      x-enum-varnames: [CloudRegionChina, CloudRegionUS, CloudRegionEU, CloudRegionIndia]
+    CloudAPIOrigin:
+      type: string
+      description: Implementation-derived built-in Device Sharing cloud origins.
+      enum:
+      - https://openapi.tuyacn.com
+      - https://apigw.tuyaus.com
+      - https://openapi.tuyaeu.com
+      - https://openapi.tuyain.com
+      x-enum-varnames: [CloudAPIOriginChina, CloudAPIOriginUS, CloudAPIOriginEU, CloudAPIOriginIndia]
+      x-go-tuya-evidence: implementation-derived
     TuyaErrorEnvelope:
       type: object
       description: Extensible Tuya error response. Error fields vary by endpoint.

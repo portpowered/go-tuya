@@ -29,7 +29,7 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 
 	rtcSignaling := &recordingRTCSignaling{}
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPClient(httpClient),
 		WithClientID(clientFixtureSyntheticClientID),
 		WithAuthenticationURL("https://auth.example.test/"),
@@ -38,7 +38,7 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 		WithRTCSignaling(rtcSignaling),
 	)
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	firstTokens := Tokens{AccessToken: "synthetic-access-one", RefreshToken: "synthetic-refresh-one", ExpireTime: 1000}
@@ -94,12 +94,12 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 	}
 }
 
-func TestNewClientDefaults(t *testing.T) {
+func TestNewClientTransportDefaults(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -107,8 +107,8 @@ func TestNewClientDefaults(t *testing.T) {
 		t.Fatal("default network edges were not initialized")
 	}
 
-	if session.ClientID != clientID {
-		t.Errorf("ClientID = %q, want default %q", session.ClientID, clientID)
+	if session.ClientID != clientFixtureSyntheticClientID {
+		t.Errorf("ClientID = %q, want configured %q", session.ClientID, clientFixtureSyntheticClientID)
 	}
 
 	if session.AuthenticationURL != LoginURI {
@@ -123,9 +123,9 @@ func TestNewClientDefaults(t *testing.T) {
 func TestWithRegionSelectsCloudEndpoint(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient(WithRegion(TuyaRegionEU))
+	client, err := newSyntheticClient(WithRegion(TuyaRegionEU))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	if got, want := client.NewSession(Tokens{}).CloudAPIURL, regionAPIEndpointEU; got != want {
@@ -155,8 +155,8 @@ func TestNewClientRejectsInvalidOptions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, err := NewClient(test.option); err == nil {
-				t.Fatal("NewClient() error = nil, want validation error")
+			if _, err := newSyntheticClient(test.option); err == nil {
+				t.Fatal("newSyntheticClient() error = nil, want validation error")
 			}
 		})
 	}
@@ -170,7 +170,7 @@ func TestNewClientRejectsConflictingHTTPOptions(t *testing.T) {
 		{WithHTTPClient(&http.Client{}), WithHTTPTransport(transport)},
 		{WithHTTPTransport(transport), WithHTTPClient(&http.Client{})},
 	} {
-		if _, err := NewClient(options...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		if _, err := newSyntheticClient(options...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 			t.Fatalf("conflicting HTTP options: got %v", err)
 		}
 	}
@@ -195,13 +195,15 @@ func TestWithHTTPTransportIsUsedByAuthenticationRequests(t *testing.T) {
 		}, nil
 	})
 
-	client, err := NewClient(WithHTTPTransport(transport), WithAuthenticationURL("https://auth.example.test"))
+	client, err := newSyntheticClient(WithHTTPTransport(transport), WithAuthenticationURL("https://auth.example.test"))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
-	if _, err := session.AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{AccessCode: "synthetic-code"}); err == nil {
+	if _, err := session.AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{
+		Schema: authFixtureSchema, AccessCode: "synthetic-code",
+	}); err == nil {
 		t.Fatal("expected malformed empty mock response error")
 	}
 
@@ -220,9 +222,9 @@ func TestClientDoesNotRefreshTokensDuringRequests(t *testing.T) {
 		return nil, errTestRequestRequiresTokens
 	})
 
-	client, err := NewClient(WithHTTPTransport(transport))
+	client, err := newSyntheticClient(WithHTTPTransport(transport))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -265,9 +267,9 @@ func TestRTCSignalingCanBeReplaced(t *testing.T) {
 
 	signaling := &recordingRTCSignaling{}
 
-	client, err := NewClient(WithRTCSignaling(signaling))
+	client, err := newSyntheticClient(WithRTCSignaling(signaling))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -314,7 +316,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 
 	var receivedOptions *mqtt.ClientOptions
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPClient(server.Client()),
 		WithCloudAPIURL(server.URL),
 		WithMQTTClientFactory(func(options *mqtt.ClientOptions) mqtt.Client {
@@ -325,7 +327,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 		}),
 	)
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{AccessToken: clientFixtureSyntheticAccess, RefreshToken: syntheticRefreshFixture})
@@ -372,9 +374,9 @@ func (stubMQTTToken) Error() error { return nil }
 func TestCloseIsSafeWithoutRunningMessageQueue(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	if err := client.NewSession(Tokens{}).Close(context.Background()); err != nil {
@@ -412,12 +414,12 @@ func TestAuthClientHTTPTransportCanBeReusedAcrossSessions(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, err := NewClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL))
+	client, err := newSyntheticClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
-	request := LoginRequest{AccessCode: "synthetic-access-code"}
+	request := LoginRequest{Schema: authFixtureSchema, AccessCode: "synthetic-access-code"}
 	for range 2 {
 		_, err := client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(
 			context.Background(),
@@ -426,5 +428,22 @@ func TestAuthClientHTTPTransportCanBeReusedAcrossSessions(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateQrCodeForLogin() error = %v", err)
 		}
+	}
+}
+
+func newSyntheticClient(options ...Option) (*Client, error) {
+	fixtureOptions := make([]Option, 0, 1+len(options))
+	fixtureOptions = append(fixtureOptions, WithClientID(clientFixtureSyntheticClientID))
+	fixtureOptions = append(fixtureOptions, options...)
+
+	return NewClient(fixtureOptions...)
+}
+
+func TestNewClientRequiresApplicationIdentity(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewClient()
+	if err == nil || !strings.Contains(err.Error(), "client ID") {
+		t.Fatalf("NewClient() error = %v, want missing application identity", err)
 	}
 }

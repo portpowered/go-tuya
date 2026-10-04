@@ -1,16 +1,24 @@
 ---
 title: Upgrade to v0.4
-description: Adapt typed event constants when upgrading from v0.3.4.
+description: Configure application identity and adapt typed event constants.
 ---
 
 # Upgrade to v0.4
 
+Pass your application client ID with `tuya.WithClientID(applicationClientID)`
+when calling `NewClient`. Supply `LoginRequest.Schema` explicitly for QR login;
+the library no longer supplies a consumer application's identity or schema.
+The `AuthenticationSchema` constant has been removed; use your application's schema.
+The CLI accepts `TUYA_CLIENT_ID` and `TUYA_AUTH_SCHEMA`, or their corresponding
+flags. Replace `QueryDevicesByHomeAssistantDevices` with `QueryDevicesByHome`;
+the two methods previously sent the same request.
+
 The v0.4 release generates the SDK's public event and capability models from
-schemas. Eight existing constants now have explicit types; their values are
+schemas. Nine existing constants now have explicit types; their values are
 unchanged:
 
 - `BizcodeBindUser`, `BizcodeDelete`, `BizcodeDpNameUpdate`, `BizcodeNameUpdate`,
-  `BizcodeOffline`, and `BizcodeOnline` are `string` constants.
+  `BizcodeOffline`, `BizcodeOnline`, and `LoginURI` are `string` constants.
 - `ProtocolDeviceReport` and `ProtocolOther` are `int` constants.
 
 Code using ordinary `string` or `int` values needs no change. When assigning

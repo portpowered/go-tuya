@@ -16,6 +16,7 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 
 	// Check required environment variables
 	requiredEnvVars := []string{
+		"TUYA_CLIENT_ID",
 		"TUYA_AUTH_TOKEN",
 		"TUYA_REFRESH_TOKEN",
 		"TUYA_AUTH_TOKEN_EXPIRED",
@@ -37,7 +38,7 @@ func TestIntegration_DeviceManagementWorkflow(t *testing.T) {
 	}
 
 	// Create client with real credentials
-	base, err := NewClient()
+	base, err := NewClient(WithClientID(os.Getenv("TUYA_CLIENT_ID")))
 	if err != nil {
 		t.Fatalf("configure client: %v", err)
 	}

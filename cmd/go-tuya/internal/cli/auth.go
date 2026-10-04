@@ -78,7 +78,7 @@ func authCommand(ctx context.Context, args []string, config settings, input io.R
 func authQR(ctx context.Context, args []string, config settings, input io.Reader, out, errOut io.Writer, deps Dependencies) error {
 	flags := flag.NewFlagSet("auth qr", flag.ContinueOnError)
 	accessCodeFile := flags.String("access-code-file", "", "read the Tuya access code from a file")
-	schema := flags.String("schema", tuya.AuthenticationSchema, "Tuya authentication schema")
+	schema := flags.String("schema", os.Getenv("TUYA_AUTH_SCHEMA"), "required application authentication schema (or TUYA_AUTH_SCHEMA)")
 
 	rest, help, err := parseCommandFlags(flags, args, out, "Usage: go-tuya [global flags] auth qr [--access-code-file path] [--schema name]")
 	if err != nil || help {
@@ -87,6 +87,11 @@ func authQR(ctx context.Context, args []string, config settings, input io.Reader
 
 	if len(rest) != 0 {
 		return usageError("auth qr does not accept positional arguments")
+	}
+
+	err = validateQRApplication(*schema, config.clientID)
+	if err != nil {
+		return err
 	}
 
 	accessCode, err := readAccessCode(*accessCodeFile, input, errOut)
@@ -113,6 +118,18 @@ func authQR(ctx context.Context, args []string, config settings, input io.Reader
 	}
 
 	return displayLoginQR(config, out, errOut, deps, login.QrFormattedCode)
+}
+
+func validateQRApplication(schema, clientID string) error {
+	if strings.TrimSpace(schema) == "" {
+		return usageError("set --schema or TUYA_AUTH_SCHEMA to the application's authentication schema")
+	}
+
+	if strings.TrimSpace(clientID) == "" {
+		return usageError("set --client-id or TUYA_CLIENT_ID to the application's client ID")
+	}
+
+	return nil
 }
 
 func displayLoginQR(config settings, out, errOut io.Writer, deps Dependencies, value string) error {

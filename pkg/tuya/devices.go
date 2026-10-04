@@ -37,30 +37,6 @@ func (c *DevicesService) QueryDevicesByHome(ctx context.Context, req QueryDevice
 	}, nil
 }
 
-// QueryDevicesByHomeAssistantDevices fetches all devices for a given home using the Home Assistant devices endpoint.
-func (c *DevicesService) QueryDevicesByHomeAssistantDevices(ctx context.Context, req QueryDevicesByHomeRequest) (QueryDevicesByHomeResponse, error) {
-	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: &req.HomeID, DeviceIds: nil})
-	if err != nil {
-		return QueryDevicesByHomeResponse{}, err
-	}
-
-	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
-	if err != nil {
-		return QueryDevicesByHomeResponse{}, err
-	}
-
-	wireResponse, err := decodeWireResponse[wire.HomeDevicesEnvelope](resp)
-	if err != nil {
-		return QueryDevicesByHomeResponse{}, err
-	}
-
-	return QueryDevicesByHomeResponse{
-		Results: mapWireDevices(dereference(wireResponse.Result)),
-		Success: false,
-		Message: "",
-	}, nil
-}
-
 func mapWireDevices(records []wire.DeviceRecord) []Device {
 	devices := make([]Device, len(records))
 	for i, record := range records {

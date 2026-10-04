@@ -31,6 +31,15 @@ by default; set `--request-timeout` to adjust it for a local sandbox.
 
 ## Credentials
 
+Network commands require your application's client ID through `--client-id`
+or `TUYA_CLIENT_ID`. QR login also requires `--schema` or `TUYA_AUTH_SCHEMA`.
+Set both from your Tuya application configuration:
+
+```sh
+export TUYA_CLIENT_ID="<application-client-id>"
+export TUYA_AUTH_SCHEMA="<authentication-schema>"
+```
+
 The CLI stores token pairs in a protected file under the operating system's
 user configuration directory. Set `--token-file` and `--pending-file` to
 choose alternate paths. On Unix, credential files are restricted to the

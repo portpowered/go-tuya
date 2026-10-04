@@ -24,6 +24,7 @@ import (
 
 const (
 	fixtureClientID       = "synthetic-client-id"
+	fixtureClientIDFlag   = "--client-id"
 	fixtureAccess         = "synthetic-access-token"
 	fixtureRefresh        = "synthetic-refresh-token"
 	fixtureCloudURL       = "https://api.example.invalid"
@@ -33,6 +34,26 @@ const (
 	fixtureRotatedAccess  = "synthetic-rotated-access"
 	fixtureRotatedRefresh = "synthetic-rotated-refresh"
 )
+
+func TestQRRequiresApplicationConfigurationBeforeReadingCredentials(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		{fixtureClientIDFlag, fixtureClientID, "auth", "qr", "--schema", ""},
+		{fixtureClientIDFlag, "", "auth", "qr", "--schema", "synthetic-app-schema"},
+	} {
+		transport := &pairedTransport{pairs: nil, next: 0}
+
+		code, stdout, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+		if code != 2 || !strings.Contains(stderr, "application") || stdout != "" {
+			t.Fatalf("invalid application configuration: code=%d stdout=%q stderr=%q", code, stdout, stderr)
+		}
+
+		if strings.Contains(stderr, "access code") || strings.Contains(stderr, "Access code") {
+			t.Fatal("read credentials before validating application configuration")
+		}
+	}
+}
 
 type replayRequest struct {
 	Method  string              `json:"method"`
@@ -276,7 +297,7 @@ func commandArgs(tokenPath string, command ...string) []string {
 	args := make([]string, 0, 7+len(command))
 	args = append(args,
 		"--token-file", tokenPath,
-		"--client-id", fixtureClientID,
+		fixtureClientIDFlag, fixtureClientID,
 		"--cloud-api-url", fixtureCloudURL,
 		"--json",
 	)
@@ -338,8 +359,8 @@ func TestAuthQRPollPairedFlow(t *testing.T) {
 
 		return nil
 	}}
-	common := []string{"--token-file", tokenPath, "--pending-file", pendingPath, "--auth-url", fixtureAuthURL, "--client-id", fixtureClientID, "--json"}
-	qrArgs := append(append([]string{}, common...), "auth", "qr", "--access-code-file", accessCodePath)
+	common := []string{"--token-file", tokenPath, "--pending-file", pendingPath, "--auth-url", fixtureAuthURL, fixtureClientIDFlag, fixtureClientID, "--json"}
+	qrArgs := append(append([]string{}, common...), "auth", "qr", "--access-code-file", accessCodePath, "--schema", "synthetic-app-schema")
 
 	code, qrOutput, qrErrors := runCommand(qrArgs, transport, dependencies, strings.NewReader(""))
 	if code != 0 {

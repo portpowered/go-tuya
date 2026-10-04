@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
@@ -81,9 +82,9 @@ type RefreshTokenResponse struct {
 
 // GenerateQrCodeForLogin generates a QR code for login authentication.
 func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
-	schema := req.Schema
+	schema := strings.TrimSpace(req.Schema)
 	if schema == "" {
-		schema = AuthenticationSchema
+		return LoginResponse{}, clientError(ErrorInvalidOperation, errAuthenticationSchemaRequired)
 	}
 
 	query, err := wireQueryValues(wire.GenerateLoginQRCodeParams{
@@ -130,15 +131,9 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 		qrCode = dereference(loginResponse.Result.Qrcode)
 	}
 
-	// Possible response:
-	// Failed due to wrong URI: "{\"code\":\"-9999999\",\"msg\":\"app param is invalid\",\"t\":123,\"tid\":\"123\",\"success\":false}"
-	// Success: {"success":true,"tid":"123","t":123,"result":{"qrcode":"123"}}
-	// "https://openapi.tuyaus.com/v1.0/m/life/home-assistant/qrcode/tokens?clientid=123&usercode=12312&schema=haauthorize"
-	// The QRlogin has to be prefixed with: f"tuyaSmart--qrLogin?token=
-	// See: https://github.com/home-assistant/core/blob/dev/homeassistant/components/tuya/config_flow.py#L48
 	return LoginResponse{
 		Code:            qrCode,
-		QrFormattedCode: "tuyaSmart--qrLogin?token=" + qrCode,
+		QrFormattedCode: string(wire.QRCodeTokenPrefixSmartLife) + qrCode,
 	}, nil
 }
 

@@ -11,6 +11,7 @@ authentication endpoints when creating the reusable client:
 
 ```go
 client, err := tuya.NewClient(
+    tuya.WithClientID(applicationClientID),
     tuya.WithCloudAPIURL(cloudURL),
     tuya.WithAuthenticationURL(authenticationURL),
 )

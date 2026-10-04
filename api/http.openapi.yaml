@@ -35,7 +35,7 @@ paths:
       summary: Get device details
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -67,7 +67,7 @@ paths:
       summary: Delete a device
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -99,7 +99,7 @@ paths:
       summary: Modify a device name
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -138,7 +138,7 @@ paths:
       summary: Get devices under a specified user
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -189,7 +189,7 @@ paths:
       summary: Get a device list
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -264,7 +264,7 @@ paths:
       summary: Modify a data-point name
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -309,7 +309,7 @@ paths:
       summary: Query device logs
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -396,7 +396,7 @@ paths:
       summary: Restore device factory defaults
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -429,7 +429,7 @@ paths:
       summary: List devices under a gateway
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -462,7 +462,7 @@ paths:
       summary: Get device factory information
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -495,7 +495,7 @@ paths:
       summary: Add a device user
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -534,7 +534,7 @@ paths:
       summary: Delete a device user
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -572,7 +572,7 @@ paths:
       summary: Modify a device user
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -616,7 +616,7 @@ paths:
       summary: Get a device user
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -655,7 +655,7 @@ paths:
       summary: List users associated with a device
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -688,7 +688,7 @@ paths:
       summary: Modify a multi-outlet name
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -727,7 +727,7 @@ paths:
       summary: Get multi-outlet names
       description: Provider-documented in Tuya’s Device Management API reference.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body
-        data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Device management
       x-go-tuya-evidence: provider-documented
@@ -760,7 +760,7 @@ paths:
       summary: Explicitly refresh an access token
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Authentication
       x-go-tuya-evidence: implementation-derived
@@ -894,7 +894,7 @@ paths:
       summary: List homes for the authenticated user
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -917,7 +917,7 @@ paths:
       summary: List home devices or selected devices
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -953,7 +953,7 @@ paths:
       summary: Send device commands
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -989,7 +989,7 @@ paths:
       summary: Get device status mappings
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -1019,7 +1019,7 @@ paths:
       summary: Get device specifications
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -1049,7 +1049,7 @@ paths:
       summary: Get MQTT connection configuration
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -1078,7 +1078,7 @@ paths:
       summary: Start a WebRTC signaling session
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived
@@ -1114,7 +1114,7 @@ paths:
       summary: Stop a WebRTC signaling session
       description: Implementation-derived from go-tuya request encoding and synthetic
         route tests; not provider-verified. Route illustration only. Use pkg/tuya
-        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+        for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
       tags:
       - Tuya private routes
       x-go-tuya-evidence: implementation-derived

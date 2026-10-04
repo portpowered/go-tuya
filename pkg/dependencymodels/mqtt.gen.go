@@ -5,7 +5,6 @@ package tuyamodels
 type MQTTChannel string
 
 const (
-	MQTTChannelDeviceLocal  MQTTChannel = "{deviceTopic}/pen"
 	MQTTChannelDeviceStatus MQTTChannel = "{deviceTopic}/sta"
 	MQTTChannelOwnerEvents  MQTTChannel = "{ownerTopic}"
 )

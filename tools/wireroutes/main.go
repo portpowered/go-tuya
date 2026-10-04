@@ -383,6 +383,7 @@ func parseChannels(content string) ([]channel, error) {
 	var parser channelParser
 
 	for line := range strings.SplitSeq(content, "\n") {
+		line = strings.TrimSuffix(line, "\r")
 		if parser.addLine(line) {
 			break
 		}
@@ -576,6 +577,8 @@ func parseRoutes(content string) ([]route, error) {
 	var parser routeParser
 
 	for line := range strings.SplitSeq(content, "\n") {
+		line = strings.TrimSuffix(line, "\r")
+
 		done, err := parser.addLine(line)
 		if err != nil {
 			return nil, err

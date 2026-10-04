@@ -67,6 +67,20 @@ components:
       - ContactSensorTextValueOpen
       - ContactSensorTextValueFalse
       - ContactSensorTextValueClosed
+    CapabilityNormalization:
+      type: object
+      description: Numeric domains and scaling rules used by SDK capability projections.
+      x-go-tuya-numeric-constants:
+        CapabilityScaleHueCycleDegrees: 360
+        CapabilityScalePercentMinimum: 0
+        CapabilityScalePercentMaximum: 100
+        CapabilityScaleTuyaDataPointMaximum: 1000
+        CapabilityScaleExtendedBrightnessMinimum: 10
+        CapabilityScaleExtendedBrightnessRange: 990
+        CapabilityScaleColorHexComponentWidth: 4
+        CapabilityScaleMinimumColorTemperatureMireds: 153
+        CapabilityScaleMaximumColorTemperatureMireds: 500
+        CapabilityScaleTemperatureTenths: 10
     PowerState:
       type: string
       enum: [on, off]

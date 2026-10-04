@@ -1,5 +1,17 @@
 components:
   schemas:
+    AuthenticationOrigin:
+      type: string
+      description: Implementation-derived default QR authentication origin.
+      enum: [https://apigw.iotbing.com]
+      x-enum-varnames: [AuthenticationOriginDefault]
+      x-go-tuya-evidence: implementation-derived
+    QRCodeTokenPrefix:
+      type: string
+      description: Implementation-derived Smart Life QR token prefix; append the returned login code unchanged.
+      enum: ["tuyaSmart--qrLogin?token="]
+      x-enum-varnames: [QRCodeTokenPrefixSmartLife]
+      x-go-tuya-evidence: implementation-derived
     JSONMediaType:
       type: string
       description: Implementation-derived JSON media type used by the QR authentication headers.

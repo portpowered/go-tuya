@@ -41,6 +41,7 @@ var (
 	errNilClientOption                    = errors.New("client option")
 	errHTTPClientRequired                 = errors.New("HTTP client is required")
 	errClientIDRequired                   = errors.New("client ID must not be empty")
+	errAuthenticationSchemaRequired       = errors.New("authentication schema must not be empty")
 	errMQTTFactoryRequired                = errors.New("MQTT client factory is required")
 	errHTTPClientNil                      = errors.New("HTTP client must not be nil")
 	errHTTPOptionsConflict                = errors.New("HTTP client and transport options are mutually exclusive")

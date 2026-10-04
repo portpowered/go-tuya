@@ -11,6 +11,19 @@ const (
 )
 
 const (
+	CapabilityScaleColorHexComponentWidth        = 4
+	CapabilityScaleExtendedBrightnessMinimum     = 10
+	CapabilityScaleExtendedBrightnessRange       = 990
+	CapabilityScaleHueCycleDegrees               = 360
+	CapabilityScaleMaximumColorTemperatureMireds = 500
+	CapabilityScaleMinimumColorTemperatureMireds = 153
+	CapabilityScalePercentMaximum                = 100
+	CapabilityScalePercentMinimum                = 0
+	CapabilityScaleTemperatureTenths             = 10
+	CapabilityScaleTuyaDataPointMaximum          = 1000
+)
+
+const (
 	CapabilityTypePower             = "power"
 	CapabilityTypeBrightness        = "brightness"
 	CapabilityTypeColor             = "color"

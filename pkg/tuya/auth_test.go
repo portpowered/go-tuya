@@ -13,7 +13,7 @@ import (
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
 const (
-	authFixtureHaauthorize      = "haauthorize"
+	authFixtureSchema           = "synthetic-app-schema"
 	authFixtureResult           = "result"
 	authFixtureSuccess          = "success"
 	authFixtureTestAccessCode   = "test-access-code"
@@ -128,8 +128,8 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 			t.Errorf("Expected usercode=test-access-code, got %s", query.Get("usercode"))
 		}
 
-		if query.Get("schema") != authFixtureHaauthorize {
-			t.Errorf("Expected schema=haauthorize, got %s", query.Get("schema"))
+		if query.Get("schema") != authFixtureSchema {
+			t.Errorf("Expected schema=synthetic-app-schema, got %s", query.Get("schema"))
 		}
 
 		// Return successful response
@@ -145,7 +145,7 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 	// Test the method
 	req := LoginRequest{
 		AccessCode: authFixtureTestAccessCode,
-		Schema:     authFixtureHaauthorize,
+		Schema:     authFixtureSchema,
 	}
 
 	ctx := context.Background()
@@ -166,36 +166,28 @@ func TestAuthService_GenerateQrCodeForLogin_Success(t *testing.T) {
 	}
 }
 
-func TestAuthService_GenerateQrCodeForLogin_DefaultSchema(t *testing.T) {
+func TestAuthServiceGenerateQrCodeRejectsMissingSchema(t *testing.T) {
 	t.Parallel()
 
-	// Test that default schema is used when not provided
-	mockHandler := func(responseWriter http.ResponseWriter, request *http.Request) {
-		query := request.URL.Query()
-		if query.Get("schema") != AuthenticationSchema {
-			t.Errorf("Expected schema=%s, got %s", AuthenticationSchema, query.Get("schema"))
-		}
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		t.Error("missing schema reached the network")
 
-		response := syntheticQRCodeEnvelope(true)
+		return nil, errTestUnexpectedRequest
+	})
 
-		responseWriter.Header().Set("Content-Type", "application/json")
-		writeSyntheticJSONResponse(t, responseWriter, response)
-	}
-
-	authService, server := setupAuthServiceWithMockServer(mockHandler)
-	defer server.Close()
-
-	// Test with empty schema - should use default
-	req := LoginRequest{
-		AccessCode: authFixtureTestAccessCode,
-		Schema:     "", // Empty schema should use default
-	}
-
-	ctx := context.Background()
-
-	_, err := authService.GenerateQrCodeForLogin(ctx, req)
+	client, err := newSyntheticClient(WithHTTPTransport(transport))
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatal(err)
+	}
+
+	for _, schema := range []string{"", " \t"} {
+		_, err = client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{
+			AccessCode: authFixtureTestAccessCode,
+			Schema:     schema,
+		})
+		if err == nil || !strings.Contains(err.Error(), "authentication schema") {
+			t.Fatalf("GenerateQrCodeForLogin() error = %v, want missing schema", err)
+		}
 	}
 }
 
@@ -216,7 +208,7 @@ func TestAuthService_GenerateQrCodeForLogin_Failure(t *testing.T) {
 	// Test the method
 	req := LoginRequest{
 		AccessCode: authFixtureTestAccessCode,
-		Schema:     authFixtureHaauthorize,
+		Schema:     authFixtureSchema,
 	}
 
 	ctx := context.Background()
@@ -246,7 +238,7 @@ func TestAuthService_GenerateQrCodeForLogin_MalformedJSON(t *testing.T) {
 
 	req := LoginRequest{
 		AccessCode: authFixtureTestAccessCode,
-		Schema:     authFixtureHaauthorize,
+		Schema:     authFixtureSchema,
 	}
 
 	ctx := context.Background()
@@ -503,7 +495,7 @@ func TestAuthService_GenerateQrCodeForLogin_HTTPError(t *testing.T) {
 
 	req := LoginRequest{
 		AccessCode: authFixtureTestAccessCode,
-		Schema:     authFixtureHaauthorize,
+		Schema:     authFixtureSchema,
 	}
 
 	ctx := context.Background()

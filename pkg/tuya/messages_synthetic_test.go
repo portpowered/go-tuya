@@ -26,7 +26,7 @@ type syntheticMQTTMessage struct {
 func TestSyntheticMessageQueueStartReportsConnectionFailure(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestSyntheticMessageQueueStartReportsConnectionFailure(t *testing.T) {
 func TestSyntheticMessageQueueStopWaitsForReconnect(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestSyntheticMessageQueueStopWaitsForReconnect(t *testing.T) {
 func TestSyntheticMessageDeliveryAppliesBackpressure(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func (c *syntheticMQTTClient) Disconnect(uint) { c.disconnects++ }
 func TestSyntheticMessageQueueListeners(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,10 +310,6 @@ func TestSyntheticMessageQueueListeners(t *testing.T) {
 		t.Fatalf("unsubscriptions = %v", broker.unsubscriptions)
 	}
 
-	if got := state.getDeviceTopic(messagesFixtureDevice1, true); got != "cloud/device/device-1/in/channel/pen" {
-		t.Fatalf("local topic = %q", got)
-	}
-
 	if got := state.extractDeviceIDFromTopic(messagesFixtureCloudDeviceDevice1InChannelSta); got != messagesFixtureDevice1 {
 		t.Fatalf("extracted device = %q", got)
 	}
@@ -323,7 +319,7 @@ func TestSyntheticMessageQueueListeners(t *testing.T) {
 func TestSyntheticMessageQueueLifecycle(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
 		t.Fatal(err)
 	}

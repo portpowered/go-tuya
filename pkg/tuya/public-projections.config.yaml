@@ -4,6 +4,7 @@ generate:
 output: pkg/tuya/public_projections.gen.go
 output-options:
   exclude-schemas:
+  - CapabilityNormalization
   - ContactSensorTextValue
   - RTCSessionCapability
   - SDKEventType

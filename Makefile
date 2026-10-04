@@ -15,8 +15,9 @@ wire-routes:
 	$(GO) run ./tools/wireroutes -check
 
 generate-wire:
-	$(GO) run ./tools/wiremodels -generate
+# Public numeric bindings are checked by the wire inventory, so generate them first.
 	$(GO) run ./tools/publicmodels -generate
+	$(GO) run ./tools/wiremodels -generate
 	$(GO) run ./tools/wireroutes
 
 build:

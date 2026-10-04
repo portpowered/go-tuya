@@ -29,7 +29,7 @@ func main() {
 	ctx := context.Background()
 	request := tuya.Request{AuthorizationContext: nil} //nolint:exhaustruct,exhaustruct_v5 // The deprecated refresh switch intentionally stays zero.
 
-	base, err := tuya.NewClient()
+	base, err := tuya.NewClient(tuya.WithClientID(os.Getenv("TUYA_CLIENT_ID")))
 	if err != nil {
 		log.Fatal("could not configure the Tuya client")
 	}

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -128,7 +129,11 @@ func validateConfig(config map[string]any) error {
 
 func validPointerOptions(options map[string]any) bool {
 	excludedSchemas, validExclusions := options["exclude-schemas"].([]any)
-	if !validExclusions || !reflect.DeepEqual(excludedSchemas, []any{"ContactSensorTextValue", "RTCSessionCapability", "SDKEventType"}) {
+
+	expectedExclusions := []any{
+		"CapabilityNormalization", "ContactSensorTextValue", "RTCSessionCapability", "SDKEventType",
+	}
+	if !validExclusions || !reflect.DeepEqual(excludedSchemas, expectedExclusions) {
 		return false
 	}
 
@@ -232,6 +237,13 @@ func writeUntypedSchema(output *strings.Builder, schemaName string, schema map[s
 		generated = true
 	}
 
+	numericConstants, err := writeProjectionNumericConstants(output, schemaName, schema, seenNames)
+	if err != nil {
+		return false, err
+	}
+
+	generated = generated || numericConstants
+
 	err = writeProjectionProperties(output, schemaName, schema, seenNames)
 	if err != nil {
 		return false, err
@@ -240,6 +252,76 @@ func writeUntypedSchema(output *strings.Builder, schemaName string, schema map[s
 	properties, hasProperties := schema["properties"].(map[string]any)
 
 	return generated || (hasProperties && len(properties) > 0), nil
+}
+
+func writeProjectionNumericConstants(output *strings.Builder, schemaName string, schema map[string]any, seenNames map[string]bool) (bool, error) {
+	rawConstants, hasConstants := schema["x-go-tuya-numeric-constants"]
+	if !hasConstants {
+		return false, nil
+	}
+
+	constants, validConstants := rawConstants.(map[string]any)
+
+	properties, hasProperties := schema["properties"].(map[string]any)
+
+	if !validNumericConstantSchema(schema, constants, validConstants, properties, hasProperties) {
+		return false, fmt.Errorf("schema %q has invalid numeric constants: %w", schemaName, errInvalidProjectionSchema)
+	}
+
+	names := make([]string, 0, len(constants))
+	for name := range constants {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	values := make(map[string]string, len(constants))
+
+	for _, name := range names {
+		value, err := projectionNumericConstant(schemaName, name, constants[name], seenNames)
+		if err != nil {
+			return false, err
+		}
+
+		seenNames[name] = true
+		values[name] = value
+	}
+
+	output.WriteString("const (\n")
+
+	for _, name := range names {
+		fmt.Fprintf(output, "\t%s = %s\n", name, values[name])
+	}
+
+	output.WriteString(")\n\n")
+
+	return true, nil
+}
+
+func validNumericConstantSchema(schema map[string]any, constants map[string]any, validConstants bool, properties map[string]any, hasProperties bool) bool {
+	return schema["type"] == "object" && validConstants && len(constants) > 0 && (!hasProperties || len(properties) == 0)
+}
+
+func projectionNumericConstant(schemaName, name string, rawValue any, seenNames map[string]bool) (string, error) {
+	value, validValue := projectionInteger(rawValue)
+	if !token.IsIdentifier(name) || name == "_" || name == "" || !unicode.IsUpper([]rune(name)[0]) || seenNames[name] || !validValue {
+		return "", fmt.Errorf("schema %q has invalid or duplicate numeric constant %q: %w", schemaName, name, errInvalidProjectionSchema)
+	}
+
+	return value, nil
+}
+
+func projectionInteger(value any) (string, bool) {
+	switch value := value.(type) {
+	case int:
+		return strconv.Itoa(value), true
+	case int64:
+		return strconv.FormatInt(value, 10), true
+	case uint64:
+		return strconv.FormatUint(value, 10), true
+	default:
+		return "", false
+	}
 }
 
 func writeEmptyProjectionMarker(output *strings.Builder, schemaName string, schema map[string]any) error {
@@ -369,7 +451,7 @@ func checkGeneratedModel() error {
 		},
 		"output": temporaryOutput,
 		"output-options": map[string]any{
-			"exclude-schemas":              []any{"ContactSensorTextValue", "RTCSessionCapability", "SDKEventType"},
+			"exclude-schemas":              []any{"CapabilityNormalization", "ContactSensorTextValue", "RTCSessionCapability", "SDKEventType"},
 			"skip-prune":                   true,
 			"prefer-skip-optional-pointer": true,
 			"prefer-skip-optional-pointer-on-container-types": true,

@@ -3,6 +3,7 @@ generate:
 output: pkg/dependencymodels/common.gen.go
 output-options:
   exclude-schemas:
+    - AuthenticationOrigin
     - DeviceCommand
     - DeviceDetailsEnvelope
     - DeviceListByUserEnvelope
@@ -43,6 +44,7 @@ output-options:
     - MultiOutletNamesEnvelope
     - QRCodeEnvelope
     - QRCodeResult
+    - QRCodeTokenPrefix
     - RTCOfferBody
     - RTCSessionEnvelope
     - RTCSessionResult

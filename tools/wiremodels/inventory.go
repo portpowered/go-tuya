@@ -19,13 +19,19 @@ import (
 )
 
 const generatedModelImport = "github.com/portpowered/go-tuya/pkg/dependencymodels"
+const publicValuesGeneratedPath = "pkg/tuya/public_values.gen.go"
+const propertiesGeneratedPath = "pkg/dependencymodels/properties.gen.go"
 
 var (
-	errAnonymousJSONObject   = errors.New("anonymous JSON objects require named schema components")
-	errMissingGeneratedType  = errors.New("schema component has no generated Go type")
-	errMissingEnumDefinition = errors.New("schema enum owner has no definition")
-	errGeneratedEnumMembers  = errors.New("generated enum members differ from schema values")
-	errGeneratedEnumNames    = errors.New("generated enum variable names differ from schema values")
+	errAnonymousJSONObject    = errors.New("anonymous JSON objects require named schema components")
+	errMissingGeneratedType   = errors.New("schema component has no generated Go type")
+	errMissingEnumDefinition  = errors.New("schema enum owner has no definition")
+	errGeneratedEnumMembers   = errors.New("generated enum members differ from schema values")
+	errGeneratedEnumNames     = errors.New("generated enum variable names differ from schema values")
+	errInvalidNumericSchema   = errors.New("public schema has invalid numeric constant values")
+	errNumericConstantDrift   = errors.New("public numeric constant differs from schema")
+	errUnusedNumericConstant  = errors.New("public numeric constant has no production use")
+	errUnownedNumericConstant = errors.New("generated numeric public constant is not owned by schema")
 )
 
 const emptyMarkdownCell = "—"
@@ -58,6 +64,7 @@ type generatedConstant struct {
 	typeName string
 	value    string
 	file     string
+	numeric  bool
 }
 
 type sourceFile struct {
@@ -76,61 +83,87 @@ type sourceInventory struct {
 	anonymous      []string
 }
 
+type wireInventoryInputs struct {
+	inventory      sourceInventory
+	schemas        map[string]any
+	generatedFiles map[string]string
+	enumMembers    map[string][]string
+	enumValues     map[string]map[string]string
+	keyValues      map[string]string
+}
+
+func prepareWireInventoryInputs(sources modelSources) (wireInventoryInputs, error) {
+	var inputs wireInventoryInputs
+
+	var err error
+
+	inputs.inventory, err = collectProductionInventory()
+	if err != nil {
+		return inputs, err
+	}
+
+	inputs.schemas, err = componentSchemas(sources.bundle)
+	if err != nil {
+		return inputs, err
+	}
+
+	inputs.generatedFiles, inputs.enumMembers, inputs.enumValues, err = inspectGeneratedModelFiles(sources.manifest)
+	if err != nil {
+		return inputs, err
+	}
+
+	validation := []func() error{
+		func() error { return checkUnregisteredGeneratedModelFiles(inputs.generatedFiles) },
+		func() error { return validateSchemaGeneratedTypes(inputs.schemas, inputs.generatedFiles) },
+		func() error { return validateGeneratedEnumValues(inputs.schemas, inputs.enumValues) },
+		func() error { return checkGeneratedWireConstructions(inputs.generatedFiles) },
+	}
+	for _, check := range validation {
+		err = check()
+		if err != nil {
+			return inputs, err
+		}
+	}
+
+	inputs.keyValues, err = inspectGeneratedWireKeyConstants()
+	if err != nil {
+		return inputs, err
+	}
+
+	return inputs, nil
+}
+
 func generateWireModelInventory(sources modelSources) ([]byte, error) {
-	inventory, err := collectProductionInventory()
-	if err != nil {
-		return nil, err
-	}
-
-	schemas, err := componentSchemas(sources.bundle)
-	if err != nil {
-		return nil, err
-	}
-
-	generatedFiles, enumMembers, enumValues, err := inspectGeneratedModelFiles(sources.manifest)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validateSchemaGeneratedTypes(schemas, generatedFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validateGeneratedEnumValues(schemas, enumValues)
-	if err != nil {
-		return nil, err
-	}
-
-	keyValues, err := inspectGeneratedWireKeyConstants()
+	inputs, err := prepareWireInventoryInputs(sources)
 	if err != nil {
 		return nil, err
 	}
 
 	operations := inventoryOperations(sources.bundle)
-	componentParents, componentRoots := schemaInventoryGraph(sources.bundle, schemas)
+	componentParents, componentRoots := schemaInventoryGraph(sources.bundle, inputs.schemas)
 
 	var output strings.Builder
 
 	writeInventoryHeader(&output)
 
-	writeHTTPInventoryRows(&output, operations, inventory.operationUses)
+	writeHTTPInventoryRows(&output, operations, inputs.inventory.operationUses)
 
-	err = writeMQTTInventory(&output, inventory.wireUses)
+	err = writeMQTTInventory(&output, inputs.inventory.wireUses)
 	if err != nil {
 		return nil, err
 	}
 
-	writeWireComponentInventory(&output, sources, schemas, generatedFiles, enumMembers, inventory.wireUses, componentParents, componentRoots)
-	writePrimitiveBindings(&output, schemas, enumValues, keyValues, inventory.wireUses)
+	writeWireComponentInventory(&output, sources, inputs.schemas, inputs.generatedFiles, inputs.enumMembers,
+		inputs.inventory.wireUses, componentParents, componentRoots)
+	writePrimitiveBindings(&output, inputs.schemas, inputs.enumValues, inputs.keyValues, inputs.inventory.wireUses)
 
-	err = writePublicProjectionInventory(&output, inventory.publicUses)
+	err = writePublicProjectionInventory(&output, inputs.inventory.publicUses)
 	if err != nil {
 		return nil, err
 	}
 
-	writeHandwrittenPopulation(&output, inventory.models)
-	writeJSONBoundaries(&output, inventory.jsonBoundaries, inventory.codecs)
+	writeHandwrittenPopulation(&output, inputs.inventory.models)
+	writeJSONBoundaries(&output, inputs.inventory.jsonBoundaries, inputs.inventory.codecs)
 
 	return []byte(output.String()), nil
 }
@@ -497,6 +530,12 @@ func writePublicProjectionRows(output *strings.Builder, schemas map[string]any, 
 
 	for _, name := range names {
 		schema, _ := schemas[name].(map[string]any)
+
+		err := validatePublicNumericConstants(name, schema, constants, uses)
+		if err != nil {
+			return err
+		}
+
 		generated, properties, componentUses := publicProjectionRow(name, schema, constants, uses)
 		fmt.Fprintf(output, "| `%s` | %s | %s | %s |\n", name,
 			markdownCell(strings.Join(generated, ", ")), markdownCell(strings.Join(properties, ", ")),
@@ -514,6 +553,10 @@ func publicProjectionRow(name string, schema map[string]any, constants []generat
 		properties = append(properties, "enum: "+strings.Join(values, ", "))
 	}
 
+	if numeric := schemaNumericConstants(schema); len(numeric) > 0 {
+		properties = append(properties, "numeric constants: "+strings.Join(schemaNumericConstantDisplay(numeric), ", "))
+	}
+
 	generated := publicProjectionGeneratedValues(name, schema, declarationFile, constants)
 	componentUses := publicProjectionUses(name, schema, constants, uses)
 
@@ -524,8 +567,8 @@ func publicProjectionRow(name string, schema map[string]any, constants []generat
 }
 
 func publicProjectionDeclarationFile(name string, schema map[string]any) string {
-	if name == "RTCSessionCapability" || schema["x-go-tuya-generate-untyped-constants"] == true {
-		return "pkg/tuya/public_values.gen.go"
+	if name == "RTCSessionCapability" || schema["x-go-tuya-generate-untyped-constants"] == true || schema["x-go-tuya-numeric-constants"] != nil {
+		return publicValuesGeneratedPath
 	}
 
 	return "pkg/tuya/public_projections.gen.go"
@@ -539,7 +582,12 @@ func publicProjectionGeneratedValues(name string, schema map[string]any, declara
 
 	for _, constant := range constants {
 		if publicProjectionConstantMatches(name, schema, constant) {
-			generated = append(generated, fmt.Sprintf("`%s`: %s=%s", constant.file, constant.name, strconv.Quote(constant.value)))
+			value := strconv.Quote(constant.value)
+			if constant.numeric {
+				value = constant.value
+			}
+
+			generated = append(generated, fmt.Sprintf("`%s`: %s=%s", constant.file, constant.name, value))
 		}
 	}
 
@@ -551,11 +599,107 @@ func publicProjectionConstantMatches(name string, schema map[string]any, constan
 		return true
 	}
 
+	if numeric := schemaNumericConstants(schema); numeric != nil {
+		_, exists := numeric[constant.name]
+
+		return exists
+	}
+
 	if schema["x-go-tuya-generate-untyped-constants"] != true {
 		return false
 	}
 
 	return slices.Contains(schemaEnumVariableNames(schema), constant.name)
+}
+
+func schemaNumericConstants(schema map[string]any) map[string]string {
+	rawConstants, hasConstants := schema["x-go-tuya-numeric-constants"]
+	if !hasConstants {
+		return nil
+	}
+
+	constants, validConstants := rawConstants.(map[string]any)
+	if !validConstants {
+		return nil
+	}
+
+	values := make(map[string]string, len(constants))
+
+	for name, rawValue := range constants {
+		switch value := rawValue.(type) {
+		case int:
+			values[name] = strconv.Itoa(value)
+		case int64:
+			values[name] = strconv.FormatInt(value, 10)
+		case uint64:
+			values[name] = strconv.FormatUint(value, 10)
+		default:
+			return nil
+		}
+	}
+
+	return values
+}
+
+func schemaNumericConstantDisplay(values map[string]string) []string {
+	names := sortedNumericConstantNames(values)
+
+	display := make([]string, 0, len(names))
+	for _, name := range names {
+		display = append(display, name+"="+values[name])
+	}
+
+	return display
+}
+
+func sortedNumericConstantNames(values map[string]string) []string {
+	names := make([]string, 0, len(values))
+	for name := range values {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+//nolint:cyclop // Each branch checks one ownership, value, or production-use invariant.
+func validatePublicNumericConstants(schemaName string, schema map[string]any, constants []generatedConstant, uses map[string][]modelUse) error {
+	expected := schemaNumericConstants(schema)
+	if schema["x-go-tuya-numeric-constants"] != nil && expected == nil {
+		return fmt.Errorf("%w: %s", errInvalidNumericSchema, schemaName)
+	}
+
+	if expected == nil {
+		return nil
+	}
+
+	actual := make(map[string]string)
+
+	for _, constant := range constants {
+		if constant.numeric && constant.file == publicValuesGeneratedPath {
+			actual[constant.name] = constant.value
+		}
+	}
+
+	for _, name := range sortedNumericConstantNames(expected) {
+		value := expected[name]
+		if actual[name] != value {
+			return fmt.Errorf("%w: schema %s, constant %s=%s, generated %s", errNumericConstantDrift, schemaName, name, value, actual[name])
+		}
+
+		if len(uses[name]) == 0 {
+			return fmt.Errorf("%w: schema %s, constant %s", errUnusedNumericConstant, schemaName, name)
+		}
+	}
+
+	for name := range actual {
+		if _, exists := expected[name]; !exists {
+			return fmt.Errorf("%w: %s, schema %s", errUnownedNumericConstant, name, schemaName)
+		}
+	}
+
+	return nil
 }
 
 func publicProjectionUses(name string, schema map[string]any, constants []generatedConstant, uses map[string][]modelUse) []modelUse {
@@ -1464,7 +1608,7 @@ func schemaDefinitionForOwner(schemas map[string]any, owner string) map[string]a
 }
 
 func inspectGeneratedWireKeyConstants() (map[string]string, error) {
-	path := "pkg/dependencymodels/properties.gen.go"
+	path := propertiesGeneratedPath
 	// #nosec G304 -- generated output path is fixed and repository-owned.
 	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 	if err != nil {
@@ -1564,7 +1708,11 @@ func constantsFromPublicValueSpec(valueSpec *ast.ValueSpec, path string) []gener
 			continue
 		}
 
-		generated := generatedConstant{name: name.Name, typeName: "", value: value, file: filepath.ToSlash(path)}
+		generated := generatedConstant{name: name.Name, typeName: "", value: value, file: filepath.ToSlash(path), numeric: false}
+		if literal, isLiteral := valueSpec.Values[index].(*ast.BasicLit); isLiteral && literal.Kind != token.STRING {
+			generated.numeric = true
+		}
+
 		if typeName != nil {
 			generated.typeName = typeName.Name
 		}

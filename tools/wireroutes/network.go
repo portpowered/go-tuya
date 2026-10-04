@@ -489,6 +489,10 @@ func validateHTTPBoundary(file *ast.File, imports map[string]string) error {
 		return fmt.Errorf("HTTP request must use the generated method and validated URL before send: %w", errNetworkBoundary)
 	}
 
+	if !httpRequestIsUnmodified(requestFunction, requestCall, sendCall) {
+		return fmt.Errorf("HTTP request must remain unchanged between construction and injected send: %w", errNetworkBoundary)
+	}
+
 	return validateHTTPBoundarySend(file, imports, requestFunction, requestCall, sendCall, httpAlias, wireAlias)
 }
 
@@ -558,6 +562,94 @@ func validHTTPURLBindings(function *ast.FuncDecl, keyCall, urlCall indexedCall) 
 func validHTTPRequestBindings(function *ast.FuncDecl, requestCall, sendCall indexedCall, httpAlias string) bool {
 	return assignedTo(requestCall, "request") && requestConstructionUsesInputs(requestCall.call, httpAlias) &&
 		hasErrorReturnGuard(function, requestCall.index, sendCall.index)
+}
+
+func httpRequestIsUnmodified(function *ast.FuncDecl, requestCall, sendCall indexedCall) bool {
+	allowed := allowedHTTPBoundaryRequestUses(function, requestCall, sendCall)
+
+	return httpBoundaryRequestHasNoOtherUses(function, requestCall, sendCall, allowed)
+}
+
+func allowedHTTPBoundaryRequestUses(function *ast.FuncDecl, requestCall, sendCall indexedCall) map[token.Pos]bool {
+	allowed := make(map[token.Pos]bool)
+	requestStart := requestCall.call.End()
+
+	if len(sendCall.call.Args) == 1 && isIdentifier(sendCall.call.Args[0], "request") {
+		allowed[sendCall.call.Args[0].Pos()] = true
+	}
+
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		rangeStatement, isRange := node.(*ast.RangeStmt)
+		if isRange && isValidatedHeaderLoop(rangeStatement, requestStart, sendCall.call.Pos()) {
+			allowHeaderLoopRequestUse(rangeStatement, requestStart, sendCall.call.Pos(), allowed)
+		}
+
+		return true
+	})
+
+	return allowed
+}
+
+func isValidatedHeaderLoop(statement *ast.RangeStmt, requestStart, sendStart token.Pos) bool {
+	return isIdentifier(statement.X, "headers") && statement.Pos() >= requestStart && statement.End() <= sendStart
+}
+
+func allowHeaderLoopRequestUse(statement *ast.RangeStmt, requestStart, sendStart token.Pos, allowed map[token.Pos]bool) {
+	ast.Inspect(statement.Body, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall || !headerSetUsesLoopValues(call, statement) {
+			return true
+		}
+
+		request := validatedHeaderRequestReceiver(call)
+		if request != nil && request.Pos() >= requestStart && request.End() <= sendStart {
+			allowed[request.Pos()] = true
+		}
+
+		return true
+	})
+}
+
+func validatedHeaderRequestReceiver(call *ast.CallExpr) *ast.Ident {
+	method, isMethod := call.Fun.(*ast.SelectorExpr)
+	if !isMethod || method.Sel.Name != "Set" {
+		return nil
+	}
+
+	header, isHeader := method.X.(*ast.SelectorExpr)
+	if !isHeader || header.Sel.Name != "Header" {
+		return nil
+	}
+
+	request, isRequest := header.X.(*ast.Ident)
+	if !isRequest || request.Name != "request" {
+		return nil
+	}
+
+	return request
+}
+
+func httpBoundaryRequestHasNoOtherUses(function *ast.FuncDecl, requestCall, sendCall indexedCall, allowed map[token.Pos]bool) bool {
+	requestStart := requestCall.call.End()
+	requestEnd := sendCall.call.End()
+	valid := true
+
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		identifier, isIdentifier := node.(*ast.Ident)
+		if !isIdentifier || identifier.Name != "request" || identifier.Pos() < requestStart || identifier.Pos() > requestEnd {
+			return true
+		}
+
+		if !allowed[identifier.Pos()] {
+			valid = false
+
+			return false
+		}
+
+		return true
+	})
+
+	return valid
 }
 
 func validHTTPSendBindings(

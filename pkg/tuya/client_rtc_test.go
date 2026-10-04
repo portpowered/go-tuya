@@ -34,7 +34,7 @@ func setupRTCTestClient(handler http.HandlerFunc) (*Session, *httptest.Server) {
 	cloudURL := server.URL
 	clientID := rtcFixtureTestClientID
 
-	base, err := NewClient(
+	base, err := newSyntheticClient(
 		WithHTTPClient(server.Client()),
 		WithCloudAPIURL(cloudURL),
 		WithClientID(clientID),

@@ -5,6 +5,10 @@ description: Sign in with QR approval and manage Tuya credentials explicitly.
 
 # Authentication
 
+Supply your application's client ID with `WithClientID` and its authentication
+schema in `LoginRequest.Schema`. Both are required; obtain their values from
+your application's Tuya configuration.
+
 The Device Sharing flow starts with `GenerateQrCodeForLogin`. Show its
 `QrFormattedCode` in a QR-capable app, wait for the account owner to approve,
 then validate the returned login code. This example creates a reusable client
@@ -16,6 +20,7 @@ Reference: [QR challenge](../../openapi/authentication/generateLoginQRCode),
 
 ```go
 base, err := tuya.NewClient(
+    tuya.WithClientID(applicationClientID),
     tuya.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
     tuya.WithRegion(tuya.TuyaRegionUS),
 )
@@ -28,7 +33,7 @@ defer session.Close(ctx)
 
 login, err := session.AuthService.GenerateQrCodeForLogin(ctx, tuya.LoginRequest{
     AccessCode: accessCode,
-    Schema:     tuya.AuthenticationSchema,
+    Schema:     authenticationSchema,
 })
 if err != nil {
     return err
@@ -63,7 +68,7 @@ calls both login methods. From `examples/auth`, run it with the access code in
 an environment variable:
 
 ```sh
-TUYA_ACCESS_CODE="<access-code>" go run .
+TUYA_CLIENT_ID="<application-client-id>" TUYA_AUTH_SCHEMA="<authentication-schema>" TUYA_ACCESS_CODE="<access-code>" go run .
 ```
 
 Use `WithHTTPClient` or `WithHTTPTransport` to set a timeout or custom

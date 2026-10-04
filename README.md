@@ -35,8 +35,9 @@ import (
     "github.com/portpowered/go-tuya/pkg/tuya"
 )
 
-func listHomes(ctx context.Context, accessToken, refreshToken string, expiryMilliseconds int64) error {
+func listHomes(ctx context.Context, applicationClientID, accessToken, refreshToken string, expiryMilliseconds int64) error {
     base, err := tuya.NewClient(
+        tuya.WithClientID(applicationClientID),
         tuya.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
         tuya.WithRegion(tuya.TuyaRegionUS),
     )

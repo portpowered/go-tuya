@@ -99,7 +99,7 @@ Global flags:
   --pending-file path     Pending QR login file (default: user config directory)
   --cloud-api-url url     Cloud API base URL override
   --auth-url url          Authentication API base URL override
-  --client-id id          Tuya application client ID override
+  --client-id id          Required application client ID (or TUYA_CLIENT_ID)
   --http-proxy url        HTTP proxy for local sandbox testing
   --mqtt-broker-url url   MQTT broker override for sandbox testing
   --request-timeout time  Per-request deadline (default: 30s)
@@ -124,7 +124,7 @@ func Run(ctx context.Context, args []string, input io.Reader, out, errOut io.Wri
 		pendingFile:       filepath.Join(configDir, "go-tuya", "pending-login.json"),
 		cloudAPIURL:       "",
 		authenticationURL: "",
-		clientID:          "",
+		clientID:          os.Getenv("TUYA_CLIENT_ID"),
 		httpProxy:         "",
 		mqttBrokerURL:     "",
 		requestTimeout:    defaultRequestTimeout,
@@ -167,7 +167,7 @@ func parseGlobalOptions(args []string, config *settings, out, errOut io.Writer) 
 	flags.StringVar(&config.pendingFile, "pending-file", config.pendingFile, "pending QR login file")
 	flags.StringVar(&config.cloudAPIURL, "cloud-api-url", "", "cloud API base URL override")
 	flags.StringVar(&config.authenticationURL, "auth-url", "", "authentication API base URL override")
-	flags.StringVar(&config.clientID, "client-id", "", "Tuya application client ID override")
+	flags.StringVar(&config.clientID, "client-id", config.clientID, "application client ID (or TUYA_CLIENT_ID)")
 	flags.StringVar(&config.httpProxy, "http-proxy", "", "HTTP proxy URL for sandbox testing")
 	flags.StringVar(&config.mqttBrokerURL, "mqtt-broker-url", "", "MQTT broker URL override for sandbox testing")
 	flags.DurationVar(&config.requestTimeout, "request-timeout", defaultRequestTimeout, "per-request timeout")

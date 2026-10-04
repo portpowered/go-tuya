@@ -615,19 +615,6 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	}
 }
 
-// getDeviceTopic constructs device topic from device ID and support_local flag.
-func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) string {
-	topic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
-	if supportLocal {
-		// When a device supports local, we do the mapping between the data point id and the more comprehensible name.
-		// i.e. dp1 -> led_dimmer_1.
-		// To do this, each device needs to maintain the corresponding specification strategy with it for local transformations.
-		return channelAddress(wire.MQTTChannelDeviceLocal, topic)
-	}
-
-	return channelAddress(wire.MQTTChannelDeviceStatus, topic)
-}
-
 // extractDeviceIDFromTopic extracts device ID from topic string.
 func (state *mqttState) extractDeviceIDFromTopic(topic string) string {
 	// the default topic format is "cloud/device/{devId}/in/24d2afb98121974b6505c40a3a980362"

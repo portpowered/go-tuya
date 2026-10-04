@@ -43,12 +43,13 @@ type Tokens struct {
 type AuthInformation = Tokens
 
 // NewClient creates a reusable Tuya client from functional options.
+// WithClientID must supply the caller's Tuya application identity.
 func NewClient(options ...Option) (*Client, error) {
 	configured := clientOptions{
 		httpClient:        new(http.Client),
 		httpClientSet:     false,
 		httpTransportSet:  false,
-		clientID:          clientID,
+		clientID:          "",
 		authenticationURL: LoginURI,
 		cloudAPIURL:       regionAPIEndpointUS,
 		mqttClientFactory: newMQTTClient,
@@ -131,7 +132,7 @@ func WithHTTPTransport(transport http.RoundTripper) Option {
 	}
 }
 
-// WithClientID overrides the provider client ID.
+// WithClientID supplies the caller's Tuya application client ID.
 func WithClientID(clientID string) Option {
 	return func(options *clientOptions) error {
 		if strings.TrimSpace(clientID) == "" {

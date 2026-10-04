@@ -148,7 +148,7 @@
         "method": "POST",
         "origin": "https://login.example.invalid",
         "path": "/v1.0/m/life/home-assistant/qrcode/tokens",
-        "query": {"clientid": ["synthetic-client-id"], "schema": ["haauthorize"], "usercode": ["synthetic-user-code"]},
+        "query": {"clientid": ["synthetic-client-id"], "schema": ["synthetic-app-schema"], "usercode": ["synthetic-user-code"]},
         "headers": {"Content-Type": ["application/json"]},
         "body": ""
       },

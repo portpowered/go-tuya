@@ -33,6 +33,7 @@ import (
 const (
 	replayFixtureSyntheticAccessToken             = "synthetic-access-token"
 	replayFixtureSyntheticClientID                = "synthetic-client-id"
+	replayFixtureSyntheticAuthenticationSchema    = "synthetic-app-schema"
 	replayFixtureSyntheticProduct01               = "synthetic-product-01"
 	replayFixtureSyntheticRefreshToken            = "synthetic-refresh-token"
 	replayFixtureSyntheticUserCode                = "synthetic-user-code"
@@ -423,7 +424,7 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 		return req
 	}
 
-	bad := request("clientid=synthetic-client-id&schema=haauthorize&usercode=wrong")
+	bad := request("clientid=synthetic-client-id&schema=" + replayFixtureSyntheticAuthenticationSchema + "&usercode=wrong")
 	if response, err := transport.RoundTrip(bad); err == nil || response != nil {
 		if response != nil && response.Body != nil {
 			_ = response.Body.Close()
@@ -432,7 +433,7 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 		t.Fatalf("request mismatch returned response %v, error %v", response, err)
 	}
 
-	goodQuery := "clientid=synthetic-client-id&schema=haauthorize&usercode=synthetic-user-code"
+	goodQuery := "clientid=synthetic-client-id&schema=" + replayFixtureSyntheticAuthenticationSchema + "&usercode=synthetic-user-code"
 
 	for _, mutation := range []struct {
 		name string
@@ -671,7 +672,7 @@ func TestLoginReplay_QRAndValidation(t *testing.T) {
 					return requireAuthRequest(request, http.MethodPost, replayFixtureV10MLifeHomeAssistantQrcodeRoute, url.Values{
 						"clientid": {replayFixtureSyntheticClientID},
 						"usercode": {replayFixtureSyntheticUserCode},
-						"schema":   {"haauthorize"},
+						"schema":   {replayFixtureSyntheticAuthenticationSchema},
 					})
 				},
 			},
@@ -690,6 +691,7 @@ func TestLoginReplay_QRAndValidation(t *testing.T) {
 
 	qrCode, err := client.AuthService.GenerateQrCodeForLogin(context.Background(), tuya.LoginRequest{
 		AccessCode: replayFixtureSyntheticUserCode,
+		Schema:     replayFixtureSyntheticAuthenticationSchema,
 	})
 	if err != nil {
 		t.Fatalf("GenerateQrCodeForLogin() error = %v", err)

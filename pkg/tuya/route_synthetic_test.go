@@ -56,14 +56,6 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 				t.Fatalf("QueryDevicesByHome = %+v, %v", got, err)
 			}
 		}},
-		{"home assistant devices", http.MethodGet, routeFixtureV10MLifeHaHomeDevices, []any{device}, func(t *testing.T, s *Session) {
-			t.Helper()
-
-			got, err := s.DevicesService.QueryDevicesByHomeAssistantDevices(ctx, QueryDevicesByHomeRequest{HomeID: routeFixtureHome1})
-			if err != nil || len(got.Results) != 1 || got.Results[0].ID != routeFixtureDevice1 {
-				t.Fatalf("QueryDevicesByHomeAssistantDevices = %+v, %v", got, err)
-			}
-		}},
 		{"devices by IDs", http.MethodGet, routeFixtureV10MLifeHaHomeDevices, []any{device}, func(t *testing.T, s *Session) {
 			t.Helper()
 
@@ -270,7 +262,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
+			client, err := newSyntheticClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
 			if err != nil {
 				t.Fatal(err)
 			}

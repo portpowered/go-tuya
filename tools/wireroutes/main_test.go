@@ -45,6 +45,24 @@ components:
 	}
 }
 
+func TestSchemaParsersAcceptCRLF(t *testing.T) {
+	t.Parallel()
+
+	openAPI := "openapi: 3.1.0\npaths:\n  /v1.0/devices:\n    get:\n      operationId: getDevices\ncomponents:\n  schemas: {}\n"
+
+	routes, err := parseRoutes(strings.ReplaceAll(openAPI, "\n", "\r\n"))
+	if err != nil || len(routes) != 1 {
+		t.Fatalf("CRLF OpenAPI schema failed to parse: routes=%v err=%v", routes, err)
+	}
+
+	asyncAPI := "asyncapi: 3.0.0\nchannels:\n  ownerEvents:\n    address: '{ownerTopic}'\n"
+
+	channels, err := parseChannels(strings.ReplaceAll(asyncAPI, "\n", "\r\n"))
+	if err != nil || len(channels) != 1 || channels[0].id != "ownerEvents" {
+		t.Fatalf("CRLF AsyncAPI schema failed to parse: channels=%v err=%v", channels, err)
+	}
+}
+
 func TestParseChannelsAndGenerate(t *testing.T) {
 	t.Parallel()
 
@@ -225,49 +243,76 @@ func validateRequestKeys(query map[string][]string, headers map[string]string) e
 }`
 
 type httpBoundaryMutation struct {
-	name    string
-	needle  string
-	replace string
+	name     string
+	needle   string
+	replace  string
+	needle2  string
+	replace2 string
 }
 
+const httpBoundarySendCall = "response, err := client.Do(request)"
+
 func httpBoundaryMutations() []httpBoundaryMutation {
+	mutations := httpBindingMutations()
+	mutations = append(mutations, httpRequestFieldMutations()...)
+	mutations = append(mutations, httpRequestEscapeMutations()...)
+
+	return mutations
+}
+
+func httpBindingMutations() []httpBoundaryMutation {
 	const (
 		operationGuard = "if !wire.IsKnownOperation(operation.Method, path) { return nil, errBoundary }"
 		pathAssignment = "path, err := formatOperationPath(operation.Path, pathArguments)"
 	)
 
 	return []httpBoundaryMutation{
-		{
-			name:    "wire import shadow",
-			needle:  pathAssignment,
-			replace: "wire := fake; path, err := formatOperationPath(operation.Path, pathArguments)",
-		},
-		{
-			name:    "http import shadow",
-			needle:  pathAssignment,
-			replace: "http := fake; path, err := formatOperationPath(operation.Path, pathArguments)",
-		},
-		{
-			name:    "client parameter shadow",
-			needle:  pathAssignment,
-			replace: "client := fake; path, err := formatOperationPath(operation.Path, pathArguments)",
-		},
-		{
-			name:    "unrelated helper validation",
-			needle:  operationGuard,
-			replace: "if err != nil { return nil, err }",
-		},
-		{
-			name:    "dead branch validation",
-			needle:  operationGuard,
-			replace: "if false { " + operationGuard + " }",
-		},
-		{
-			name:    "key guard omitted from request path",
-			needle:  "err = validateRequestKeys(query, headers)",
-			replace: "err = nil",
-		},
+		httpMutation("wire import shadow", pathAssignment, "wire := fake; path, err := formatOperationPath(operation.Path, pathArguments)"),
+		httpMutation("http import shadow", pathAssignment, "http := fake; path, err := formatOperationPath(operation.Path, pathArguments)"),
+		httpMutation("client parameter shadow", pathAssignment, "client := fake; path, err := formatOperationPath(operation.Path, pathArguments)"),
+		httpMutation("unrelated helper validation", operationGuard, "if err != nil { return nil, err }"),
+		httpMutation("dead branch validation", operationGuard, "if false { "+operationGuard+" }"),
+		httpMutation("key guard omitted from request path", "err = validateRequestKeys(query, headers)", "err = nil"),
 	}
+}
+
+func httpRequestFieldMutations() []httpBoundaryMutation {
+	return []httpBoundaryMutation{
+		httpRequestMutation("request URL path mutated before send", "request.URL.Path = \"/v1.0/ghost\""),
+		httpRequestMutation("request method mutated before send", "request.Method = \"DELETE\""),
+		httpRequestMutation("request body mutated before send", "request.Body = nil"),
+		httpRequestMutation("request URL userinfo mutated before send", "request.URL.User = nil"),
+		httpRequestMutation("request body factory mutated before send", "request.GetBody = nil"),
+		httpRequestMutation("request content length framing mutated before send", "request.ContentLength = -1"),
+		httpRequestMutation("request transfer encoding framing mutated before send", "request.TransferEncoding = []string{\"chunked\"}"),
+		httpRequestMutation("unvalidated header mutation before send", "request.Header.Add(\"X-Tuya-Forged\", \"value\")"),
+	}
+}
+
+func httpRequestEscapeMutations() []httpBoundaryMutation {
+	return []httpBoundaryMutation{
+		httpRequestMutation("request alias escapes before send", "requestAlias := request\n requestAlias.URL.Path = \"/v1.0/ghost\""),
+		httpRequestMutation("request passed to unknown mutator", "rewriteRequest(request)"),
+		httpTwoPartMutation(
+			"request passed to cross-package mutator",
+			"package httptransport\nimport (",
+			"package httptransport\nimport (\n rewriter \"example.com/requestrewriter\"",
+			httpBoundarySendCall,
+			"rewriter.Modify(request)\n "+httpBoundarySendCall,
+		),
+	}
+}
+
+func httpMutation(name, needle, replace string) httpBoundaryMutation {
+	return httpBoundaryMutation{name: name, needle: needle, replace: replace, needle2: "", replace2: ""}
+}
+
+func httpRequestMutation(name, statements string) httpBoundaryMutation {
+	return httpMutation(name, httpBoundarySendCall, statements+"\n "+httpBoundarySendCall)
+}
+
+func httpTwoPartMutation(name, needle, replace, needle2, replace2 string) httpBoundaryMutation {
+	return httpBoundaryMutation{name: name, needle: needle, replace: replace, needle2: needle2, replace2: replace2}
 }
 
 func TestHTTPBoundaryRejectsShadowedAndUnrelatedValidation(t *testing.T) {
@@ -283,6 +328,10 @@ func TestHTTPBoundaryRejectsShadowedAndUnrelatedValidation(t *testing.T) {
 			t.Parallel()
 
 			mutated := strings.Replace(httpBoundaryValidSource, testCase.needle, testCase.replace, 1)
+			if testCase.needle2 != "" {
+				mutated = strings.Replace(mutated, testCase.needle2, testCase.replace2, 1)
+			}
+
 			if mutated == httpBoundaryValidSource {
 				t.Fatal("test mutation did not match the source fixture")
 			}

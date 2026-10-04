@@ -174,11 +174,10 @@ type CustomerTokenInfo struct {
 
 // LoginRequest represents a request to generate a QR code for login.
 type LoginRequest struct {
-	// (required - for tuya HA auth schema) Access code that is unique to the user.
-	// https://www.home-assistant.io/integrations/tuya/ instructions for the token are available here.
+	// AccessCode is the account access code required by the selected Tuya authorization schema.
 	AccessCode string
 
-	// (Required) Authorization schema for accessing the users data
+	// Schema is the caller-selected Tuya authorization schema. It must not be empty.
 	Schema string
 }
 

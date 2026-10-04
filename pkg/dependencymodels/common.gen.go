@@ -8,6 +8,54 @@ import (
 	"fmt"
 )
 
+// Defines values for CloudAPIOrigin.
+const (
+	CloudAPIOriginChina CloudAPIOrigin = "https://openapi.tuyacn.com"
+	CloudAPIOriginEU    CloudAPIOrigin = "https://openapi.tuyaeu.com"
+	CloudAPIOriginIndia CloudAPIOrigin = "https://openapi.tuyain.com"
+	CloudAPIOriginUS    CloudAPIOrigin = "https://apigw.tuyaus.com"
+)
+
+// Valid indicates whether the value is a known member of the CloudAPIOrigin enum.
+func (e CloudAPIOrigin) Valid() bool {
+	switch e {
+	case CloudAPIOriginChina:
+		return true
+	case CloudAPIOriginEU:
+		return true
+	case CloudAPIOriginIndia:
+		return true
+	case CloudAPIOriginUS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CloudRegion.
+const (
+	CloudRegionChina CloudRegion = "CN"
+	CloudRegionEU    CloudRegion = "EU"
+	CloudRegionIndia CloudRegion = "IN"
+	CloudRegionUS    CloudRegion = "US"
+)
+
+// Valid indicates whether the value is a known member of the CloudRegion enum.
+func (e CloudRegion) Valid() bool {
+	switch e {
+	case CloudRegionChina:
+		return true
+	case CloudRegionEU:
+		return true
+	case CloudRegionIndia:
+		return true
+	case CloudRegionUS:
+		return true
+	default:
+		return false
+	}
+}
+
 // BooleanResultEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
 type BooleanResultEnvelope struct {
 	// Code Provider response code when present.
@@ -27,6 +75,12 @@ type BooleanResultEnvelope struct {
 	Tid                  *string                `json:"tid,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CloudAPIOrigin Implementation-derived built-in Device Sharing cloud origins.
+type CloudAPIOrigin string
+
+// CloudRegion Built-in cloud region identifiers accepted by the SDK.
+type CloudRegion string
 
 // StringResultEnvelope Tuya response envelope observed by the library. Unspecified envelope fields are retained.
 type StringResultEnvelope struct {

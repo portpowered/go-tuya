@@ -350,7 +350,7 @@ func newSyntheticMQTTReplayQueue(
 
 	var broker *mqttReplayClient
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPTransport(httpReplay),
 		WithClientID("synthetic-client-id"),
 		WithCloudAPIURL("https://api.example.invalid"),

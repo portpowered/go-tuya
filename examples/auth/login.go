@@ -20,7 +20,7 @@ func main() {
 
 	ctx := context.Background()
 
-	base, err := tuya.NewClient()
+	base, err := tuya.NewClient(tuya.WithClientID(os.Getenv("TUYA_CLIENT_ID")))
 	if err != nil {
 		log.Fatal("could not configure the Tuya client")
 	}
@@ -29,7 +29,7 @@ func main() {
 
 	login, err := client.AuthService.GenerateQrCodeForLogin(ctx, tuya.LoginRequest{
 		AccessCode: accessCode,
-		Schema:     tuya.AuthenticationSchema,
+		Schema:     os.Getenv("TUYA_AUTH_SCHEMA"),
 	})
 	if err != nil {
 		log.Fatal("could not start QR-code login; redact credentials before inspecting diagnostics")
