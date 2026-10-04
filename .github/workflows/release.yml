@@ -126,4 +126,4 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes \
-            --notes "Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See [provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)."
+            --notes "Public event constants now have explicit string or int types. See the [v0.4 upgrade guide](https://portpowered.github.io/go-tuya/docs/guides/upgrading/). Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See [provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)."
