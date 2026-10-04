@@ -44,6 +44,62 @@
     }
   },
   {
+    "operation_id": "queryDevicesByIDs",
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.0/m/life/ha/devices/detail",
+      "query": {
+        "encdata": [
+          "<encrypted>"
+        ]
+      },
+      "headers": {
+        "X-appKey": [
+          "synthetic-client-id"
+        ],
+        "X-requestId": [
+          "<uuid>"
+        ],
+        "X-sign": [
+          "<tuya-signature>"
+        ],
+        "X-time": [
+          "<unix-millis>"
+        ],
+        "X-token": [
+          "synthetic-access-token"
+        ]
+      },
+      "body": "",
+      "plain_query": {
+        "devIds": "device-1,device-2"
+      }
+    },
+    "response": {
+      "status": 200,
+      "headers": {
+        "Content-Type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "success": true,
+        "t": 1700000000000,
+        "result": [
+          {
+            "id": "device-1",
+            "online": true
+          },
+          {
+            "id": "device-2",
+            "online": false
+          }
+        ]
+      }
+    }
+  },
+  {
     "operation_id": "getDevicesByUser",
     "request": {
       "method": "GET",

@@ -82,25 +82,27 @@ type Home struct {
 
 // Device represents a smart device returned by the Tuya API.
 type Device struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	LocalKey     string   `json:"local_key"`
-	Category     string   `json:"category"`
-	ProductID    string   `json:"product_id"`
-	ProductName  string   `json:"product_name"`
-	SubCategory  string   `json:"sub_category"`
-	Icon         string   `json:"icon"`
-	IP           string   `json:"ip"`
-	Lat          string   `json:"lat"`
-	Lon          string   `json:"lon"`
-	Model        string   `json:"model"`
-	TimeZone     string   `json:"time_zone"`
-	ActiveTime   int64    `json:"active_time"`
-	CreateTime   int64    `json:"create_time"`
-	UpdateTime   int64    `json:"update_time"`
-	Online       bool     `json:"online"`
-	Status       []Status `json:"status"`
-	Capabilities []string `json:"capabilities"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	LocalKey    string `json:"local_key"`
+	Category    string `json:"category"`
+	ProductID   string `json:"product_id"`
+	ProductName string `json:"product_name"`
+	SubCategory string `json:"sub_category"`
+	Icon        string `json:"icon"`
+	IP          string `json:"ip"`
+	Lat         string `json:"lat"`
+	Lon         string `json:"lon"`
+	Model       string `json:"model"`
+	TimeZone    string `json:"time_zone"`
+	ActiveTime  int64  `json:"active_time"`
+	CreateTime  int64  `json:"create_time"`
+	UpdateTime  int64  `json:"update_time"`
+	Online      bool   `json:"online"`
+	// OnlinePresent distinguishes an explicit offline state from an omitted observation.
+	OnlinePresent bool     `json:"-"`
+	Status        []Status `json:"status"`
+	Capabilities  []string `json:"capabilities"`
 }
 
 // Status represents the current status of a device property.

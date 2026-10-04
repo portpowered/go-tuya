@@ -5,6 +5,7 @@ import (
 	"crypto/md5" // #nosec G501 -- synthetic route tests reproduce Tuya's protocol-mandated request-key derivation.
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,6 +22,7 @@ const (
 	routeFixtureV10DevicesDevice1           = "/v1.0/devices/device-1"
 	routeFixtureV10DevicesDevice1UsersUser2 = "/v1.0/devices/device-1/users/user-2"
 	routeFixtureV10MLifeHaHomeDevices       = "/v1.0/m/life/ha/home/devices"
+	routeFixtureV10MLifeHaDevicesDetail     = "/v1.0/m/life/ha/devices/detail"
 )
 
 // These hand-authored responses exercise the public operation mapping and
@@ -64,7 +66,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 				t.Fatalf("QueryDevicesByHomeAssistantDevices = %+v, %v", got, err)
 			}
 		}},
-		{"devices by IDs", http.MethodGet, routeFixtureV10MLifeHaHomeDevices, []any{device}, func(t *testing.T, s *Session) {
+		{"devices by IDs", http.MethodGet, routeFixtureV10MLifeHaDevicesDetail, []any{device}, func(t *testing.T, s *Session) {
 			t.Helper()
 
 			got, err := s.DevicesService.QueryDevicesByIDs(ctx, QueryDevicesByIDsRequest{DeviceIDs: []string{routeFixtureDevice1}})
@@ -282,5 +284,125 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 				t.Fatalf("request count = %d, want 1", requests)
 			}
 		})
+	}
+}
+
+func TestSyntheticDeviceDetailsProtocol(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		onlineField string
+		present     bool
+		online      bool
+		invalid     bool
+	}{
+		{"online", `,"online":true`, true, true, false},
+		{"explicit-false", `,"online":false`, true, false, false},
+		{"missing", "", false, false, false},
+		{"null", `,"online":null`, false, false, true},
+		{"string", `,"online":"true"`, false, false, true},
+		{"number", `,"online":1`, false, false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := `[{"id":"device-1","status":[{"code":"switch","value":true}]` + test.onlineField + `},{"id":"device-2","online":false}]`
+
+			server := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+				assertDeviceDetailsQuery(t, request)
+				writeSyntheticDetailsResponse(t, responseWriter, request, result)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			session := client.NewSession(Tokens{AccessToken: routeFixtureSyntheticAccess, RefreshToken: syntheticRefreshFixture})
+			response, err := session.DevicesService.QueryDevicesByIDs(context.Background(),
+				QueryDevicesByIDsRequest{DeviceIDs: []string{routeFixtureDevice1, "device-2"}})
+
+			if test.invalid {
+				var classified *ClientError
+				if !errors.As(err, &classified) || classified.Kind != ErrorProtocol {
+					t.Fatalf("invalid online observation error = %v, want protocol failure", err)
+				}
+
+				return
+			}
+
+			if err != nil || len(response.Results) != 2 {
+				t.Fatalf("device-details response = %+v, %v", response, err)
+			}
+
+			assertDeviceDetailsObservations(t, response.Results, test.present, test.online)
+		})
+	}
+}
+
+func writeSyntheticDetailsResponse(t *testing.T, responseWriter http.ResponseWriter, request *http.Request, result string) {
+	t.Helper()
+
+	secretHash := md5.Sum([]byte(request.Header.Get("X-Requestid") + syntheticRefreshFixture)) // #nosec G401 -- synthetic Tuya protocol key.
+	secret := secretGenerating(request.Header.Get("X-Requestid"), "", hex.EncodeToString(secretHash[:]))
+
+	encrypted, err := aesGCMEncrypt(result, secret)
+	if err != nil {
+		t.Errorf("encrypt device-details fixture: %v", err)
+
+		return
+	}
+
+	err = json.NewEncoder(responseWriter).Encode(map[string]any{"success": true, "result": string(encrypted)})
+	if err != nil {
+		t.Errorf("write device-details fixture: %v", err)
+	}
+}
+
+func assertDeviceDetailsObservations(t *testing.T, devices []Device, present, online bool) {
+	t.Helper()
+
+	first, second := devices[0], devices[1]
+	if first.ID != routeFixtureDevice1 || first.OnlinePresent != present || first.Online != online {
+		t.Fatalf("first device observation = %+v", first)
+	}
+
+	if second.ID != "device-2" || !second.OnlinePresent || second.Online {
+		t.Fatalf("second device observation = %+v", second)
+	}
+
+	if len(first.Status) != 1 || first.Status[0].Code != "switch" || first.Status[0].Value != true {
+		t.Fatalf("device status = %+v", first.Status)
+	}
+}
+
+func assertDeviceDetailsQuery(t *testing.T, request *http.Request) {
+	t.Helper()
+
+	if request.Method != http.MethodGet || request.URL.Path != routeFixtureV10MLifeHaDevicesDetail {
+		t.Errorf("device-details request = %s %s", request.Method, request.URL.Path)
+	}
+
+	if request.Header.Get("X-Token") != routeFixtureSyntheticAccess {
+		t.Error("device-details request omitted account access token")
+	}
+
+	secretHash := md5.Sum([]byte(request.Header.Get("X-Requestid") + syntheticRefreshFixture)) // #nosec G401 -- synthetic Tuya protocol key.
+	secret := secretGenerating(request.Header.Get("X-Requestid"), "", hex.EncodeToString(secretHash[:]))
+	plaintext := decryptRequestPayload(t, request.URL.Query().Get("encdata"), secret)
+
+	var query map[string]any
+
+	if err := json.Unmarshal([]byte(plaintext), &query); err != nil {
+		t.Errorf("decode device-details query: %v", err)
+
+		return
+	}
+
+	if len(query) != 1 || query["devIds"] != "device-1,device-2" {
+		t.Errorf("device-details query = %#v, want only devIds with both identifiers", query)
 	}
 }

@@ -20,6 +20,10 @@ import (
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
 const (
+	encryptionFixtureProvider          = "provider"
+	encryptionFixtureTransport         = "transport"
+	encryptionFixtureHTTP              = "http"
+	encryptionFixtureCanceled          = "canceled"
 	encryptionFixtureRetained          = "retained"
 	encryptionFixtureSyntheticAccess   = "synthetic-access"
 	encryptionFixtureSyntheticClientID = "synthetic-client-id"
@@ -226,7 +230,7 @@ func TestEncryptedClientRejectsUnschematizedOperation(t *testing.T) {
 	}
 }
 
-func TestClientErrorClassifiesAndPreservesTransportCause(t *testing.T) {
+func TestClientErrorClassifiesAndRedactsTransportCause(t *testing.T) {
 	t.Parallel()
 
 	cause := errTestSyntheticNetwork
@@ -240,8 +244,140 @@ func TestClientErrorClassifiesAndPreservesTransportCause(t *testing.T) {
 
 	var classified *ClientError
 
-	if !errors.As(err, &classified) || classified.Kind != ErrorTransport || !errors.Is(err, cause) {
-		t.Fatalf("transport error = %v, want typed transport error retaining cause", err)
+	var diagnostic *APIError
+	if !errors.As(err, &classified) || classified.Kind != ErrorTransport || errors.Is(err, cause) || !errors.As(err, &diagnostic) {
+		t.Fatalf("transport error = %v, want typed redacted transport error", err)
+	}
+}
+
+func TestConcurrentAPIFailuresKeepSafeDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name, code, category, wantCode string
+		status                         int
+		kind                           ErrorKind
+	}{
+		{"endpoint-unreachable", `"2001"`, encryptionFixtureProvider, "2001", 200, ErrorProvider},
+		{"numeric", `1010`, encryptionFixtureProvider, "1010", 200, ErrorUnauthorized},
+		{"status-rejected", `"2001"`, encryptionFixtureHTTP, "2001", 503, ErrorProvider},
+		{"unauthorized", `"1010"`, encryptionFixtureHTTP, "1010", 401, ErrorUnauthorized},
+		{"negative", `-1`, encryptionFixtureProvider, "-1", 200, ErrorProvider},
+		{"long", `"123456789012345678901"`, encryptionFixtureProvider, "", 200, ErrorProvider},
+		{"unsafe", `"credential-sentinel"`, encryptionFixtureProvider, "", 200, ErrorProvider},
+		{"fraction", `1.2`, encryptionFixtureProvider, "", 200, ErrorProvider},
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+		for _, candidate := range cases {
+			if candidate.name == request.Header.Get("X-Token") {
+				responseWriter.WriteHeader(candidate.status)
+				_, _ = io.WriteString(responseWriter, `{"success":false,"code":`+candidate.code+`,"msg":"credential-sentinel","access_token":"credential-sentinel"}`)
+
+				return
+			}
+		}
+
+		responseWriter.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(server.Close)
+
+	client, err := NewClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, candidate := range cases {
+		t.Run(candidate.name, func(t *testing.T) {
+			t.Parallel()
+
+			session := client.NewSession(Tokens{AccessToken: candidate.name, RefreshToken: syntheticRefreshFixture})
+			_, err := session.DevicesService.QueryDevicesByIDs(context.Background(), QueryDevicesByIDsRequest{DeviceIDs: []string{routeFixtureDevice1}})
+
+			assertSafeAPIFailure(t, err, candidate.kind, candidate.category, candidate.status, candidate.wantCode)
+		})
+	}
+}
+
+type diagnosticFailureBody struct {
+	cause error
+}
+
+var errTestCredentialTransport = errors.New("https://credential-sentinel.invalid/?refresh_token=credential-sentinel")
+
+var _ io.ReadCloser = (*diagnosticFailureBody)(nil)
+
+func (b *diagnosticFailureBody) Read([]byte) (int, error) { return 0, b.cause }
+func (b *diagnosticFailureBody) Close() error             { return b.cause }
+
+func TestAPIFailuresRedactTransportAndReadCauses(t *testing.T) {
+	t.Parallel()
+
+	for _, mode := range []string{encryptionFixtureTransport, "read", encryptionFixtureCanceled} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+
+			cause := errTestCredentialTransport
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+				if mode == encryptionFixtureCanceled {
+					cancel()
+
+					return nil, cause
+				}
+
+				if mode == encryptionFixtureTransport {
+					return nil, cause
+				}
+
+				return &http.Response{StatusCode: http.StatusOK, Body: &diagnosticFailureBody{cause: cause}, Request: request}, nil
+			})
+
+			client, err := NewClient(WithHTTPTransport(transport))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			session := client.NewSession(Tokens{AccessToken: encryptionFixtureSyntheticAccess, RefreshToken: syntheticRefreshFixture})
+
+			_, err = session.DevicesService.QueryDevicesByIDs(ctx, QueryDevicesByIDsRequest{DeviceIDs: []string{routeFixtureDevice1}})
+			if mode == encryptionFixtureCanceled {
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("cancellation = %v", err)
+				}
+
+				return
+			}
+
+			assertSafeAPIFailure(t, err, ErrorTransport, encryptionFixtureTransport, 0, "")
+
+			if errors.Is(err, cause) || strings.Contains(err.Error(), "credential-sentinel") {
+				t.Fatalf("transport failure retained sensitive cause: %v", err)
+			}
+		})
+	}
+}
+
+func assertSafeAPIFailure(t *testing.T, err error, kind ErrorKind, category string, status int, code string) {
+	t.Helper()
+
+	var (
+		classified *ClientError
+		diagnostic *APIError
+	)
+
+	if !errors.As(err, &classified) || classified.Kind != kind || !errors.As(err, &diagnostic) {
+		t.Fatalf("failure = %v, want classified diagnostic", err)
+	}
+
+	if diagnostic.DiagnosticCategory() != category || diagnostic.HTTPStatus() != status || diagnostic.ProviderCode() != code {
+		t.Fatalf("diagnostic = %+v, want category %s status %d code %q", diagnostic, category, status, code)
+	}
+
+	if strings.Contains(err.Error(), "credential-sentinel") {
+		t.Fatalf("failure exposed credentials: %v", err)
 	}
 }
 
