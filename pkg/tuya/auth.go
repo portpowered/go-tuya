@@ -3,7 +3,9 @@ package tuya
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -12,6 +14,24 @@ import (
 
 // AuthService is the service used to generate the QR code, and then validate the code to get the access token.
 type AuthService service
+
+func decodeAuthResponse(ctx context.Context, response *http.Response, target any) ([]byte, error) {
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, transportFailure(ctx)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, responseStatusError(response.StatusCode, body)
+	}
+
+	err = json.Unmarshal(body, target)
+	if err != nil {
+		return nil, clientError(ErrorProtocol, newAPIError("protocol", response.StatusCode, body))
+	}
+
+	return body, nil
+}
 
 // RefreshToken refreshes the access token using the provided refresh token.
 // Example output:
@@ -56,7 +76,7 @@ func (c *AuthService) RefreshToken(ctx context.Context, req RefreshTokenRequest)
 		}, nil
 	}
 
-	return RefreshTokenResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errRefreshTokenFailure, response))
+	return RefreshTokenResponse{}, clientError(ErrorProvider, errors.Join(errRefreshTokenFailure, newAPIError("provider", response.StatusCode, nil)))
 }
 
 // RefreshTokenRequest represents a request to refresh an access token.
@@ -108,7 +128,7 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
-		return LoginResponse{}, clientError(ErrorTransport, err)
+		return LoginResponse{}, transportFailure(ctx)
 	}
 
 	defer func() {
@@ -117,13 +137,13 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 
 	var loginResponse wire.QRCodeEnvelope
 
-	err = json.NewDecoder(response.Body).Decode(&loginResponse)
+	responseBody, err := decodeAuthResponse(ctx, response, &loginResponse)
 	if err != nil {
-		return LoginResponse{}, clientError(ErrorProtocol, err)
+		return LoginResponse{}, err
 	}
 
 	if !dereference(loginResponse.Success) {
-		return LoginResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errLoginFailure, loginResponse))
+		return LoginResponse{}, clientError(ErrorProvider, errors.Join(errLoginFailure, newAPIError("provider", response.StatusCode, responseBody)))
 	}
 
 	var qrCode string
@@ -171,7 +191,7 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 
 	response, err := c.client.HTTPClient.Do(httpRequest)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorTransport, err)
+		return ValidateLoginCodeResponse{}, transportFailure(ctx)
 	}
 
 	defer func() {
@@ -180,13 +200,15 @@ func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCo
 
 	var validateLoginCodeResponse wire.LoginCodeEnvelope
 
-	err = json.NewDecoder(response.Body).Decode(&validateLoginCodeResponse)
+	responseBody, err := decodeAuthResponse(ctx, response, &validateLoginCodeResponse)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
+		return ValidateLoginCodeResponse{}, err
 	}
 
 	if !dereference(validateLoginCodeResponse.Success) || validateLoginCodeResponse.Result == nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorProvider, fmt.Errorf("%w: %+v", errLoginCodeValidationFailure, validateLoginCodeResponse))
+		diagnostic := newAPIError("provider", response.StatusCode, responseBody)
+
+		return ValidateLoginCodeResponse{}, clientError(ErrorProvider, errors.Join(errLoginCodeValidationFailure, diagnostic))
 	}
 
 	return ValidateLoginCodeResponse{

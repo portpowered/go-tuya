@@ -132,17 +132,17 @@ func (c *EncryptedClient) makeRequest(
 
 	response, err := c.Client.HTTPClient.Do(request)
 	if err != nil {
-		return nil, clientError(ErrorTransport, fmt.Errorf("failed to make request: %w", err))
+		return nil, transportFailure(ctx)
 	}
 
 	defer func() {
 		closeErr := response.Body.Close()
 		if closeErr != nil {
-			log.Printf("failed to close response body: %v", closeErr) // Do not override the request result.
+			log.Print("failed to close Tuya response body") // Do not expose transport details or override the request result.
 		}
 	}()
 
-	return decodeEncryptedResponse(response, secret)
+	return decodeEncryptedResponse(ctx, response, secret)
 }
 
 type encryptedRequestPayload struct {
@@ -290,10 +290,10 @@ func (c *EncryptedClient) newEncryptedRequest(
 	return request, nil
 }
 
-func decodeEncryptedResponse(resp *http.Response, secret string) (*EncryptedAPIResponse, error) {
+func decodeEncryptedResponse(ctx context.Context, resp *http.Response, secret string) (*EncryptedAPIResponse, error) {
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, clientError(ErrorTransport, fmt.Errorf("failed to read response: %w", err))
+		return nil, transportFailure(ctx)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -313,18 +313,18 @@ func responseStatusError(statusCode int, responseBody []byte) error {
 		kind = ErrorNotFound
 	}
 
-	return clientError(kind, fmt.Errorf("%w: code=%d, content=%s", errHTTPResponse, statusCode, string(responseBody)))
+	return clientError(kind, newAPIError("http", statusCode, responseBody))
 }
 
 func parseSuccessfulEncryptedResponse(statusCode int, responseBody []byte, secret string) (*EncryptedAPIResponse, error) {
 	transportResponse, err := decodeTransportResponse(responseBody)
 	if err != nil {
-		return nil, err
+		return nil, clientError(ErrorProtocol, newAPIError("protocol", statusCode, responseBody))
 	}
 
 	success := dereference(transportResponse.Success)
 	if !success {
-		return nil, unsuccessfulTransportResponseError(transportResponse)
+		return nil, unsuccessfulTransportResponseError(statusCode, responseBody)
 	}
 
 	responseData, err := convertWireValue[map[string]any](transportResponse)
@@ -351,16 +351,15 @@ func decodeTransportResponse(responseBody []byte) (wire.EncryptedHTTPResponseEnv
 	return transportResponse, nil
 }
 
-func unsuccessfulTransportResponseError(transportResponse wire.EncryptedHTTPResponseEnvelope) error {
-	code, _ := transportResponse.Code.(string)
-	msg, _ := transportResponse.Msg.(string)
+func unsuccessfulTransportResponseError(statusCode int, responseBody []byte) error {
+	diagnostic := newAPIError("provider", statusCode, responseBody)
 	kind := ErrorProvider
 
-	if code == "1010" {
+	if diagnostic.ProviderCode() == "1010" {
 		kind = ErrorUnauthorized
 	}
 
-	return clientError(kind, fmt.Errorf("%w: (%s) %s", errNetworkError, code, msg))
+	return clientError(kind, diagnostic)
 }
 
 func encryptedAPIResponse(

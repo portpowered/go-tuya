@@ -42,6 +42,8 @@ const (
 	MethodQueryDeviceSpecification = "GET"
 	RouteQueryDeviceStatus         = "/v1.0/m/life/devices/%s/status"
 	MethodQueryDeviceStatus        = "GET"
+	RouteQueryDevicesByIDs         = "/v1.0/m/life/ha/devices/detail"
+	MethodQueryDevicesByIDs        = "GET"
 	RouteQueryHomeDevices          = "/v1.0/m/life/ha/home/devices"
 	MethodQueryHomeDevices         = "GET"
 	RouteQueryHomes                = "/v1.0/m/life/users/homes"
@@ -116,6 +118,9 @@ func OperationQueryDeviceSpecification() Operation {
 func OperationQueryDeviceStatus() Operation {
 	return Operation{Method: MethodQueryDeviceStatus, Path: RouteQueryDeviceStatus}
 }
+func OperationQueryDevicesByIDs() Operation {
+	return Operation{Method: MethodQueryDevicesByIDs, Path: RouteQueryDevicesByIDs}
+}
 func OperationQueryHomeDevices() Operation {
 	return Operation{Method: MethodQueryHomeDevices, Path: RouteQueryHomeDevices}
 }
@@ -170,6 +175,7 @@ var knownOperations = []Operation{
 	OperationListMultiOutletNames(),
 	OperationQueryDeviceSpecification(),
 	OperationQueryDeviceStatus(),
+	OperationQueryDevicesByIDs(),
 	OperationQueryHomeDevices(),
 	OperationQueryHomes(),
 	OperationRefreshAccessToken(),

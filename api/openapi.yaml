@@ -880,7 +880,7 @@ paths:
   /v1.0/m/life/ha/home/devices:
     get:
       operationId: queryHomeDevices
-      summary: List home devices or selected devices
+      summary: List home devices
       description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
         provider-verified.
         Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
@@ -898,6 +898,36 @@ paths:
         in: query
         required: false
         description: Comma-separated device IDs used by device-ID queries.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeDevicesEnvelope'
+        default:
+          description: Error envelope varies by provider route.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+  /v1.0/m/life/ha/devices/detail:
+    get:
+      operationId: queryDevicesByIDs
+      summary: Query details for selected devices
+      description: Implementation-derived from the retained device-details request and synthetic encrypted
+        exchanges; not provider-verified.
+        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
+      tags:
+      - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+      parameters:
+      - name: devIds
+        in: query
+        required: true
+        description: Comma-separated device identifiers.
         schema:
           type: string
       responses:

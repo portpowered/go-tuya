@@ -180,6 +180,14 @@ func TestRemainingOperationsPairedReplay(t *testing.T) {
 
 			return wrapReplayOperationError(e)
 		}},
+		{"queryDevicesByIDs", func() error {
+			v, e := session.DevicesService.QueryDevicesByIDs(ctx, tuya.QueryDevicesByIDsRequest{DeviceIDs: []string{completeReplayFixtureDevice1, "device-2"}})
+			if e == nil && (len(v.Results) != 2 || !v.Results[0].OnlinePresent || !v.Results[0].Online || !v.Results[1].OnlinePresent || v.Results[1].Online) {
+				return testMismatchf("device details = %+v", v.Results)
+			}
+
+			return wrapReplayOperationError(e)
+		}},
 		{"getDevicesByUser", func() error {
 			v, e := session.DevicesService.QueryDevicesByUser(ctx, tuya.QueryDevicesByUserRequest{UID: "user-1"})
 			if e == nil && (len(v.Devices) != 1 || v.Devices[0].ID != completeReplayFixtureDevice1) {

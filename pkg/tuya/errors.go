@@ -57,8 +57,6 @@ var (
 	errUnschematizedOperation             = errors.New("is not in api/openapi.yaml")
 	errRefreshTokenRequired               = errors.New("refresh token is required; set it on the session or request")
 	errAccessTokenRequired                = errors.New("access token is required; set it on the session or request")
-	errHTTPResponse                       = errors.New("response error")
-	errNetworkError                       = errors.New("network error")
 	errCipherDataTooShort                 = errors.New("cipher data too short")
 	errProtocolFieldInvalid               = errors.New("missing or invalid protocol field")
 	errDataFieldInvalid                   = errors.New("missing or invalid data field")
@@ -69,6 +67,7 @@ var (
 	errMQTTFactoryReturnedNil             = errors.New("MQTT client factory returned nil")
 	errResponseIsNil                      = errors.New("response is nil")
 	errWireFieldNotJSONEncoded            = errors.New("wire field")
+	errDeviceOnlineBoolean                = errors.New("device online field must be a boolean when supplied")
 )
 
 // ErrorKind identifies a stable class of client failure.

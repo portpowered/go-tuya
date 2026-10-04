@@ -40,6 +40,14 @@ same path in the prior stable tag.
 
 ## Tag and verify
 
+Device-ID queries use the implementation-derived device-details route and its
+`devIds` parameter. Device results retain whether online state was supplied;
+an omitted state is unknown, while a supplied non-boolean state is rejected.
+HTTP, provider, and transport failures expose redacted `APIError` diagnostics
+through `ClientError`. Transport errors no longer retain arbitrary underlying
+causes or credential-bearing URLs; context cancellation remains inspectable
+with `errors.Is`. These synthetic protocol checks are not provider captures.
+
 Use semantic version tags of the form `vMAJOR.MINOR.PATCH`; push a reviewed tag
 to start `.github/workflows/release.yml`. Before v1, an API break requires a
 minor or major increase. A v0 patch release must preserve compatibility. Once

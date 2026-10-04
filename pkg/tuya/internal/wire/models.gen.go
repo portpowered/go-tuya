@@ -946,6 +946,12 @@ type GetDeviceLogsParams struct {
 	QueryType *int `form:"query_type,omitempty" json:"query_type,omitempty"`
 }
 
+// QueryDevicesByIDsParams defines parameters for QueryDevicesByIDs.
+type QueryDevicesByIDsParams struct {
+	// DevIds Comma-separated device identifiers.
+	DevIds string `form:"devIds" json:"devIds"`
+}
+
 // QueryHomeDevicesParams defines parameters for QueryHomeDevices.
 type QueryHomeDevicesParams struct {
 	// HomeId Home identifier used by home-device queries.

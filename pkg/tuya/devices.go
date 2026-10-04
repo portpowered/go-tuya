@@ -25,7 +25,7 @@ func (c *DevicesService) QueryDevicesByHome(ctx context.Context, req QueryDevice
 		return QueryDevicesByHomeResponse{}, err
 	}
 
-	wireResponse, err := decodeWireResponse[wire.HomeDevicesEnvelope](resp)
+	wireResponse, err := decodeHomeDevicesResponse(resp)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
@@ -49,7 +49,7 @@ func (c *DevicesService) QueryDevicesByHomeAssistantDevices(ctx context.Context,
 		return QueryDevicesByHomeResponse{}, err
 	}
 
-	wireResponse, err := decodeWireResponse[wire.HomeDevicesEnvelope](resp)
+	wireResponse, err := decodeHomeDevicesResponse(resp)
 	if err != nil {
 		return QueryDevicesByHomeResponse{}, err
 	}
@@ -65,29 +65,48 @@ func mapWireDevices(records []wire.DeviceRecord) []Device {
 	devices := make([]Device, len(records))
 	for i, record := range records {
 		devices[i] = Device{
-			ID:           dereference(record.Id),
-			LocalKey:     dereference(record.LocalKey),
-			Name:         dereference(record.Name),
-			Category:     dereference(record.Category),
-			ProductID:    dereference(record.ProductId),
-			ProductName:  dereference(record.ProductName),
-			SubCategory:  additionalString(record.AdditionalProperties, "subCategory"),
-			Icon:         dereference(record.Icon),
-			IP:           dereference(record.Ip),
-			Lat:          additionalString(record.AdditionalProperties, "lat"),
-			Lon:          additionalString(record.AdditionalProperties, "lon"),
-			Model:        dereference(record.Model),
-			TimeZone:     dereference(record.TimeZone),
-			ActiveTime:   dereference(record.ActiveTime),
-			CreateTime:   dereference(record.CreateTime),
-			UpdateTime:   dereference(record.UpdateTime),
-			Online:       dereference(record.Online),
-			Status:       mapGeneratedDeviceStatus(record.Status),
-			Capabilities: nil,
+			ID:            dereference(record.Id),
+			LocalKey:      dereference(record.LocalKey),
+			Name:          dereference(record.Name),
+			Category:      dereference(record.Category),
+			ProductID:     dereference(record.ProductId),
+			ProductName:   dereference(record.ProductName),
+			SubCategory:   additionalString(record.AdditionalProperties, "subCategory"),
+			Icon:          dereference(record.Icon),
+			IP:            dereference(record.Ip),
+			Lat:           additionalString(record.AdditionalProperties, "lat"),
+			Lon:           additionalString(record.AdditionalProperties, "lon"),
+			Model:         dereference(record.Model),
+			TimeZone:      dereference(record.TimeZone),
+			ActiveTime:    dereference(record.ActiveTime),
+			CreateTime:    dereference(record.CreateTime),
+			UpdateTime:    dereference(record.UpdateTime),
+			Online:        dereference(record.Online),
+			OnlinePresent: record.Online != nil,
+			Status:        mapGeneratedDeviceStatus(record.Status),
+			Capabilities:  nil,
 		}
 	}
 
 	return devices
+}
+
+func decodeHomeDevicesResponse(response *EncryptedAPIResponse) (wire.HomeDevicesEnvelope, error) {
+	if response != nil {
+		// The schema makes online optional, but a supplied observation must be
+		// boolean. Generated pointer decoding alone treats JSON null as absent.
+		records, _ := response.Body["result"].([]any)
+		for _, record := range records {
+			fields, _ := record.(map[string]any)
+			if value, supplied := fields["online"]; supplied {
+				if _, valid := value.(bool); !valid {
+					return wire.HomeDevicesEnvelope{}, clientError(ErrorProtocol, errDeviceOnlineBoolean)
+				}
+			}
+		}
+	}
+
+	return decodeWireResponse[wire.HomeDevicesEnvelope](response)
 }
 
 func mapGeneratedDeviceStatus(statuses *[]wire.DeviceStatus) []Status {
@@ -173,17 +192,17 @@ func decodeBooleanResult(response *EncryptedAPIResponse) (bool, error) {
 func (c *DevicesService) QueryDevicesByIDs(ctx context.Context, req QueryDevicesByIDsRequest) (QueryDevicesByIDsResponse, error) {
 	deviceIDs := strings.Join(req.DeviceIDs, ",")
 
-	params, err := wireRequestMap(wire.QueryHomeDevicesParams{HomeId: nil, DeviceIds: &deviceIDs})
+	params, err := wireRequestMap(wire.QueryDevicesByIDsParams{DevIds: deviceIDs})
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
 
-	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryHomeDevices(), nil, params, nil, &req)
+	resp, err := c.client.EncryptedClient.requestOperation(ctx, wire.OperationQueryDevicesByIDs(), nil, params, nil, &req)
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
 
-	wireResponse, err := decodeWireResponse[wire.HomeDevicesEnvelope](resp)
+	wireResponse, err := decodeHomeDevicesResponse(resp)
 	if err != nil {
 		return QueryDevicesByIDsResponse{}, err
 	}
