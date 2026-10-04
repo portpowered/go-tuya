@@ -31,12 +31,30 @@ jobs:
           version: v2.14.0
           only-new-issues: false
           args: --timeout=5m
+      - name: Lint CLI module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: cmd/go-tuya
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
+      - name: Lint authentication example module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: examples/auth
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
       - name: Verify generated wire artifacts on the tag
         run: |
-          go run ./tools/wiremodels -generate
-          go run ./tools/wireroutes -check
-          git diff --exit-code -- api/openapi.yaml pkg/dependencymodels
-          test -z "$(git ls-files --others --exclude-standard -- pkg/dependencymodels)"
+          make generate-wire
+          make wire-routes
+          generated_status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$generated_status" ]; then
+            echo "Regeneration changed tracked files or produced untracked artifacts:"
+            echo "$generated_status"
+            exit 1
+          fi
       - name: Check non-generated coverage on the tag
         run: make coverage
       - name: Check release module configuration

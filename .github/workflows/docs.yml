@@ -10,6 +10,8 @@ on:
       - 'pkg/dependencymodels/**'
       - 'tools/wireroutes/**'
       - 'tools/wiremodels/**'
+      - 'tools/publicmodels/**'
+      - 'pkg/tuya/*.gen.go'
       - 'tools/check_site_links.py'
       - '.github/workflows/docs.yml'
       - 'README.md'
@@ -36,16 +38,15 @@ jobs:
         with:
           go-version: '1.25.0'
           cache: true
-      - name: Generate Tuya API wire models
-        run: go run ./tools/wiremodels -generate
-      - name: Generate Tuya wire routes
-        run: go run ./tools/wireroutes
-      - name: Check generated models are current
+      - name: Regenerate and check all schema-owned files
         run: |
-          git ls-files --error-unmatch pkg/dependencymodels/routes.gen.go
-          git ls-files --error-unmatch pkg/dependencymodels/mqtt.gen.go
-          git diff --exit-code -- api/openapi.yaml pkg/dependencymodels
-          test -z "$(git ls-files --others --exclude-standard -- pkg/dependencymodels)"
+          make generate-wire
+          generated_status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$generated_status" ]; then
+            echo "Regeneration changed tracked files or produced untracked artifacts:"
+            echo "$generated_status"
+            exit 1
+          fi
       - name: Test with coverage
         if: github.event_name != 'pull_request'
         run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...

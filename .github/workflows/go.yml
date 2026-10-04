@@ -44,6 +44,8 @@ jobs:
       - name: Build
         run: go build ./...
       - name: Check schema-backed wire routes
+        env:
+          GOTOOLCHAIN: go1.25.0
         run: make wire-routes
       - name: Test with race detector
         run: go test -race ./...
@@ -110,5 +112,9 @@ jobs:
       - name: Regenerate every schema-owned model and route
         run: |
           make generate-wire
-          git diff --exit-code -- api/openapi.yaml pkg/dependencymodels
-          test -z "$(git ls-files --others --exclude-standard -- pkg/dependencymodels)"
+          generated_status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$generated_status" ]; then
+            echo "Regeneration changed tracked files or produced untracked artifacts:"
+            echo "$generated_status"
+            exit 1
+          fi
