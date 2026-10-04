@@ -224,7 +224,7 @@ func (r *mqttHTTPReplay) RoundTrip(request *http.Request) (*http.Response, error
 	}
 
 	requestID := request.Header.Get("X-Requestid")
-	hash := md5.Sum([]byte(requestID + "synthetic-refresh-token")) // #nosec G401 -- the paired transcript uses Tuya's protocol-defined test key.
+	hash := md5.Sum([]byte(requestID + mqttFixtureRefreshToken)) // #nosec G401 -- the paired transcript uses Tuya's protocol-defined test key.
 
 	plain, err := aesGCMDecrypt(encrypted.Encdata, secretGenerating(requestID, "", hex.EncodeToString(hash[:])))
 	if err != nil {
@@ -259,7 +259,10 @@ func (r *mqttHTTPReplay) RoundTrip(request *http.Request) (*http.Response, error
 		return nil, r.transcript.err
 	}
 
-	r.transcript.accept(mqttReplayFrame{Direction: "server", Action: "http-response", Topic: r.pair.Request.Path, Payload: strconv.Itoa(r.pair.Response.Status)})
+	r.transcript.accept(mqttReplayFrame{
+		Direction: mqttFixtureServer, Action: "http-response",
+		Topic: r.pair.Request.Path, Payload: strconv.Itoa(r.pair.Response.Status),
+	})
 
 	if r.transcript.err != nil {
 		return nil, r.transcript.err
@@ -375,8 +378,8 @@ func newSyntheticMQTTReplayQueue(
 	}
 
 	session := client.NewSession(Tokens{
-		AccessToken:  "synthetic-access-token",
-		RefreshToken: "synthetic-refresh-token",
+		AccessToken:  mqttFixtureAccessToken,
+		RefreshToken: mqttFixtureRefreshToken,
 		ExpireTime:   time.Now().Add(time.Hour).UnixMilli(),
 	})
 
@@ -423,7 +426,7 @@ func consumeSyntheticMQTTFrames(t *testing.T, replay *mqttReplayTranscript, brok
 		}
 
 		frame := replay.Frames[replay.next]
-		if frame.Direction != "server" || frame.Action != "message" {
+		if frame.Direction != mqttFixtureServer || frame.Action != "message" {
 			t.Fatalf("next frame = %+v, want inbound message", frame)
 		}
 

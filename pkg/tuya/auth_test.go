@@ -96,7 +96,7 @@ func setupAuthServiceWithMockServer(handler http.HandlerFunc) (*AuthService, *ht
 		CloudAPIURL:       server.URL,
 	}
 	client.EncryptedClient = &EncryptedClient{Client: client}
-	client.SetTokens(Tokens{AccessToken: "synthetic-access-token", RefreshToken: "synthetic-refresh-token"})
+	client.SetTokens(Tokens{AccessToken: mqttFixtureAccessToken, RefreshToken: mqttFixtureRefreshToken})
 
 	authService := &AuthService{client: client}
 

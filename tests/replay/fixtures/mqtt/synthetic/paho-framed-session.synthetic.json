@@ -1,0 +1,60 @@
+{
+  "provenance": "Hand-authored synthetic MQTT 3.1.1 packet bytes for Paho v1.5.1; not a broker or account capture. packet_id is a nonzero, distinct client identifier bound to the following server acknowledgement.",
+  "frames": [
+    {
+      "direction": "client",
+      "hex": "104500044d51545404c2001e001573796e7468657469632d6d7174742d636c69656e74000e73796e7468657469632d75736572001273796e7468657469632d70617373776f7264",
+      "packet_id": false
+    },
+    {
+      "direction": "server",
+      "hex": "20020000",
+      "packet_id": false
+    },
+    {
+      "direction": "client",
+      "hex": "820c0001000767656e6572616c00",
+      "packet_id": true
+    },
+    {
+      "direction": "server",
+      "hex": "9003000100",
+      "packet_id": true
+    },
+    {
+      "direction": "client",
+      "hex": "822900010024636c6f75642f6465766963652f6465766963652d312f696e2f6368616e6e656c2f73746100",
+      "packet_id": true
+    },
+    {
+      "direction": "server",
+      "hex": "9003000100",
+      "packet_id": true
+    },
+    {
+      "direction": "server",
+      "hex": "303f000767656e6572616c7b2270726f746f636f6c223a342c2264617461223a7b226465764964223a226465766963652d31222c22737461747573223a5b5d7d7d",
+      "packet_id": false
+    },
+    {
+      "direction": "server",
+      "hex": "305c0024636c6f75642f6465766963652f6465766963652d312f696e2f6368616e6e656c2f7374617b2270726f746f636f6c223a342c2264617461223a7b226465764964223a226465766963652d31222c22737461747573223a5b5d7d7d",
+      "packet_id": false
+    },
+    {
+      "direction": "client",
+      "hex": "a22800010024636c6f75642f6465766963652f6465766963652d312f696e2f6368616e6e656c2f737461",
+      "packet_id": true
+    },
+    {
+      "direction": "server",
+      "hex": "b0020001",
+      "packet_id": true
+    },
+    {
+      "direction": "client",
+      "hex": "e000",
+      "packet_id": false
+    }
+  ]
+}
