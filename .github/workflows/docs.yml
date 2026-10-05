@@ -52,7 +52,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: go test -race -coverpkg=./pkg/... -coverprofile=coverage.out ./pkg/...
       - name: Build Fumadocs site
-        uses: portpowered/api-docs-website-github-action@88d47570320f9551a1c6d1f07437285e91f2bffa
+        uses: portpowered/api-docs-website-github-action@f7bb9340238620b058d6bff9fb953a9efb2f3bd5
         with:
           title: go-tuya implementation-derived API reference
           openapi: api/openapi.yaml
