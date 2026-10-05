@@ -10,16 +10,15 @@ The `go-tuya` CLI is a separate Go module that calls the public
 It provides a customer-facing way to test authentication, reads, commands, and
 events without writing an application.
 
-The standalone CLI's first release is planned as `v0.4.0` and is pending
-publication. Until then, run from a checkout:
+The CLI follows its own release tags under
+`cmd/go-tuya/vMAJOR.MINOR.PATCH`. To run it from a checkout:
 
 ```sh
 cd cmd/go-tuya
 go run . --help
 ```
 
-The CLI has its own release tag under `cmd/go-tuya/vMAJOR.MINOR.PATCH`. After
-`v0.4.0` is published, install it with:
+To install release `v0.4.0` from the public Go module proxy, run:
 
 ```sh
 go install github.com/portpowered/go-tuya/cmd/go-tuya@v0.4.0
