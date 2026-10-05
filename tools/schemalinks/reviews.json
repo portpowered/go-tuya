@@ -1,0 +1,80 @@
+{
+  "https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a": {
+    "publisher": "Tuya Developer",
+    "title": "Device Management — Cloud Services API Reference",
+    "reviewed": "2026-10-04",
+    "source": "https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a",
+    "assessment": "The official API list on the page names every linked method and path below. Content was reviewed directly; page availability alone is not the evidence.",
+    "limitations": "This evidence applies to the listed public /v1.0/device-management operations. It does not document private /v1.0/m/... routes or establish their contracts, signing, encryption, regional behavior, or SDK implementation details.",
+    "operations": {
+      "GET /v1.0/devices/{device_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/{device_id} (get device details)."
+      },
+      "DELETE /v1.0/devices/{device_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes DELETE /v1.0/devices/{device_id} (delete a device)."
+      },
+      "PUT /v1.0/devices/{device_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes PUT /v1.0/devices/{device_id} (modify a device name)."
+      },
+      "GET /v1.0/users/{uid}/devices": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/users/{uid}/devices (list a user's devices)."
+      },
+      "GET /v1.0/devices": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices (list devices)."
+      },
+      "PUT /v1.0/devices/{device_id}/functions/{function_code}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes PUT /v1.0/devices/{device_id}/functions/{function_code} (modify a data-point name)."
+      },
+      "GET /v1.0/devices/{device_id}/logs": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/{device_id}/logs (query device logs)."
+      },
+      "PUT /v1.0/devices/{device_id}/reset-factory": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes PUT /v1.0/devices/{device_id}/reset-factory (restore factory defaults)."
+      },
+      "GET /v1.0/devices/{device_id}/sub-devices": {
+        "status": "official-operation-list-entry-placeholder-spelling-differs",
+        "evidence": "The API list includes GET /v1.0/devices/{deviceId}/sub-devices; its placeholder spelling differs from the schema's {device_id}, while the method and path shape match."
+      },
+      "GET /v1.0/devices/factory-infos": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/factory-infos (query factory information)."
+      },
+      "POST /v1.0/devices/{device_id}/user": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes POST /v1.0/devices/{device_id}/user (add a device user)."
+      },
+      "DELETE /v1.0/devices/{device_id}/users/{user_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes DELETE /v1.0/devices/{device_id}/users/{user_id} (delete a device user)."
+      },
+      "PUT /v1.0/devices/{device_id}/users/{user_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes PUT /v1.0/devices/{device_id}/users/{user_id} (modify a device user)."
+      },
+      "GET /v1.0/devices/{device_id}/users/{user_id}": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/{device_id}/users/{user_id} (query a device user)."
+      },
+      "GET /v1.0/devices/{device_id}/users": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/{device_id}/users (list device users)."
+      },
+      "PUT /v1.0/devices/{device_id}/multiple-name": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes PUT /v1.0/devices/{device_id}/multiple-name (modify multi-outlet names)."
+      },
+      "GET /v1.0/devices/{device_id}/multiple-names": {
+        "status": "official-operation-list-entry",
+        "evidence": "The API list includes GET /v1.0/devices/{device_id}/multiple-names (get multi-outlet names)."
+      }
+    }
+  }
+}

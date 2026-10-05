@@ -11,13 +11,13 @@ func TestWireQueryValuesRejectFixedKeysAcrossFileHelpers(t *testing.T) {
 	t.Parallel()
 
 	files := parseWireQueryValuesSources(t, map[string]string{
-		"first.go": `package sample
+		wireProbeFirstFile: `package sample
 import "net/url"
 func mutateQuery(values url.Values) { values.Set("unregistered-query", "value") }
 func mutateIndexedQuery(values url.Values) { alias := values; alias["unregistered-index"] = []string{"value"} }
 func fixedQueryLiteral() url.Values { return url.Values{"unregistered-literal": []string{"value"}} }
 `,
-		"second.go": `package sample
+		wireProbeSecondFile: `package sample
 import "net/url"
 func callQueryHelpers(values url.Values) { mutateQuery(values); mutateIndexedQuery(values) }
 `,

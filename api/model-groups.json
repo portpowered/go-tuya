@@ -57,6 +57,11 @@
       "operations": []
     },
     {
+      "name": "events_compatibility_projection",
+      "source": "api/models/events_compatibility_projection.yaml",
+      "operations": []
+    },
+    {
       "name": "rtc",
       "source": "api/models/rtc.yaml",
       "operations": [

@@ -574,7 +574,7 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
 
 	// Parse message
-	var sharingMessage wire.RawSharingMessage
+	var sharingMessage wire.RawSharingEvent
 
 	err := json.Unmarshal(payload, &sharingMessage)
 	if err != nil {
@@ -599,7 +599,7 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 
-	evt, err := parseRawSharingMessage(sharingMessage)
+	evt, err := parseRawSharingEvent(sharingMessage)
 	if err != nil {
 		log.Print("Failed to parse MQTT event payload")
 

@@ -509,7 +509,7 @@ func validateHTTPRequestBindings(
 	}
 
 	if !validatedHTTPInputsAreUnmodified(function, pathCall, operationGuard, urlCall, requestCall, imports) {
-		return fmt.Errorf("HTTP schema-validated method and route must remain unchanged through request construction: %w", errNetworkBoundary)
+		return fmt.Errorf("HTTP schema-validated method, route, and URL authority must remain unchanged through request construction: %w", errNetworkBoundary)
 	}
 
 	if !validHTTPURLBindings(function, keyCall, urlCall) {
@@ -597,7 +597,8 @@ func validatedHTTPInputsAreUnmodified(
 	guardPathUses, guardOperationUses := safeHTTPGuardDiagnosticUses(operationGuard.statement.Body, aliasForPath(imports, "fmt"))
 
 	return validatedHTTPPathIsUnmodified(function, pathCall, operationGuard, urlCall, guardPathUses) &&
-		validatedHTTPMethodIsUnmodified(function, pathCall, operationGuard, requestCall, guardOperationUses)
+		validatedHTTPMethodIsUnmodified(function, pathCall, operationGuard, requestCall, guardOperationUses) &&
+		validatedHTTPURLIsUnmodified(function, urlCall, requestCall)
 }
 
 func validatedHTTPPathIsUnmodified(
@@ -667,6 +668,46 @@ func validatedHTTPMethodIsUnmodified(
 	}
 
 	return namedValueUsesUnchanged(function.Body, "operation", function.Body.Pos(), function.Body.End(), allowedOperationUses)
+}
+
+func validatedHTTPURLIsUnmodified(function *ast.FuncDecl, urlCall, requestCall indexedCall) bool {
+	if function == nil || urlCall.call == nil || requestCall.call == nil ||
+		functionSignatureBindsName(function, "target") {
+		return false
+	}
+
+	target := requestURLStringReceiver(requestCall.call)
+	if target == nil {
+		return false
+	}
+
+	return namedValueUsesUnchanged(
+		function.Body,
+		"target",
+		urlCall.call.End(),
+		function.Body.End(),
+		map[token.Pos]bool{target.Pos(): true},
+	)
+}
+
+func requestURLStringReceiver(call *ast.CallExpr) *ast.Ident {
+	if call == nil || len(call.Args) < 3 {
+		return nil
+	}
+
+	stringCall, isCall := call.Args[2].(*ast.CallExpr)
+	if !isCall || len(stringCall.Args) != 0 {
+		return nil
+	}
+
+	stringMethod, isSelector := stringCall.Fun.(*ast.SelectorExpr)
+	if !isSelector || stringMethod.Sel.Name != "String" || !isIdentifier(stringMethod.X, "target") {
+		return nil
+	}
+
+	target, _ := stringMethod.X.(*ast.Ident)
+
+	return target
 }
 
 func directReturnOnly(block *ast.BlockStmt) bool {

@@ -9,6 +9,14 @@ components:
           type: string
         sdp:
           type: string
+      example:
+        session_id: synthetic-rtc-session-001
+        sdp: |-
+          v=0
+          o=- synthetic-session 1 IN IP4 127.0.0.1
+          s=synthetic-session
+          t=0 0
+      x-example-evidence: synthetic
     RTCOfferBody:
       type: object
       description: WebRTC offer payload sent to Tuya signaling.
@@ -23,6 +31,14 @@ components:
       required:
       - sdp
       - type
+      example:
+        type: offer
+        sdp: |-
+          v=0
+          o=- synthetic-offer 1 IN IP4 127.0.0.1
+          s=synthetic-offer
+          t=0 0
+      x-example-evidence: synthetic
     RTCSessionEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -47,3 +63,17 @@ components:
           description: Provider trace identifier when present.
         result:
           $ref: '#/components/schemas/RTCSessionResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-rtc-001
+        result:
+          session_id: synthetic-rtc-session-001
+          sdp: |-
+            v=0
+            o=- synthetic-answer 1 IN IP4 127.0.0.1
+            s=synthetic-answer
+            t=0 0
+      x-example-evidence: synthetic

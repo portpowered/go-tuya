@@ -47,6 +47,8 @@ jobs:
         env:
           GOTOOLCHAIN: go1.25.0
         run: make wire-routes
+      - name: Validate canonical schema examples
+        run: make schema-examples
       - name: Test with race detector
         run: go test -race ./...
       - name: Profile library packages

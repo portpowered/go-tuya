@@ -28,6 +28,8 @@ const (
 	completeReplayFixtureGetDeviceDetails      = "getDeviceDetails"
 	completeReplayFixtureSyntheticRefreshToken = "synthetic-refresh-token"
 	completeReplayFixtureUser2                 = "user-2"
+	completeReplayFixtureUpdateDeviceName      = "updateDeviceName"
+	completeReplayFixtureDeskLampName          = "Desk lamp"
 )
 
 type operationPair struct {
@@ -44,7 +46,7 @@ type orderedHTTPReplay struct {
 
 func (r *orderedHTTPReplay) RoundTrip(request *http.Request) (*http.Response, error) {
 	if r.next >= len(r.pairs) {
-		return nil, testMismatchf("unexpected exchange after transcript exhaustion: %s %s", request.Method, request.URL)
+		return nil, testMismatchf("unexpected exchange after transcript exhaustion")
 	}
 
 	pair := r.pairs[r.next]
@@ -121,6 +123,18 @@ func encryptSyntheticResponse(requestID, plain string) (string, error) {
 	nonce := []byte("synthetic123")
 
 	return base64.StdEncoding.EncodeToString(append(nonce, gcm.Seal(nil, nonce, quoted, nil)...)), nil
+}
+
+func runReplayDeviceNameUpdate(session *tuya.Session) error {
+	_, err := session.DevicesService.UpdateDeviceName(
+		context.Background(),
+		tuya.UpdateDeviceNameRequest{
+			DeviceID: completeReplayFixtureDevice1,
+			Name:     completeReplayFixtureDeskLampName,
+		},
+	)
+
+	return wrapReplayOperationError(err)
 }
 
 func wrapReplayOperationError(err error) error {
@@ -290,13 +304,19 @@ func TestRemainingOperationsPairedReplay(t *testing.T) {
 
 			return wrapReplayOperationError(e)
 		}},
-		{"updateDeviceName", func() error {
-			v, e := session.DevicesService.UpdateDeviceName(ctx, tuya.UpdateDeviceNameRequest{DeviceID: completeReplayFixtureDevice1, Name: "Desk lamp"})
-			if e == nil && !v.Result {
+		{completeReplayFixtureUpdateDeviceName, func() error {
+			deviceNameResponse, updateErr := session.DevicesService.UpdateDeviceName(
+				ctx,
+				tuya.UpdateDeviceNameRequest{
+					DeviceID: completeReplayFixtureDevice1,
+					Name:     completeReplayFixtureDeskLampName,
+				},
+			)
+			if updateErr == nil && !deviceNameResponse.Result {
 				return errReplayTestRenameFailed
 			}
 
-			return wrapReplayOperationError(e)
+			return wrapReplayOperationError(updateErr)
 		}},
 		{"sendDeviceCommands", func() error {
 			v, requestErr := session.DevicesService.SendCommands(ctx, tuya.SendCommandsRequest{
@@ -371,6 +391,37 @@ func TestRemainingOperationsPairedReplay(t *testing.T) {
 		}
 
 		t.Fatalf("exhausted transcript returned %v, %v", response, err)
+	}
+}
+
+func TestOrderedReplayExhaustionDiagnosticHidesRequestValues(t *testing.T) {
+	t.Parallel()
+
+	const requestSecret = "synthetic-diagnostic-query-secret"
+
+	requestURL := "https://api.example.invalid/v1.0/devices?access_token=" + requestSecret
+	replay := &orderedHTTPReplay{}
+
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, requestURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := replay.RoundTrip(request)
+	if response != nil && response.Body != nil {
+		_ = response.Body.Close()
+	}
+
+	if err == nil || response != nil {
+		t.Fatalf("exhausted replay returned response %v, error %v", response, err)
+	}
+
+	if strings.Contains(err.Error(), requestSecret) {
+		t.Fatalf("exhaustion diagnostic exposed a request value: %v", err)
+	}
+
+	if replay.next != 0 {
+		t.Fatal("unexpected request consumed a replay pair")
 	}
 }
 
@@ -473,13 +524,18 @@ func TestPairedReplayRejectsInvalidVolatileValues(t *testing.T) {
 
 			return wrapReplayOperationError(err)
 		}},
-		{"encrypted body", "updateDeviceName", func(r *http.Request) {
-			r.Body = io.NopCloser(strings.NewReader(`{"encdata":"c3ludGhldGlj"}`))
-		}, func(s *tuya.Session) error {
-			_, err := s.DevicesService.UpdateDeviceName(context.Background(), tuya.UpdateDeviceNameRequest{DeviceID: completeReplayFixtureDevice1, Name: "Desk lamp"})
-
-			return wrapReplayOperationError(err)
-		}},
+		{"encrypted body", completeReplayFixtureUpdateDeviceName, func(r *http.Request) {
+			body := []byte(`{"encdata":"c3ludGhldGlj"}`)
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			r.ContentLength = int64(len(body))
+			r.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
+		}, runReplayDeviceNameUpdate},
+		{"content length", completeReplayFixtureUpdateDeviceName, func(r *http.Request) { r.ContentLength++ }, runReplayDeviceNameUpdate},
+		{"GetBody", completeReplayFixtureUpdateDeviceName, func(r *http.Request) {
+			r.GetBody = func() (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader("synthetic-mutated-replay-body")), nil
+			}
+		}, runReplayDeviceNameUpdate},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

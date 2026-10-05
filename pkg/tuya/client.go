@@ -241,8 +241,13 @@ func WithRTCSignaling(signaling RTCSignaling) Option {
 
 func validateEndpoint(name, endpoint string) error {
 	parsed, err := url.Parse(endpoint)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return fmt.Errorf("%s %w", name, errAbsoluteHTTPURL)
+	if err != nil ||
+		(parsed.Scheme != "http" && parsed.Scheme != "https") ||
+		parsed.Host == "" ||
+		parsed.User != nil ||
+		parsed.RawQuery != "" ||
+		parsed.Fragment != "" {
+		return fmt.Errorf("%s %w without credentials, query, or fragment", name, errAbsoluteHTTPURL)
 	}
 
 	return nil

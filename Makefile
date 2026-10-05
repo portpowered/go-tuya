@@ -4,15 +4,18 @@ GOLANGCI_LINT ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lin
 export GOWORK := off
 
 .DEFAULT_GOAL := check
-.PHONY: check build test lint fmt replay coverage wire-routes generate-wire \
+.PHONY: check build test lint fmt replay coverage wire-routes generate-wire schema-examples \
 	build-cli test-cli vet-cli lint-cli module-cli check-cli
 
-check: lint wire-routes build test check-cli check-example
+check: lint wire-routes build test schema-examples check-cli check-example
 
 wire-routes:
 	$(GO) run ./tools/wiremodels -check
 	$(GO) run ./tools/publicmodels -check
 	$(GO) run ./tools/wireroutes -check
+
+schema-examples:
+	$(GO) run ./tools/schemaexamples
 
 generate-wire:
 # Public numeric bindings are checked by the wire inventory, so generate them first.

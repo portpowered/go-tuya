@@ -1473,7 +1473,7 @@ func collectKnownValueBindings(value any, component string, path []string, bindi
 }
 
 func collectKnownValueBinding(node map[string]any, component string, path []string, bindings map[string][]string) {
-	target, hasTarget := node["x-go-tuya-known-values-schema"].(string)
+	target, hasTarget := node[knownValuesExtension].(string)
 	if !hasTarget {
 		return
 	}

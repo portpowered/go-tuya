@@ -101,13 +101,13 @@ func TestWireRequestMapReturnedMapRetainsGeneratedProvenanceAcrossSiblingHelper(
 	t.Parallel()
 
 	err := checkWireProvenanceProbe(t, map[string]string{
-		"first.go": `package sample
+		wireProbeFirstFile: `package sample
 import wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 func wireRequestMap(value any) (map[string]any, error) { return nil, nil }
 func mutate(values map[string]any) { values["audit-unregistered-query"] = "value" }
 func build() { result, _ := wireRequestMap(wire.RTCOfferBody{}); mutate(result) }
 `,
-		"second.go": `package sample
+		wireProbeSecondFile: `package sample
 func callAgain() { build() }
 `,
 	}, provenanceModels())
@@ -325,6 +325,14 @@ func provenanceModels() map[string]generatedModel {
 		wireProvenanceEnumType: {
 			Name: wireProvenanceEnumType, File: wireProvenanceGeneratedGroup, Alias: "", Fields: nil,
 			EnumMembers: map[string]string{wireProvenanceEnumMember: "offer"},
+		},
+		"Envelope": {
+			Name: "Envelope", File: wireProvenanceGeneratedGroup, Alias: "",
+			Fields: map[string]string{"Bodies": wireProvenanceEnumBody}, EnumMembers: nil,
+		},
+		"RTCOfferListBody": {
+			Name: "RTCOfferListBody", File: wireProvenanceGeneratedGroup, Alias: "",
+			Fields: map[string]string{"Types": wireProvenanceEnumType}, EnumMembers: nil,
 		},
 	}
 }

@@ -49,6 +49,7 @@ jobs:
         run: |
           make generate-wire
           make wire-routes
+          make schema-examples
           check_generated_outputs() {
             local generated_status ignored_generated
             generated_status="$(git status --porcelain --untracked-files=all -- "$@")"

@@ -1,220 +1,153 @@
 # Independent review record
 
-Status: **open; fixes and two fresh final independent approvals are required**.
+At the user's request on 2026-10-04, final dual review and checklist closure
+are deferred while known customer-facing fixes, required CI, and releases
+are completed. These reports audit earlier snapshots and do not approve
+the final release. Unverified checklist items remain open.
 
-The reports below audit `f1ca66afc9d28dbb8c551535bfff2d0b5677eecd`
-against shared template `05e93ff08899414207e9335717e7d7b0190ebd09`.
-The current [checklist](template-checklist.md) pins
+Status: **open; findings and final dual approval remain outstanding**.
+
+The two reports below independently audit all 16 checklist items at source
+`261ddf44425f3072b14033bd47c36dd11bdbff6c`, against shared template
 `62cc3cb5a1308dae8700f92052f99b1c455a1d98`.
-Historical scoped approvals remain in Git history and do not approve later changes.
+They were delivered before either reviewer read this record or the other report.
+Later implementation changes require verification on the final commit.
+See the [current checklist](template-checklist.md). Historical reports remain
+in Git history. Passing CI does not resolve the findings below.
 
-## Findings being resolved
+## Reviewer 1 — initial independent audit
 
-- Unknown, recursive, imported, or helper-owned wire values can evade schema checks.
-- Generated maps and query values can lose provenance through fields and helper escapes.
-- Later closed-enum field mutations can evade validation.
-- A new network primitive and post-guard route mutation can evade the route inventory.
-- Signature preimage formatting needs schema ownership and generated runtime use.
-- Request-body backing storage needs mutation checks through the actual send.
-- Old release guide URLs need a rendered compatibility destination.
-- An orphan document needs removal and the review record needs consolidation.
-- Injected HTTP cookie state needs isolation from callers and other sessions.
+### Independent review 1 — initial Tuya library audit
 
-The original reviewers became implementers of the fixes, so two new reviewers
-must independently audit all sixteen items at the frozen implementation commit.
-Every finding remains open until those reviewers verify its disposition. Release,
-Pages, clean SDK consumption, and public CLI installation need final evidence.
+**Reviewed source:** `261ddf44425f3072b14033bd47c36dd11bdbff6c` (the isolated archive provided for this review; its local synthetic Git HEAD is `b8569677079a4941a744e957dad28809e0baa6f9`). The coordinator's manifest confirms the archive contents match the reviewed source tree.
 
-## Original review 1: repair evidence
+**Review date:** 2026-10-04, America/Los_Angeles.
 
-# Independent checklist audit — Reviewer 1
+**Reviewer:** Reviewer 1, independent of implementation.
 
-**Repository:** portpowered/go-tuya
-**Reviewed commit:** f1ca66afc9d28dbb8c551535bfff2d0b5677eecd
-**Implementation baseline:** f5506c7f303debd917e13ae1827911909da30de9 (reviewed commit changes checklist wording only)
-**PR base:** main
-**Shared standards:** portpowered/go-third-party-template at 05e93ff08899414207e9335717e7d7b0190ebd09
+**Scope:** All 16 items in `docs/template-checklist.md`, with the shared template library, verification, and client-design guidance. This is an initial review, not release sign-off. `docs/independent-review.md` and repository history were intentionally deferred until this initial all-16 report was delivered.
+
+#### Verdicts
+
+| # | Verdict | Evidence and disposition |
+| --- | --- | --- |
+| 1 | **PASS** | The public API is in `pkg/tuya`; examples are separate and the README presents a standalone SDK. The CLI is in its own module. I found no consuming-application adapter or rollout plan in this source snapshot. |
+| 2 | **OPEN — finding R1-2** | The guides and README describe supported methods and distinguish provider-documented from implementation-derived behavior. Fixture provenance says the checked-in exchanges are synthetic, and there are no private account captures. However, `api/` contains no OpenAPI `example`/`examples` entries, and CI/tools contain no validator that validates examples against their owning schemas. Synthetic replay JSON under `tests/replay/fixtures/` is not in the canonical schemas. This misses the checklist's schema-backed request, response, event, nested-payload, resource-update, relation-change, and failure examples plus CI validation. Add the canonical examples and an offline schema-validation gate; retain the current synthetic classification. |
+| 3 | **PASS** | `README.md` has Go version, CI, coverage, release, Go Reference, license, and documentation badges, all pointing at the `portpowered/go-tuya` project or its live reports. |
+| 4 | **OPEN — findings R1-4a/R1-4b** | `docs/wire-model-inventory.md` records HTTP operations, MQTT channels/Paho framing, generated model groups, primitive values, projections, and handwritten JSON populations. `make wire-routes` passed. The gates test unreferenced exported JSON models and anonymous nested objects. The schema variant binding and the HTTP authority source gate still have gaps: (a) `api/models/events.yaml` binds `RawSharingMessage.protocol` to values 4 and 20 but binds `data` to the single combined `RawSharingMessageData`; separate `RawDeviceReportData` and `RawDeviceManagementData` components are not discriminated/referenced from that envelope. `api/mqtt.asyncapi.yaml` therefore exposes one merged payload instead of the two known protocol variants, while `pkg/tuya/message_protocol.go` branches on protocol and decodes them separately. Schema and generated reference need an explicit variant binding and required shape. (b) A compile-valid mutation `target.Host = "attacker.invalid"` inserted after `requestURL(...)` and before `http.NewRequestWithContext(..., target.String(), ...)` was accepted by `validateSourceNetworkBoundary` in a temporary probe. The boundary checks route/method provenance and tracks request mutation, but does not preserve or validate the `target` URL identity between URL construction and request construction. Track the URL object's effective authority and all request identity fields through construction/send; add this negative control to the exact default gate. Both probe files were removed after use. |
+| 5 | **PASS for this source snapshot** | `.golangci.yml` has literal `linters.default: all`, and CI pins golangci-lint v2.14.0, runs full-repository lint and separate CLI/example lint, then build, race tests, vet, formatting, module checks, coverage, and replay. Exact-source CI at `261ddf…`: `verify` and `generation` succeeded (run `37251628188`). I independently ran `make lint` and a clean rerun of `make check` with Go 1.26.8, the pinned v2.14.0 executable, and isolated caches; both passed. The first `make check` overlapped a temporary probe test I removed before its test phase and failed only because that file had been removed. The clean rerun passed all gates. `make replay` also passed. Golangci reported only deprecation warnings for configured `wsl`, `exhaustruct`, and `gomodguard`; there were zero issues. The separate Docs job failed, as recorded under item 12; that does not change the successful Go verification job. |
+| 6 | **PASS at the enforced floor; 90% target outstanding** | `make coverage` reports HTTP transport 93.8% (60/64), MQTT transport 50.0% (1/2), public Tuya package 82.8% (1311/1584), and combined non-generated `pkg` coverage 83.2% (1372/1650). This exceeds the CI-enforced 80% floor and remains below the stated 90% target. Generated files are filtered by `tools/coverage`. |
+| 7 | **PASS for source layout and inventory** | Public SDK is `pkg/tuya`, generated wire models are grouped in `pkg/dependencymodels`, and HTTP/MQTT transport packages live under `pkg/dependencies/`. There is no catch-all internal model bucket. `make check` passed wire/public-model inventory drift checks; inventory tests cover unreferenced exported JSON structs and anonymous nested wire objects. The CLI and authentication example are separate modules importing the public SDK path. The exact published consumer-proxy check is a release-only check and remains pending publication. |
+| 8 | **OPEN — finding R1-8** | `NewClient` uses functional options, has defaults, requires the application client ID, checks conflicting HTTP options, rejects a shared cookie jar, and tests invalid/conflicting cases. But `validateEndpoint` checks only scheme, host, and HTTP(S); it accepts endpoint URLs containing user information, query, or fragment. The later `httptransport.validateOrigin` rejects these when an operation runs, so `NewClient` can accept a configuration that will fail only on first use. Reject those components at option/constructor time and add tests. |
+| 9 | **PASS** | `Client` stores reusable endpoint/transport settings; each `Session` owns tokens, HTTP client value, queue, and connection lifecycle. Shared injected `http.Client.Jar` values are rejected, sessions receive cloned clients, and cookie-isolation tests assert two-session behavior. Refresh does not mutate shared client state. |
+| 10 | **PASS for implemented network edges** | HTTP is injected through `WithHTTPClient`/`WithHTTPTransport`; MQTT can be replaced with `WithMQTTClientFactory` and a connection-producing Paho hook; RTC signaling is replaceable. The pinned Paho v1.5.1 contract has a `net.Pipe` paired-frame success and denied-CONNACK replay. The route/network gate scans `pkg`, `cmd`, and `examples` and rejects direct socket/network edges. |
+| 11 | **PASS** | `AuthService.RefreshToken` is explicit and returns rotated tokens. Sessions expose `Tokens`/`SetTokens`; normal requests do not update tokens. README and authentication guide explain caller persistence and reauthentication responsibility. |
+| 12 | **OPEN — findings R1-12a/R1-12b** | Customer guides are MDX under `docs/guides/` and link to generated reference pages. On the exact reviewed source, Docs run `37251628232` failed its rendered-link gate: `provider-evidence/index.html` had broken `./device-list` and `./authentication` links. The source checker reads every rendered HTML page, but its schema-URL extraction only matches `https://portpowered.github.io/...` (`tools/check_site_links.py` line 36); it does not enumerate the many `externalDocs.url` values for `developer.tuya.com` in `api/http.openapi.yaml`, so schema-supplied destinations absent from static anchors are not checked/reviewed by that mechanism. The sibling-link fix and a subsequent Docs run are post-snapshot evidence and need reviewer verification on the final tree/artifact before closing this item. |
+| 13 | **OPEN** | README copy is caller-focused; maintainer inventory, verification, release, and checklist material is outside guide navigation. I reviewed the customer guides and maintainer docs, excluding the explicitly deferred independent review record. I reviewed the generated wire inventory at a high level and its drift gates passed, but I did not manually cross-check every inventory row. I could not inspect rendered Pages because the reviewed Docs build stopped at the broken-link gate. Complete the deferred record audit, manually verify the inventory, and inspect the final rendered site before sign-off; check incoming links and release URLs at that commit. |
+| 14 | **OPEN** | This is one independent review. The source checklist remains unchecked, and multiple findings/items remain open. A second independent review, finding resolution, affected-check reruns, and both reviewers' verification at the final commit are still required. |
+| 15 | **OPEN — finding R1-15** | HTTP and MQTT tests use synthetic paired exchanges, mismatch controls, and exhaustion checks. A temporary compile-valid replay probe built the expected QR request from `qr-created.synthetic.json`, set `request.Host = "attacker.invalid"`, and called `matchFixtureRequest`; the matcher accepted it. At `tests/replay/replay_test.go:137`, the comparison uses URL scheme/host/path only, ignoring the effective `Request.Host`. It also calls `request.URL.Query()` without rejecting malformed raw query errors, and `matchFixtureHeaders` checks expected headers without rejecting unlisted headers. Add authority, URL user-info/opaque, malformed-query, complete relevant-header, and secret-redacted mismatch controls; remove any probe artifacts (already removed here). |
+| 16 | **PENDING RELEASE; source review open** | The standalone `cmd/go-tuya` module consumes the public SDK, offers QR login/poll, explicit refresh/export/logout, discovery/read/control, JSON output, cancellation, and offline paired CLI tests. `make check` builds/tests/vets/tidies the CLI module; CI and release workflows pin all-linter v2.14.0. The local `replace ../..` is development-only and the release workflow rejects it, then checks the published CLI from a clean proxy consumer. Neither the SDK nor CLI v0.4 release/proxy install has occurred at this reviewed source, so external install/tag verification is pending. The CLI guide also needs reviewer confirmation against the required short ordered install/login/discovery/operation sequence and a clear explanation of selecting IDs from discovery output. The provider path is QR approval; no browser/localhost/PKCE contract is established by the reviewed Tuya schemas, so I did not count OAuth callback features as missing. |
+
+#### Findings and dispositions
+
+| Finding | Severity | Evidence | Disposition at reviewed source |
+| --- | --- | --- | --- |
+| R1-2 | P1 | Canonical API schemas contain no `example`/`examples` objects; no schema-validation CI gate found. | Open. Add schema-valid request/response/event examples and validate them in CI. |
+| R1-4a | P1 | Protocol 4/20 share one `RawSharingMessageData` reference; specific payload components are disconnected from the message schema. | Open. Bind protocol discriminators to generated named payload variants and check rendered shape. |
+| R1-4b | P1 | Temporary source-gate probe mutating `target.Host` after `requestURL` was accepted. | Open. Track effective URL authority and identity from URL construction through send; add a default-root negative test. |
+| R1-8 | P2 | `validateEndpoint` accepts endpoint URL user-info/query/fragment even though later origin validation rejects them. | Open. Reject invalid endpoint components when applying client options. |
+| R1-12a | P1 | Exact Docs CI run failed on `provider-evidence` sibling links. | Open at reviewed SHA. Coordinator later reported a doc-only sibling-link patch and successful Docs run; verify that change on the final snapshot/artifact. |
+| R1-12b | P2 | `check_site_links.py` schema regex only collects GitHub Pages URLs; provider `externalDocs` URLs are outside that collection. | Open. Enumerate all schema-provided externalDocs/description URLs for review and check internal destinations in the rendered artifact. |
+| R1-15 | P1 | Temporary replay probe setting `Request.Host` to `attacker.invalid` still matched and would receive the paired response. | Open. Compare effective authority and add malformed-query/URL-userinfo/header-completeness and redaction controls. |
+
+#### Check results
+
+- `make lint GOLANGCI_LINT=<pinned v2.14.0 executable>` — passed, zero issues; deprecated-linter warnings only.
+- `make check GOLANGCI_LINT=<pinned v2.14.0 executable>` — passed on clean snapshot; includes SDK/CLI/example vet/build/race tests, schema gates, and module checks.
+- `make replay` — passed.
+- `make coverage` — 83.2% combined non-generated package coverage; minimum 80% met, 90% target not met.
+- Exact-source CI `verify` and `generation` — success; exact-source Docs build — failure as above.
+- Final working tree status was clean. Both temporary probe files were deleted; no commit, merge, or source fix was made.
+
+**Signed:** Reviewer 1 — independent initial review.
+
+**Overall verdict:** **NOT APPROVED**; keep checklist item 14 unchecked. Resolve open findings, review the final rendered site and release evidence, and have both independent reviewers verify all affected items at the final commit.
+
+## Reviewer 2 — initial independent audit
+
+### Independent review 2 — initial 16-item audit
+
+**Reviewed source SHA:** `261ddf44425f3072b14033bd47c36dd11bdbff6c` (identified by the review coordinator; local review metadata was excluded from this first pass).
+
 **Review date:** 2026-10-04
 
-I reviewed a fresh temporary clone at the exact SHA. Checks ran from its repository root with Go 1.26.8 and scoped temporary caches; the pinned golangci-lint v2.14 executable was used. Temporary adversarial source probes were compiled and removed from that clone. The original go-tuya checkout, private/untracked files, checklist, and review records were not edited.
+**Reviewer attestation:** Reviewer 2, independent and not an implementer. Signed: Codex reviewer agent, 2026-10-04.
 
-## Overall determination
+#### Scope and result
 
-**Not merge-eligible at this reviewed commit.** Checklist item 4 has reproducible fail-open source-gate cases: unresolved recursion, generated-map and schema-keyed query-map writes through aggregate receiver fields, and an unlisted x/net/websocket network primitive all pass the exact root make wire-routes gate. Fix those cases and have both independent reviewers recheck the final implementation SHA before considering merge.
+I assessed every numbered item in `docs/template-checklist.md` against the designated Tuya checkout. All 16 items were addressed (100% review coverage). Nine pass at this source snapshot; seven remain open. “Open” means the checklist evidence is incomplete or a concrete discrepancy remains; it does not mean the underlying code is necessarily unusable.
 
-The PR CI and docs artifact are green, but they are not a full publication pass. The Docs workflow intentionally skips Pages deploy on pull requests. SDK v0.4 and nested CLI release/consumer-install checks have not run. Those publication checks can occur after merge and before first release; they are distinct from fixing the blocking source gate. Items 14, 12, and 16 therefore remain open/partial even aside from item 4.
+The target checkout was read-only. I did not read its `docs/independent-review.md`, Git history, or any other review report before delivering this first verdict, as directed by the coordinator. I did not edit or commit source files.
 
-## Checklist verdicts
+A scope deviation occurred during the audit: three read commands omitted the required checkout working directory. One briefly read a small prefix of the caller’s main Ring checkout `api/openapi.yaml` and its authentication guide; the other two returned only missing-path errors. Those outputs are excluded from every verdict below. No history, review record, or report was read, and no files were changed. I resumed in the designated Tuya checkout with explicit working directories.
 
-### 1. Application independence — PASS
+#### Verification performed
 
-The library requires the consuming application's client ID through WithClientID; it does not supply an application identity. pkg/tuya exposes a provider SDK, and the CLI is a separate nested module. The README says applications supply and store account credentials. Tuya mobile/private endpoint paths containing home-assistant are provider routes, not an application adapter. No consuming-app import or adapter was found in the public package, examples, README, or guides.
+- `make lint` passed with Go 1.26.8 and golangci-lint v2.14.0. Root, CLI, and authentication-example lint runs each reported zero issues. The checked-in config uses literal `linters.default: all`; workflows pin v2.14.0 and lint all issues.
+- `make check` passed with Go 1.26.8. This reran lint, schema/model/route drift checks, build, race tests, CLI module checks/build/tests/vet, and example module checks/build/tests/vet.
+- `make replay` passed, including the paired HTTP replay suite and framed Paho MQTT transcript test.
+- `make coverage` passed its 80% minimum. Non-generated coverage was HTTP transport 93.8% (60/64), MQTT transport 50.0% (1/2), SDK 82.9% (1313/1584), and combined 83.3% (1374/1650). The 90% target was not met. Generated `.gen.go` statements are excluded by `tools/coverage`.
+- The coverage profile has zero-hit non-generated functions in `pkg/dependencies/mqtttransport.NewClient`, several compatibility `GetRequest` methods, `Session.Unload`, `DevicesService.GetDeviceStreamAllocate`, `EncryptedClient.Put`/`Delete`, event `GetDeviceID` methods, `newMQTTClient`, `queueReconnect`, and `NewCustomerTokenInfo`. These uncovered paths are reported rather than counted as generated code.
+- Independent read-only GitHub Actions lookups for exact source SHA 261ddf44425f3072b14033bd47c36dd11bdbff6c in portpowered/go-tuya found blocking CI run [37251628188](https://github.com/portpowered/go-tuya/actions/runs/37251628188), completed successfully. Its verify and generation jobs passed, including all-linter checks for SDK, CLI, and example modules, route/schema drift, race tests, coverage, replay, vet, formatting, and module metadata. The separate Documentation run [37251628232](https://github.com/portpowered/go-tuya/actions/runs/37251628232) failed its rendered-site link check; build succeeded and later upload/deploy steps were skipped. Item 5’s exact-commit blocking-CI evidence is present and passes; the documentation-link failure remains open under item 12.
 
-### 2. API usage, operations, errors, injection, customer guides — PASS
+#### Item verdicts
 
-The README and MDX guides cover authentication and explicit refresh, device discovery/control, event lifecycle, regions, and the standalone CLI. Examples call the current exported options, session, and service methods. They document ClientError, caller-owned token persistence, transport injection, and lifecycle cleanup. The device-list guide separates Tuya-documented behavior from implementation-derived signing/encryption. Replay provenance is explicitly synthetic, with no account-capture claim. The rendered candidate has guides for authentication, CLI, device control/list, events, regions/endpoints, upgrading, and an index.
+1. **PASS — repository boundary.** The module is `github.com/portpowered/go-tuya`, the public SDK is under `pkg/tuya`, and the separate CLI and examples consume the SDK. The README and public guides address application configuration without containing an application adapter or rollout plan.
 
-### 3. README badges — PASS
+2. **OPEN — examples are not schema-backed.** The guides document authentication, operations, errors, transport injection, and evidence classes. Synthetic replay fixtures are stored separately under `tests/replay/fixtures/**/synthetic` with provenance notes. However, the canonical API schemas have no `example`/`examples` entries, and neither `make check` nor the visible CI workflows validate request, response, or event examples against their owning schemas. This leaves the checklist’s schema-valid canonical examples and CI validation requirements unmet.
 
-README has Go-version, CI, coverage, release, Go Reference, license, and documentation badges. Their targets use portpowered/go-tuya and live report/repository URLs; no template example module or repository placeholder remains.
+3. **PASS — README badges.** The README includes Go version, CI, coverage, release, Go Reference, license, and documentation badges. Badge destinations use the `portpowered/go-tuya` repository and Pages coverage/documentation endpoints.
 
-### 4. Schema/model/network inventory and fail-closed source gates — OPEN, BLOCKING
+4. **OPEN — known message variants and provenance controls.** `docs/wire-model-inventory.md` is generated, records endpoint/model use sites and primitive bindings, and `make check` passes the model and route drift gates. The protocol inventory is not complete enough to sign off:
+   - `api/models/events.yaml` binds `RawSharingMessage.protocol` to the values 4 and 20, but `data` refers to open `RawSharingMessageData`. The known `RawDeviceReportData` and `RawDeviceManagementData` schemas have no incoming schema reference (also reflected by the inventory), so the generated event reference does not bind either protocol value to its concrete payload shape.
+   - Several checklist-required compile-valid regression controls are absent from the checked-in test suite: a novel fixed wire value returned through a named result; a generated map returned through a named result and escaping to an unverified helper; a sibling-file helper that returns a novel fixed value or mutates a generated map with a caller-input positive; a helper chain beyond the traversal boundary; nested closed-enum values in arrays/slices and anonymous/reference chains; and indexed receiver-path negatives covering intermediate keys through slices, pointer dereferences, and type assertions. The implementation contains provenance traversal code, but those specific controls are not demonstrated by the tests I inspected.
+   - The existing wire and route negative tests run in the repository test suite, but I found no control that mutates a fixture and exercises it through the exact default `make wire-routes`/CI command.
 
-The checked-in inventory has separate HTTP operations, MQTT/external-edge, generated provider components, primitive-value bindings, public projections, handwritten SDK/CLI JSON types, and codec sections. OpenAPI contains 28 operation IDs across 24 paths; AsyncAPI describes two receive channels. Generated-artifact and route checks pass on the clean target (make wire-routes). The external Paho contract identifies v1.5.1, broker/config source, frames, injection seam, replay fixtures, and EOF lifecycle behavior. I independently searched production Go types, JSON tags, maps, constants, and outbound-network sites in addition to regenerating/checking the inventory.
+   Relevant source: `api/models/events.yaml`; `docs/wire-model-inventory.md` entries for `RawSharingMessageData`, `RawDeviceReportData`, and `RawDeviceManagementData`; `tools/wiremodels/*_test.go`; `tools/wireroutes/main_test.go`.
 
-Compile-valid negative probes show the gate does not meet fail-closed requirements. Each probe was placed in a temporary production file under pkg/tuya, passed go test ./pkg/tuya, and was removed. For aggregate probes I ran go run ./tools/wiremodels to refresh the temporary inventory, then the exact root make wire-routes; the gate passed with the novel value/key still present.
+5. **PASS — exact-commit blocking CI.** The independent GitHub Actions lookup found CI run [37251628188](https://github.com/portpowered/go-tuya/actions/runs/37251628188) on the exact source SHA, completed successfully with both verify and generation jobs passing. The full-repository SDK, CLI, and example all-linter steps and the build, schema/route checks, race tests, coverage, replay, vet, formatting, and module-metadata steps succeeded. The separate Documentation run [37251628232](https://github.com/portpowered/go-tuya/actions/runs/37251628232) failed its rendered-link check and is tracked under item 12.
 
-**Reproductions that pass when they must fail:**
+6. **PASS AT MINIMUM — coverage.** CI and `tools/coverage` enforce the 80% combined non-generated floor; this snapshot is 83.3%. The 90% target remains unmet. See the zero-hit non-generated paths listed under “Verification performed.”
 
-1. **Unresolved recursion is treated as acceptable provenance.** Define auditRecursiveWireKey() string { return auditRecursiveWireKey() }, then assign result.AdditionalProperties[auditRecursiveWireKey()] = value for a generated wire.LoginCodeResult. This compiles, and after wiremodels refresh make wire-routes exits 0. It must emit a diagnostic because recursion prevents proving the key is caller-owned.
-2. **Generated map escape through aggregate field and receiver method.** Store result.AdditionalProperties in auditWireMapHolder{values: ...}; call holder.Apply(), whose receiver method writes holder.values["audit-unregistered-holder-method-key"] = nil. Refreshed inventory followed by root make wire-routes exits 0. The nested schema-owned map's trust must not survive storage in a cross-function aggregate field.
-3. **Schema-keyed url.Values aggregate-field mutation.** Store url.Values{string(wire.QueryParamClientid): []string{"client-id"}} in an aggregate field, then call holder.values.Set("audit-unregistered-aggregate-query", "value"). After inventory refresh, root make wire-routes exits 0. This bypasses generated query-key enforcement through a receiver field.
-4. **Unlisted dependency network primitive.** A compile-valid production file importing pinned golang.org/x/net/websocket and calling websocket.Dial("wss://mqtt.example.invalid/socket", "", "https://client.example.invalid") passes go test ./pkg/tuya and root make wire-routes. tools/wireroutes/network.go recognizes Paho and several WebSocket modules, but its package whitelist omits golang.org/x/net/websocket. The gate must reject this unlisted active socket edge.
+7. **OPEN — package layout passes; public release consumer remains pending.** Provider wire models live in `pkg/dependencymodels`, public projections are separately schema-generated, and transports live under `pkg/dependencies`. The CLI is a separate module and compiles against `pkg/tuya`, but its `go.mod` uses a local `replace` to the checkout. A clean consumer against the planned public v0.4 SDK module has not been verified because that release is unpublished.
 
-Controls I also exercised passed as intended: caller-defined open map value/key positive; sibling-file fixed keys and generated-map mutation fail; named-result generated value escape fails; helper/method map writes fail; returned callback writes fail; global generated-map write fails; 128-helper chain and recursive fixed fallback fail. These controls do not resolve the four open cases above.
+8. **PASS — functional options and client configuration.** `NewClient` uses functional options with endpoint, region, HTTP, MQTT-factory, and RTC-signaling configuration; it validates nil/invalid configuration. Account token state is assigned to sessions, not the reusable client.
 
-The failures reproduce through the exact Makefile command from the default root working directory, not isolated helper-unit tests. They conflict with item 4's requirements that unresolved recursion, aggregate map storage, and unlisted dependency traffic fail the gate.
+9. **PASS — account/session isolation.** The reusable client snapshots the injected HTTP client and rejects a shared non-nil cookie jar. `client_cookie_isolation_test.go` exercises two account sessions and checks complete requests, cookies, tokens, and transport identity. Tokens and MQTT/RTC lifecycle state are session-owned.
 
-### 5. Blocking all-linter CI — PASS
+10. **PASS — network injection.** HTTP uses an injected `http.Client`/RoundTripper; MQTT creation is replaceable and exposes Paho’s connection-producing hook; RTC signaling is replaceable through `RTCSignaling`. `mqtt_framed_replay_test.go` drives Paho through `SetCustomOpenConnectionFn` and `net.Pipe` and checks frames and teardown. The route gate scans `pkg`, `cmd`, and `examples` for unregistered network edges.
 
-.golangci.yml sets the literal linters.default: all. Repository CI pins golangci-lint v2.14.0 and runs root, CLI, and auth-example lint without new-issues-only or continue-on-error behavior. Exact PR CI [run 37192250212](https://github.com/portpowered/go-tuya/actions/runs/37192250212) completed successfully on the reviewed SHA; route/generation, lint, build, race, coverage-floor, replay, vet, CLI, and auth-example checks passed. Local root make lint and make check also succeeded; root, CLI, and auth-example lint each had 0 issues.
+11. **PASS — explicit token renewal.** SDK token exchange/refresh methods return credentials; sessions expose and accept caller-owned token updates. README and authentication guide instruct callers to persist rotated tokens and do not describe silent refresh.
 
-### 6. Synthetic fixtures and non-generated coverage — PARTIAL
+12. **OPEN — source snapshot has broken guide links.** Customer guides are MDX and the Docs workflow builds Fumadocs and checks internal links across rendered HTML plus schema-supplied site links. In this reviewed source, `docs/guides/provider-evidence.mdx` links to sibling pages with `./device-list` and `./authentication`, which resolve beneath the current page. A separate doc-only commit and successful Docs artifact were reported by the coordinator after this source SHA; they are outside this verdict and need re-review on the later snapshot.
 
-make coverage passed the enforced 80% floor:
+13. **OPEN — documentation is not release-ready at this source.** The README is focused and the contributor docs keep inventories and verification detail out of the customer navigation. However, `docs/guides/upgrading.mdx` is presented as “Upgrade to v0.4” while the SDK v0.4 is planned and unpublished; the README marks only the CLI release as pending. `docs/guides/cli.mdx` also omits the implemented `auth logout` command. The exact rendered Pages artifact for this source was not reviewed. I deferred reading the independent review record until after this first 16-item delivery, so final tracked-document review remains incomplete.
 
-- httptransport: 93.8% (60/64)
-- mqtttransport: 50.0% (1/2)
-- pkg/tuya: 82.8% (1312/1584)
-- combined non-generated production packages: 83.2% (1373/1650)
+14. **OPEN — dual final review is not complete.** This is the independent reviewer 2 verdict for the supplied source only. Both reviewers must verify all fixes at the final commit, all other checklist items must be closed, and the current repository review record must be completed before item 14 can pass.
 
-The 90% target is not met. The coverage tool excludes pkg/testing/, files named *.gen.go, and files with the generated header. Remaining uncovered behavior includes pkg/tuya/messages.go:queueReconnect (0%), pkg/tuya/tokens.go:NewCustomerTokenInfo (0%), and pkg/tuya/users.go:Unload (0%); MQTT transport has one of two statements covered. These are reported gaps, not a request to add tests only to raise a number.
+15. **PASS — paired replay controls.** Synthetic HTTP exchanges match outbound requests before returning responses and fail on unexpected/mismatched exchanges. The pinned Paho v1.5.1 contract is separate in `api/external/paho-mqtt-v1.5.1.yaml`; framed synthetic success and denied-CONNACK replays run through `net.Pipe`, check packet ordering/IDs, and require EOF after teardown. Fixture provenance is explicitly synthetic.
 
-### 7. Package/schema boundaries and import-path verification — PARTIAL
+16. **OPEN — CLI is implemented, publication and customer workflow evidence remain incomplete.** The separate CLI module includes QR authentication, explicit refresh/import/export/logout commands, home/device discovery, status/specification reads, explicit device commands, JSON output, cancellation, and offline paired HTTP/MQTT tests. The guide states that the first CLI release is pending and uses a `vX.Y.Z` install placeholder; the module still has a local SDK `replace`, and the release workflow rejects that directive. There is no published CLI-module consumer installation evidence yet. The guide does not document `auth logout` or explain how to select discovered IDs; device control requires the caller to supply a device-specific code and a JSON value via file/stdin. The supported Tuya login path evidenced in these schemas and guides is QR approval/polling; I found no SDK or schema for a browser callback/PKCE flow, so browser-listener requirements are not asserted as supported here.
 
-The public SDK is under pkg/tuya; generated provider wire models are in pkg/dependencymodels; HTTP/MQTT adapters are in pkg/dependencies/httptransport and pkg/dependencies/mqtttransport. Responsibilities are split across auth, device, event, route, and external MQTT schemas/generated files. Public semantic projections are separately generated from provider wire types.
+#### Open findings and disposition
 
-The release workflow defines a fresh-consumer SDK import test against the public module proxy, but it is tag-triggered and was not run for this PR. There is no v0.4.0 publication yet, so candidate import path has not been verified from a clean external consumer module.
+- **F1 — canonical schema examples and validation (items 2, 4): OPEN.** No fix or waiver evidenced in this source review.
+- **F2 — MQTT payload variant binding (item 4): OPEN.** Bind protocol 4/20 to generated payload variants and review the rendered reference.
+- **F3 — provenance regression-control gaps (item 4): OPEN.** Add the specifically required compile-valid negatives and caller-input positives, then run them through the default gate command.
+- **F4 — exact blocking CI (item 5): CLOSED / PASS at this source SHA.** Read-only lookup found CI run [37251628188](https://github.com/portpowered/go-tuya/actions/runs/37251628188) on exact SHA 261ddf44425f3072b14033bd47c36dd11bdbff6c; both jobs passed. The separate Documentation run [37251628232](https://github.com/portpowered/go-tuya/actions/runs/37251628232) failed its rendered-link check, which remains F6/item 12.
+- **F5 — published SDK consumer (item 7): OPEN.** Verify the planned v0.4 public module from a clean consumer when the version is published.
+- **F6 — broken provider-evidence links (item 12): OPEN at this SHA.** Coordinator-reported doc-only commit `0f6366cca5be055ac58abf5af71c198497e7605d` has a successful Docs run/artifact, but it is a later source and must be checked on the refreshed snapshot.
+- **F7 — premature upgrade guide and incomplete CLI guide (items 13, 16): OPEN.** Make release state explicit, document logout and a copyable customer sequence/ID selection, and re-review rendered pages.
+- **F8 — final independent review and CLI publication (items 14, 16): OPEN.** Re-audit fixes on the final source and complete the separate public CLI consumer/release checks.
 
-### 8. Functional options and validation — PASS
-
-NewClient uses functional options with region/URL defaults and validation for missing/blank client identity, bad endpoints, nil transports/factories, and conflicting HTTP client/transport options. Account tokens are supplied to sessions rather than stored in reusable client configuration.
-
-### 9. Client/session ownership — PASS
-
-Client contains reusable configuration. Each Session owns a token snapshot, services, message queue, and connection state. Session.Tokens, SetTokens, Close, queue stop, and RTC stream/session close expose ownership and lifecycle operations. Concurrent refresh responsibility is documented for callers.
-
-### 10. Network injection seams — PASS for current SDK edges
-
-HTTP requests use the injected HTTP client/transport. MQTT supports WithMQTTClientFactory; Paho SetCustomOpenConnectionFn can return an offline net.Pipe. RTC signaling can be replaced with WithRTCSignaling; default signaling uses the injected HTTP edge. make replay passed, including Paho framed transcript and close/EOF assertion. Item 4 separately remains blocking because the source gate fails to reject an additional unlisted edge.
-
-### 11. Explicit token exchange/refresh — PASS
-
-AuthService.RefreshToken returns the refreshed access/refresh pair. Callers explicitly persist the pair and call Session.SetTokens; the reusable client does not silently rotate stored credentials. README and authentication guide explain this contract.
-
-### 12. Rendered Pages and all-page links — PARTIAL
-
-Exact Docs run [37192250259](https://github.com/portpowered/go-tuya/actions/runs/37192250259) succeeded at the reviewed SHA and uploaded its rendered artifact. I downloaded and inspected the artifact in TEMP: 43 HTML pages including generated references, guides, root, and not-found routes. The workflow-equivalent link checker, run with GITHUB_REPOSITORY=portpowered/go-tuya, reported **801 internal links across 43 rendered pages**. I inspected rendered guide/reference titles and representative content, including upgrading and reference pages.
-
-There are two unique Tuya externalDocs URLs; I opened both and confirmed they render Tuya documentation pages. The static link checker only collects project Pages URLs from API YAML, so it does not automatically verify schema-supplied Tuya links.
-
-The PR workflow skips deploy and Pages-artifact upload for a pull request. Thus the candidate artifact is verified, but the exact site has not been published from main. The release-note link points to the upgrading guide route present in the artifact.
-
-### 13. Concise, audience-appropriate docs — PARTIAL
-
-README stays focused on installation, authenticated usage, capabilities, configuration/lifecycle, and guide links; inventory and generation detail are in contributor docs. Customer guides distinguish provider evidence and synthetic behavior. Concrete cleanup items remain before a release:
-
-- docs/guides/cli.mdx repeats the credentials/untrusted-endpoint caveat in the final paragraph immediately after the same warning in the preceding paragraph.
-- TASKS.md contains only the orphan heading ### NOtes.
-- README instructs go get ...@latest, which currently resolves to published SDK v0.3.4 while this candidate documents the unreleased v0.4 API. The CLI guide says its first release is pending; the SDK installation claim should also be version-aware at publication.
-- The current independent-review document embeds a lengthy report for old commit 48d4f… while saying earlier records remain in Git history. This is duplicate reviewer evidence in the current document and should be removed or moved into historical Git records.
-
-### 14. Two independent all-item reviews — OPEN
-
-At the reviewed SHA the checklist items are unchecked, and docs/independent-review.md says two independent reviews of all 16 items are pending. This R1 report is separate and in TEMP; it does not alter repo signoff marks. Item 4 remains unresolved and no R2 review of the final fixed SHA exists. Keep item 14 open until both reviewers record item-by-item evidence and recheck the final candidate.
-
-### 15. Paired request/response and ordered frame replay — PASS
-
-The HTTP replay harness checks outbound method, origin, escaped path, repeated query values, relevant headers, and body before returning paired status/headers/body; it rejects unexpected/duplicate calls and verifies expected calls are consumed. HTTP fixtures and provenance notes label cases synthetic. Paho success and denied-CONNACK tests exercise ordered client/server MQTT frames through net.Pipe, validate variable packet IDs, require clean disconnect/EOF, and reject changed frames. make replay passed. The client uses QR login rather than OAuth; OAuth state/PKCE requirements do not apply. No real account captures are claimed.
-
-### 16. Standalone CLI and published install/release — PARTIAL
-
-cmd/go-tuya is a separate module with auth, explicit refresh, home/device discovery, status/spec reads, explicit command, and event-watch commands. Credentials are accepted through protected files, environment, stdin, or explicit files rather than ordinary secret arguments; JSON output/help are documented. go -C cmd/go-tuya run . --help succeeded locally, and exact blocking CI covered CLI lint/build/race tests/vet/module checks. CLI synthetic paired HTTP and MQTT lifecycle fixtures are present.
-
-gh release list shows SDK latest v0.3.4 and no v0.4.0; the repository has no cmd/go-tuya/v* release tag. The nested release workflow requires published SDK v0.4.0 and then verifies a separate consumer module and go install through the public proxy. The first CLI release is correctly marked pending in its guide. Published CLI installation and module tagging remain unverified until after SDK v0.4 publication and nested CLI release.
-
-## Merge/release disposition
-
-- **Before merge:** fix and retest item 4's unresolved-recursion, aggregate-map receiver, and dependency-network cases; rerun affected gates and exact blocking CI on the fixed SHA. Obtain R2's independent all-16 review of that final SHA. Current SHA is not ready to merge.
-- **Before first public release:** resolve remaining partial item 6/7 evidence as required by maintainers, publish/deploy exact main Docs site and verify it, clean up item 13 docs, publish SDK v0.4.0, then release/install separately tagged CLI and record fresh-consumer evidence. Passing the current PR Docs artifact is not a substitute for those publication checks.
-
-## Original review 2: repair evidence
-
-# Reviewer 2 — independent go-tuya checklist review
-
-**Reviewed commit:** `f1ca66afc9d28dbb8c551535bfff2d0b5677eecd`
-**Repository:** `portpowered/go-tuya`
-**Underlying SDK/tool implementation:** `f5506c7f303debd917e13ae1827911909da30de9`; the reviewed head adds the checklist-only change.
-**Review result:** **Not merge-eligible yet.** Item 4 has reproducible fail-open source-gate bypasses; item 12/13 have a broken published release-note destination and an orphan tracked document.
-
-I reviewed the full 16-item checklist and the linked shared library, verification, client-design, website, and releasing standards. I used an isolated clone at `C:/Users/andre/AppData/Local/Temp/go-tuya-review-r2`; all probes were temporary and removed. The original checkout was left untouched, including its existing untracked files. The temp clone has no source diff; its only untracked content is the downloaded Docs artifact in `rendered-site/`.
-
-I did not open `docs/independent-review.md`, as directed. This report is outside the repository and does not change any checklist signoff.
-
-## Verification evidence
-
-- Exact frozen-head CI run `37192250212` succeeded on `f1ca66af...`: both `generation` and `verify` jobs passed. The verify job ran SDK, nested CLI, and auth-example all-linter checks, build, schema route gate, race tests, non-generated coverage, replay, vet, formatting, and module metadata checks.
-- Exact frozen-head Documentation run `37192250259` succeeded. It regenerated schema artifacts, built the site, checked links, and uploaded `documentation-site`. Deployment was skipped because this was a pull request.
-- The earlier implementation-head runs `37191650873` (CI) and `37191650857` (Docs) also succeeded; I checked their successful job/step lists.
-- In the isolated clone, `make lint`, `make check`, `make coverage`, and `make replay` all passed with Go 1.26.8 and caches outside the cloned module. `make check` included the SDK, CLI, auth example, generated-model and route gates, race-enabled tests, and module checks. The pinned native golangci-lint v2.14 executable reported no issues; config has literal `linters.default: all`, and CI uses v2.14.0 with `only-new-issues: false`.
-- Coverage was 83.2% combined (1,373/1,650 non-generated statements): SDK 82.8%, HTTP transport 93.8%, MQTT transport 50.0%. The documented 80% CI minimum passes; the 90% target is not met and is described as a target.
-- I independently compared the generated wire-component table's 68 component names with generated declarations; every table entry had a generated declaration. Seven generated operation-parameter types were listed separately. An independent production-source scan found 108 handwritten JSON-tagged structs under `pkg/`, `cmd/`, and `examples/`; all 108 matched inventory entries, with no missing or extra entries. All 1,155 file/line references in the inventory resolved to existing source lines. Route inventory has 28 HTTP operations and two MQTT channels.
-- A clean separate consumer module importing `github.com/portpowered/go-tuya/pkg/tuya` and compiling a call to `tuya.NewClient()` passed after `go mod tidy`; it used a local `replace` to the isolated source. This does not substitute for a published-proxy install.
-- I downloaded the exact Docs artifact and inspected all 43 HTML pages, including every guide, the site root, generated OpenAPI operation pages, AsyncAPI pages, and fallback pages. Re-running the checker with `GITHUB_REPOSITORY=portpowered/go-tuya` checked 801 internal links across all 43 rendered pages. The seven user guides plus guide index exist and render expected content.
-- I manually followed schema externalDocs to Tuya’s “Get Device List” and “Device Management” pages; both pages resolved to the relevant API reference. GitHub auth/command example destinations and pkg.go.dev returned HTTP 200. The README’s live coverage JSON/HTML, Pages root, and pkg.go.dev targets also returned HTTP 200.
-- The exact artifact has no `docs/guides/provider-evidence/` page. The old release-note URL below currently returns HTTP 200 but serves the generic API-reference not-found fallback.
-
-## Checklist verdicts
-
-1. **PASS.** The public `pkg/tuya` client, README, auth example, and user guides are Tuya-focused. They do not include a consuming application adapter or rollout plan.
-
-2. **PASS.** README documents supported operations, authentication, error inspection, options/injection, token ownership, and session close. The authentication, device-list/control, event, RTC/provider, upgrading, and CLI MDX guides match the current API. Provider-documented and implementation-derived behavior are distinguished in the API reference and guide copy.
-
-3. **PASS.** README has Go version, CI, coverage, release, Go Reference, license, and docs badges. The badge destinations are live; coverage JSON/HTML and Pages root returned 200, and the latest release page resolved to v0.3.4. The new PR’s Pages artifact is built but not deployed yet, as expected.
-
-4. **FAIL — blocking.** The schemas and generated outputs are broadly populated and drift checks pass, but the source gates do not enforce several explicit negative controls:
-   - **Generated struct later writes bypass fixed-value validation.** In `tools/wiremodels/wire_construction.go:446-470`, a selector assignment has no key returned by `wireAssignmentParts` and is skipped by the mutation scanner. I added a compile-valid temp probe using generated `wire.RTCOfferBody.Type` (schema enum, only `offer`): later direct assignment, pointer-alias assignment, and package-global assignment to unregistered strings all passed the exact root `make wire-routes` command after temp inventory regeneration. `go test ./pkg/tuya` compiled the probe. The dynamic caller-input positive also remained accepted.
-   - **Named-result generated map escapes to and is mutated by an unverified helper.** A compile-valid temp probe returned `wireRequestMap(wire.EncryptedRequestQuery{Encdata: value})` through a named map result, then passed it to a sibling sink that wrote `fields["review-unregistered-query"] = "fixed"`. After regenerating only the temp inventory, root `make wire-routes` passed. This is the exact kind of named-result escape the checklist requires to reject.
-   - **Unresolved imported helper provenance fails open.** A helper in a separate package returning an unregistered fixed value, used as `Encdata: helper.Value()`, compiled and passed root `make wire-routes`. The gate must not infer caller input when it cannot prove the imported helper’s provenance.
-   - **HTTP route can change after the schema guard.** `pkg/dependencies/httptransport/http.go:50-64` checks `IsKnownOperation(operation.Method, path)`, then uses `path` again in `requestURL`. I inserted a gofmt-valid `path += operation.Path` after the guard and before `requestURL`; `go test -run '^$' ./pkg/dependencies/httptransport` and root `make wire-routes` both passed. The gate checks route-construction/guard ordering but not that the validated path remains unchanged through send.
-   - **Signature preimage string template is not schema-owned.** `pkg/tuya/encryption.go:31,561-597` embeds the `'||'` separator and `key=value` canonicalization used to form the X-sign preimage. `api/models/encryption.yaml` only models the X-sign header as a string; I found no schema component, generated declaration, or inventory entry for this library-owned format. No cookie transport was found (N/A).
-
-   Other negative controls I probed did behave as intended: sibling function/method fixed returns, named-result bare returns, returned callback values, a 40-helper chain, recursive fixed fallback, and a global fixed initializer were rejected. The successful fail-open probes were removed; after cleanup, the temp clone’s `make wire-routes` passes and has no source diff.
-
-5. **PASS.** Exact frozen-head CI succeeded, including a reviewer-independent exact-commit check. `.golangci.yml` sets literal `linters.default: all`; CI pins v2.14.0 and blocks on the full repository, CLI, and example runs. Exceptions are narrowed by path, linter, and reason. Local `make lint` and `make check` also passed. There are upstream linter deprecation warnings, but no lint issues or failed gate.
-
-6. **PASS.** Deterministic synthetic HTTP, error, session, and MQTT paired transcripts exist; no private account capture was committed. Combined non-generated coverage is 83.2%, above the enforced 80% minimum. The remaining gap to the stated 90% target is reported rather than hidden.
-
-7. **PASS.** Public API is under `pkg/tuya`; generated provider models are under `pkg/dependencymodels`; transport code is under `pkg/dependencies`. Responsibility schemas are split across authentication, common, devices, encryption, events, homes, message_queue, and RTC; public semantic projections use a separate schema. No catch-all wire/model bucket was found. The isolated consumer-module compile passed. Published-proxy verification remains a release gate under item 16.
-
-8. **PASS.** `NewClient(...Option)` validates the required client ID, endpoints, nil/conflicting HTTP options, and MQTT factory. Defaults and override options are explicit. Reusable client options carry endpoint/transport config, not account tokens.
-
-9. **PASS.** Account tokens and stateful message queue/RTC lifecycles are session-scoped. `Session.Tokens` and `SetTokens` expose caller-managed state, `Session.Close` stops its queue, and RTC streams have explicit stop/teardown methods. Client config can serve multiple accounts.
-
-10. **PASS.** HTTP clients or RoundTrippers are injectable; MQTT creation is injectable through `WithMQTTClientFactory` and Paho `ClientOptions.SetCustomOpenConnectionFn`; RTC signaling can be replaced. No additional SDK-owned socket edge was found. The actual pinned Paho MQTT v1.5.1 framed exchange is replayed through `net.Pipe`, including success and denied-CONNACK paths, packet ordering, disconnect, and EOF.
-
-11. **PASS.** Token refresh is an explicit `AuthService.RefreshToken` call returning rotated credentials. It does not mutate session tokens; docs and tests require callers to persist and explicitly call `Session.SetTokens`. Requests do not refresh implicitly.
-
-12. **OPEN.** The exact PR artifact builds all guides and the generated reference; 801 internal links pass, and schema externalDocs were manually checked. However, published GitHub release notes for v0.2.0 and v0.3.1–v0.3.4 still link to `https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/`. That route is absent from the exact artifact and the live URL serves a not-found fallback despite HTTP 200. The Docs workflow does not inspect GitHub release notes, so its success does not catch this regression. Preserve a valid redirect/alias or update the published release-note links, then recheck after Pages deployment. The PR Docs run intentionally skipped deployment; the final main Pages deployment still needs verification.
-
-13. **OPEN.** README is compact and focused on install, short authenticated usage, capabilities, options, lifecycle, errors, and guide links. Other tracked docs are separated by audience; provenance and migration history stay in contributor/release material. Two concrete copy/navigation issues remain: the broken repeated release-note `provider-evidence` destination above, and tracked `TASKS.md` is an unlinked one-line file containing only `### NOtes` (no references point to it). Delete or give that file a clear current purpose, and repair the release-note destination. I did not inspect `docs/independent-review.md` per task direction.
-
-14. **OPEN.** Findings in item 4 and items 12/13 remain unresolved. This Reviewer 2 report is saved in TEMP, not attached to the current repository review record, and I did not read the other current review report. Do not check item 14 or treat previous signoffs as resolving these findings. Both reviewers must verify fixes at the final implementation commit and add their separate item-by-item evidence to the repository’s single current review document.
-
-15. **PASS.** HTTP and MQTT replay tests pair requests/frames with their exact response/frames and assert ordering, mismatch rejection, volatile-value rules, and cleanup. Authentication tests cover the QR/token exchanges; CLI tests cover auth errors and event cancellation/cleanup. No OAuth callback/PKCE or CSRF/OTP flow exists in this SDK, so those flow-specific requirements are N/A; the implemented QR/token flow is explicitly exercised. MQTT teardown tests require EOF rather than treating a timeout as proof of cleanup.
-
-16. **OPEN — publication proof pending.** The standalone CLI is in `cmd/go-tuya`, consumes the public SDK, has help, JSON output, nonzero failures, cancellation, token-file/env/stdin paths, explicit export, explicit device-change commands, and offline paired CLI tests. CI runs pinned all-linter, build, test, vet, and module checks. The first CLI module release has not been published, and SDK v0.4.0 is not yet available from the public proxy. `.github/workflows/release-cli.yml` deliberately requires SDK v0.4.0 and rejects the development-only local `replace`; therefore a clean published CLI consumer install and `go install` proof cannot exist yet. SDK and CLI tags plus a main-branch Pages deployment remain post-merge publication gates.
-
-## Merge and release disposition
-
-**Do not merge at this commit.** The P1 source-gate bypasses in item 4 need fixes plus compile-valid regression tests run through the root CI/Makefile command; repair item 12/13’s release-note destination and remove or repurpose `TASKS.md`; then rerun exact CI and obtain two independent final-commit reviews. After those changes and reviews, implementation merge eligibility can be assessed before publishing. Final v0.4.0 SDK proxy verification, first CLI tag/consumer install, and main Pages deployment are separate post-merge publication evidence and remain pending.
+**Signed:** Reviewer 2 (independent, non-author) — 2026-10-04.

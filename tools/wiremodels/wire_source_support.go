@@ -172,6 +172,10 @@ func wireEnumTypeExpressionName(expression ast.Expr) string {
 		return expression.Sel.Name
 	case *ast.StarExpr:
 		return wireEnumTypeExpressionName(expression.X)
+	case *ast.ArrayType:
+		return wireEnumTypeExpressionName(expression.Elt)
+	case *ast.MapType:
+		return wireEnumTypeExpressionName(expression.Value)
 	case *ast.ParenExpr:
 		return wireEnumTypeExpressionName(expression.X)
 	}

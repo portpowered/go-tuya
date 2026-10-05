@@ -28,6 +28,18 @@ components:
           type: boolean
         uid:
           type: string
+      example:
+        geoName: Synthetic home
+        groupId: 1001
+        name: Apartment
+        ownerId: synthetic-user-001
+        id: 2001
+        lat: 37.7749
+        lon: -122.4194
+        background: https://example.invalid/home/synthetic-background.jpg
+        status: true
+        uid: synthetic-user-001
+      x-example-evidence: synthetic
     HomeListEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -54,6 +66,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HomeRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-001
+        result:
+        - geoName: Synthetic home
+          groupId: 1001
+          name: Apartment
+          ownerId: synthetic-user-001
+          id: 2001
+          lat: 37.7749
+          lon: -122.4194
+          background: https://example.invalid/home/synthetic-background.jpg
+          status: true
+          uid: synthetic-user-001
+      x-example-evidence: synthetic
     HomeDevicesEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -80,3 +110,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeviceRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-devices-001
+        result:
+        - id: synthetic-device-001
+          name: Desk lamp
+          category: dj
+          online: true
+          status:
+          - code: switch_led
+            value: true
+      x-example-evidence: synthetic

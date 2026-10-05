@@ -29,7 +29,7 @@ func TestGeneratePropertyConstantsQualifiesKeysBySchema(t *testing.T) {
 				"RawSharingMessage": map[string]any{
 					propertyFixtureProperties: map[string]any{
 						"protocol": map[string]any{propertyFixtureType: "integer"},
-						"data":     map[string]any{propertyFixtureType: "object"},
+						"data":     map[string]any{propertyFixtureType: schemaObjectType},
 					},
 				},
 			},

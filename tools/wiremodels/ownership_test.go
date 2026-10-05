@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"slices"
 	"testing"
 )
 
@@ -95,11 +96,11 @@ func TestKnownValueBindingsKeepWireFieldsOpenAndResolveEnums(t *testing.T) {
 		propertyFixtureComponents: map[string]any{
 			propertyFixtureSchemas: map[string]any{
 				"RawStatus": map[string]any{
-					propertyFixtureType: "object",
-					"properties": map[string]any{
+					propertyFixtureType: schemaObjectType,
+					propertyFixtureProperties: map[string]any{
 						"code": map[string]any{
-							"type":                          schemaStringType,
-							"x-go-tuya-known-values-schema": "KnownCode",
+							"type":               schemaStringType,
+							knownValuesExtension: "KnownCode",
 						},
 					},
 				},
@@ -154,7 +155,7 @@ func TestKnownValueBindingsRejectClosedOrDuplicateEnums(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			source := map[string]any{propertyFixtureType: stringSchemaType, "x-go-tuya-known-values-schema": ownershipKnownSchema}
+			source := map[string]any{propertyFixtureType: stringSchemaType, knownValuesExtension: ownershipKnownSchema}
 
 			if name == "closed source" {
 				closedSource, validSource := known.(map[string]any)
@@ -163,7 +164,7 @@ func TestKnownValueBindingsRejectClosedOrDuplicateEnums(t *testing.T) {
 				}
 
 				source = closedSource
-				source["x-go-tuya-known-values-schema"] = ownershipKnownSchema
+				source[knownValuesExtension] = ownershipKnownSchema
 			}
 
 			bundle := map[string]any{
@@ -180,6 +181,80 @@ func TestKnownValueBindingsRejectClosedOrDuplicateEnums(t *testing.T) {
 				t.Fatalf("invalid known-value binding accepted: %v", err)
 			}
 		})
+	}
+}
+
+func TestKnownValueBindingsFollowNestedReferencesAndArrayItems(t *testing.T) {
+	t.Parallel()
+
+	bundle := nestedKnownValueBundle(false)
+
+	err := validateComponentReferences(bundle, bundle)
+	if err != nil {
+		t.Fatalf("valid nested open-string bindings rejected: %v", err)
+	}
+
+	components, validComponents := bundle[propertyFixtureComponents].(map[string]any)
+	if !validComponents {
+		t.Fatal("components are missing")
+	}
+
+	schemas, validSchemas := components[propertyFixtureSchemas].(map[string]any)
+	if !validSchemas {
+		t.Fatal("schemas are missing")
+	}
+
+	locations := knownValueBindingsByTarget(schemas)[ownershipKnownSchema]
+	for _, want := range []string{"Nested.status (open string)", "Source.events.items (open string)"} {
+		if !slices.Contains(locations, want) {
+			t.Errorf("nested binding locations %v do not include %q", locations, want)
+		}
+	}
+}
+
+func TestKnownValueBindingsRejectAnonymousClosedEnumInArrayItem(t *testing.T) {
+	t.Parallel()
+
+	bundle := nestedKnownValueBundle(true)
+
+	err := validateComponentReferences(bundle, bundle)
+	if !errors.Is(err, errModelOwnership) {
+		t.Fatalf("anonymous closed enum in a referenced array item was accepted: %v", err)
+	}
+}
+
+func nestedKnownValueBundle(closedItem bool) map[string]any {
+	item := map[string]any{
+		propertyFixtureType: stringSchemaType, knownValuesExtension: ownershipKnownSchema,
+	}
+	if closedItem {
+		item[schemaFixtureEnumKey] = []any{ownershipKnownValue}
+	}
+
+	return map[string]any{
+		propertyFixtureComponents: map[string]any{
+			propertyFixtureSchemas: map[string]any{
+				ownershipKnownSchema: map[string]any{
+					propertyFixtureType:  stringSchemaType,
+					schemaFixtureEnumKey: []any{ownershipKnownValue},
+				},
+				"Nested": map[string]any{
+					propertyFixtureType: schemaObjectType,
+					propertyFixtureProperties: map[string]any{"status": map[string]any{
+						propertyFixtureType: stringSchemaType, knownValuesExtension: ownershipKnownSchema,
+					}},
+				},
+				"Source": map[string]any{
+					propertyFixtureType: schemaObjectType,
+					propertyFixtureProperties: map[string]any{
+						"events": map[string]any{
+							propertyFixtureType: "array", "items": item,
+						},
+						"nested": map[string]any{ownershipReferenceKey: "#/components/schemas/Nested"},
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -316,10 +316,11 @@ func Do(client *http.Client, method, target string) (*http.Response, error) {
 
 const httpBoundaryValidSource = `package httptransport
 import (
- "bytes"
- "io"
- "net/http"
- wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
+	"bytes"
+	"io"
+	"net/http"
+	"net/url"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 func Do(
  ctx any, client *http.Client, origin string, operation wire.Operation,
@@ -362,6 +363,7 @@ const httpBoundarySendCall = "response, err := client.Do(request)"
 func httpBoundaryMutations() []httpBoundaryMutation {
 	mutations := httpBindingMutations()
 	mutations = append(mutations, httpValidatedRouteMutations()...)
+	mutations = append(mutations, httpTargetURLMutations()...)
 	mutations = append(mutations, httpRequestFieldMutations()...)
 	mutations = append(mutations, httpRequestEscapeMutations()...)
 	mutations = append(mutations, httpRequestBodyFactoryMutations()...)
@@ -396,6 +398,25 @@ func httpValidatedRouteMutations() []httpBoundaryMutation {
 	}
 }
 
+func httpTargetURLMutations() []httpBoundaryMutation {
+	const requestConstruction = "request, err := http.NewRequestWithContext(ctx, operation.Method, target.String(), requestBody(body))"
+
+	return []httpBoundaryMutation{
+		httpMutation("URL authority changed before request construction", requestConstruction, "target.Host = \"attacker.invalid\"\n "+requestConstruction),
+		httpMutation(
+			"URL authority changed through a local alias",
+			requestConstruction,
+			"urlAlias := target\n urlAlias.Host = \"attacker.invalid\"\n "+requestConstruction,
+		),
+		httpMutation("URL scheme changed before request construction", requestConstruction, "target.Scheme = \"ftp\"\n "+requestConstruction),
+		httpMutation("URL userinfo changed before request construction", requestConstruction, "target.User = url.User(\"attacker\")\n "+requestConstruction),
+		httpMutation("URL opaque form changed before request construction", requestConstruction, "target.Opaque = \"attacker.invalid/path\"\n "+requestConstruction),
+		httpMutation("malformed URL query introduced before request construction", requestConstruction, "target.RawQuery = \"clientid=%zz\"\n "+requestConstruction),
+		httpMutation("URL path changed before request construction", requestConstruction, "target.Path = \"/v1.0/ghost\"\n "+requestConstruction),
+		httpMutation("URL raw path changed before request construction", requestConstruction, "target.RawPath = \"/v1.0/%2Fghost\"\n "+requestConstruction),
+	}
+}
+
 func httpBindingMutations() []httpBoundaryMutation {
 	const (
 		operationGuard = "if !wire.IsKnownOperation(operation.Method, path) { return nil, errBoundary }"
@@ -415,6 +436,12 @@ func httpBindingMutations() []httpBoundaryMutation {
 func httpRequestFieldMutations() []httpBoundaryMutation {
 	return []httpBoundaryMutation{
 		httpRequestMutation("request URL path mutated before send", "request.URL.Path = \"/v1.0/ghost\""),
+		httpRequestMutation("request URL authority mutated before send", "request.URL.Host = \"attacker.invalid\""),
+		httpRequestMutation("request URL scheme mutated before send", "request.URL.Scheme = \"ftp\""),
+		httpRequestMutation("request URL opaque form mutated before send", "request.URL.Opaque = \"attacker.invalid/path\""),
+		httpRequestMutation("malformed request URL query introduced before send", "request.URL.RawQuery = \"clientid=%zz\""),
+		httpRequestMutation("request URL raw path mutated before send", "request.URL.RawPath = \"/v1.0/%2Fghost\""),
+		httpRequestMutation("effective HTTP authority overridden before send", "request.Host = \"attacker.invalid\""),
 		httpRequestMutation("request method mutated before send", "request.Method = \"DELETE\""),
 		httpRequestMutation("request body mutated before send", "request.Body = nil"),
 		httpRequestMutation("request URL userinfo mutated before send", "request.URL.User = nil"),
@@ -518,6 +545,25 @@ func TestHTTPBoundaryRejectsShadowedAndUnrelatedValidation(t *testing.T) {
 				t.Fatal("unregistered or unbound HTTP network edge escaped the gate")
 			}
 		})
+	}
+}
+
+func TestHTTPBoundaryAllowsCallerSuppliedValueForKnownQueryKey(t *testing.T) {
+	t.Parallel()
+
+	const routeAssignment = " path, err := formatOperationPath(operation.Path, pathArguments)"
+
+	callerQuery := " queryValues := query[wire.QueryParamClientid]\n query = map[string][]string{wire.QueryParamClientid: queryValues}\n" + routeAssignment
+
+	validCallerQuerySource := strings.Replace(httpBoundaryValidSource, routeAssignment, callerQuery, 1)
+
+	if validCallerQuerySource == httpBoundaryValidSource {
+		t.Fatal("test mutation did not add a caller-supplied query value")
+	}
+
+	err := validateSourceNetworkBoundary(httpBoundary, []byte(validCallerQuerySource))
+	if err != nil {
+		t.Fatalf("caller-supplied value for a generated query key rejected: %v", err)
 	}
 }
 

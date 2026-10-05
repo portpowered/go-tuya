@@ -5,12 +5,16 @@ components:
       description: Implementation-derived default QR authentication origin.
       enum: [https://apigw.iotbing.com]
       x-enum-varnames: [AuthenticationOriginDefault]
+      example: https://apigw.iotbing.com
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     QRCodeTokenPrefix:
       type: string
       description: Implementation-derived Smart Life QR token prefix; append the returned login code unchanged.
       enum: ["tuyaSmart--qrLogin?token="]
       x-enum-varnames: [QRCodeTokenPrefixSmartLife]
+      example: "tuyaSmart--qrLogin?token="
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     JSONMediaType:
       type: string
@@ -19,6 +23,8 @@ components:
       - application/json
       x-enum-varnames:
       - JSONMediaTypeApplicationJSON
+      example: application/json
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     QRCodeResult:
       type: object
@@ -27,6 +33,9 @@ components:
       properties:
         qrcode:
           type: string
+      example:
+        qrcode: https://example.invalid/qr/synthetic-login
+      x-example-evidence: synthetic
     LoginCodeResult:
       type: object
       description: Login token payload observed by the library.
@@ -47,6 +56,15 @@ components:
           type: string
         endpoint:
           type: string
+      example:
+        access_token: synthetic-access-token
+        refresh_token: synthetic-refresh-token
+        expire_time: 1700003600
+        terminal_id: synthetic-terminal-001
+        uid: synthetic-user-001
+        username: synthetic-user
+        endpoint: https://example.invalid
+      x-example-evidence: synthetic
     RefreshedTokenResult:
       type: object
       description: Refresh-token payload observed by the library.
@@ -61,6 +79,12 @@ components:
           format: int64
         uid:
           type: string
+      example:
+        accessToken: synthetic-access-token-rotated
+        refreshToken: synthetic-refresh-token-rotated
+        expireTime: 1700007200
+        uid: synthetic-user-001
+      x-example-evidence: synthetic
     QRCodeEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -85,6 +109,15 @@ components:
           description: Provider trace identifier when present.
         result:
           $ref: '#/components/schemas/QRCodeResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
+        result:
+          qrcode: https://example.invalid/qr/synthetic-login
+      x-example-evidence: synthetic
     LoginCodeEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -109,6 +142,21 @@ components:
           description: Provider trace identifier when present.
         result:
           $ref: '#/components/schemas/LoginCodeResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
+        result:
+          access_token: synthetic-access-token
+          refresh_token: synthetic-refresh-token
+          expire_time: 1700003600
+          terminal_id: synthetic-terminal-001
+          uid: synthetic-user-001
+          username: synthetic-user
+          endpoint: https://example.invalid
+      x-example-evidence: synthetic
     RefreshTokenEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -133,3 +181,15 @@ components:
           description: Provider trace identifier when present.
         result:
           $ref: '#/components/schemas/RefreshedTokenResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-003
+        result:
+          accessToken: synthetic-access-token-rotated
+          refreshToken: synthetic-refresh-token-rotated
+          expireTime: 1700007200
+          uid: synthetic-user-001
+      x-example-evidence: synthetic

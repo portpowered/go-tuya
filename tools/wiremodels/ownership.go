@@ -10,10 +10,12 @@ import (
 var errModelOwnership = errors.New("schema ownership is incomplete or ambiguous")
 
 const (
-	jsonMediaTypeSchema = "JSONMediaType"
-	jsonMediaTypeRef    = "#/components/schemas/JSONMediaType"
-	jsonMediaTypeValue  = "application/json"
-	stringSchemaType    = "string"
+	jsonMediaTypeSchema  = "JSONMediaType"
+	jsonMediaTypeRef     = "#/components/schemas/JSONMediaType"
+	jsonMediaTypeValue   = "application/json"
+	stringSchemaType     = "string"
+	schemaObjectType     = "object"
+	knownValuesExtension = "x-go-tuya-known-values-schema"
 )
 
 var groupName = regexp.MustCompile(`^[a-z][a-z_]*$`)
@@ -247,7 +249,7 @@ func validateComponentMetadata(key string, child any, source, bundle map[string]
 		}
 
 		return validateSchemaReference(reference, bundle)
-	case "x-go-tuya-known-values-schema":
+	case knownValuesExtension:
 		reference, isReference := child.(string)
 		if !isReference {
 			return fmt.Errorf("known-value binding %v is invalid: %w", child, errModelOwnership)

@@ -5,13 +5,22 @@ components:
       description: Implementation-derived default QR authentication origin.
       enum:
         - https://apigw.iotbing.com
+      example: https://apigw.iotbing.com
       type: string
       x-enum-varnames:
         - AuthenticationOriginDefault
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     BooleanResultEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
       properties:
         code:
           description: Provider response code when present.
@@ -32,6 +41,7 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     CloudAPIOrigin:
       description: Implementation-derived built-in Device Sharing cloud origins.
       enum:
@@ -39,12 +49,14 @@ components:
         - https://apigw.tuyaus.com
         - https://openapi.tuyaeu.com
         - https://openapi.tuyain.com
+      example: https://apigw.tuyaus.com
       type: string
       x-enum-varnames:
         - CloudAPIOriginChina
         - CloudAPIOriginUS
         - CloudAPIOriginEU
         - CloudAPIOriginIndia
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     CloudRegion:
       description: Built-in cloud region identifiers accepted by the SDK.
@@ -53,15 +65,20 @@ components:
         - US
         - EU
         - IN
+      example: US
       type: string
       x-enum-varnames:
         - CloudRegionChina
         - CloudRegionUS
         - CloudRegionEU
         - CloudRegionIndia
+      x-example-evidence: synthetic
     DeviceCommand:
       additionalProperties: true
       description: A device command. The value is device-specific.
+      example:
+        code: switch_led
+        value: true
       properties:
         code:
           type: string
@@ -70,9 +87,25 @@ components:
         - code
         - value
       type: object
+      x-example-evidence: synthetic
     DeviceDetailsEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          id: synthetic-device-001
+          ip: 192.0.2.10
+          name: Desk lamp
+          online: true
+          status:
+            - code: switch_led
+              value: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-detail-001
       properties:
         code:
           description: Provider response code when present.
@@ -93,9 +126,22 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceListByUserEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - category: dj
+            id: synthetic-device-001
+            ip: 192.0.2.10
+            name: Desk lamp
+            online: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-list-001
       properties:
         code:
           description: Provider response code when present.
@@ -118,9 +164,42 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceListEnvelope:
       additionalProperties: true
       description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          devices:
+            - active_time: 1700000000
+              biz_type: 0
+              category: dj
+              create_time: 1700000000
+              icon: https://example.invalid/icons/synthetic-lamp.png
+              id: synthetic-device-001
+              ip: 192.0.2.10
+              model: synthetic-model-001
+              name: Desk lamp
+              online: true
+              owner_id: synthetic-user-001
+              product_id: synthetic-product-001
+              product_name: Synthetic lamp
+              status:
+                - code: switch_led
+                  type: Boolean
+                  value: true
+              sub: false
+              time_zone: "+00:00"
+              uid: synthetic-user-001
+              update_time: 1700000000
+              uuid: synthetic-device-uuid-001
+          last_id: synthetic-page-001
+          total: 1
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-list-001
       properties:
         code:
           type: integer
@@ -136,9 +215,22 @@ components:
         tid:
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceListResult:
       additionalProperties: true
       description: Official Tuya device-list result. The reference documents total, devices, and last_id but does not define requiredness for every response.
+      example:
+        devices:
+          - category: dj
+            id: synthetic-device-001
+            ip: 192.0.2.10
+            name: Desk lamp
+            online: true
+            status:
+              - code: switch_led
+                value: true
+        last_id: synthetic-page-001
+        total: 1
       properties:
         devices:
           items:
@@ -152,9 +244,18 @@ components:
           format: int64
           type: integer
       type: object
+      x-example-evidence: synthetic
     DeviceLogRecord:
       additionalProperties: true
       description: Log record fields consumed or exposed by the library.
+      example:
+        code: switch_led
+        event_from: synthetic-device
+        event_id: 101
+        event_time: 1700000000000
+        row: synthetic-log-row-001
+        status: success
+        value: true
       properties:
         code:
           type: string
@@ -171,9 +272,30 @@ components:
           type: string
         value: {}
       type: object
+      x-example-evidence: synthetic
     DeviceLogsEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          count: 1
+          current_row_key: synthetic-log-row-001
+          device_id: synthetic-device-001
+          has_next: false
+          logs:
+            - code: switch_led
+              event_from: synthetic-device
+              event_id: 101
+              event_time: 1700000000000
+              row: synthetic-log-row-001
+              status: success
+              value: true
+          next_row_key: synthetic-log-row-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-logs-001
       properties:
         code:
           description: Provider response code when present.
@@ -194,9 +316,24 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceLogsResult:
       additionalProperties: true
       description: Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+      example:
+        count: 1
+        current_row_key: synthetic-log-row-001
+        device_id: synthetic-device-001
+        has_next: false
+        logs:
+          - code: switch_led
+            event_from: synthetic-device
+            event_id: 101
+            event_time: 1700000000000
+            row: synthetic-log-row-001
+            status: success
+            value: true
+        next_row_key: synthetic-log-row-001
       properties:
         count:
           format: int64
@@ -214,9 +351,36 @@ components:
         next_row_key:
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceRecord:
       additionalProperties: true
       description: Fields below appear in Tuya's official example response for this operation. The reference does not define requiredness or an exhaustive field set. Additional properties are retained for forward compatibility.
+      example:
+        active_time: 1700000000
+        biz_type: 0
+        category: dj
+        create_time: 1700000000
+        icon: https://example.invalid/icons/synthetic-lamp.png
+        id: synthetic-device-001
+        ip: 192.0.2.10
+        lat: "37.7749"
+        lon: "-122.4194"
+        model: synthetic-model-001
+        name: Desk lamp
+        online: true
+        owner_id: synthetic-user-001
+        product_id: synthetic-product-001
+        product_name: Synthetic lamp
+        status:
+          - code: switch_led
+            type: Boolean
+            value: true
+        sub: false
+        subCategory: synthetic-category-001
+        time_zone: "+00:00"
+        uid: synthetic-user-001
+        update_time: 1700000000
+        uuid: synthetic-device-uuid-001
       properties:
         active_time:
           description: Activation timestamp value in the example response.
@@ -296,9 +460,25 @@ components:
           description: Device UUID in the example response.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceSpecification:
       additionalProperties: true
       description: Specification result consumed by the library; category-specific fields are open.
+      example:
+        category: dj
+        functions:
+          - code: switch_led
+            desc: Synthetic switch function
+            name: Switch
+            type: Boolean
+            values:
+              type: boolean
+        status:
+          - code: switch_led
+            name: Switch state
+            type: Boolean
+            values:
+              type: boolean
       properties:
         category:
           type: string
@@ -312,9 +492,31 @@ components:
             $ref: '#/components/schemas/SpecificationStatus'
           type: array
       type: object
+      x-example-evidence: synthetic
     DeviceSpecificationEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          functions:
+            - code: switch_led
+              desc: Synthetic switch function
+              name: Switch
+              type: Boolean
+              values:
+                type: boolean
+          status:
+            - code: switch_led
+              name: Switch state
+              type: Boolean
+              values:
+                type: boolean
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-spec-001
       properties:
         code:
           description: Provider response code when present.
@@ -335,9 +537,14 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceStatus:
       additionalProperties: true
       description: A status entry in Tuya's example response. The example uses a string value; the reference does not constrain the value type, so it remains an unconstrained JSON value.
+      example:
+        code: switch_led
+        type: Boolean
+        value: true
       properties:
         code:
           description: Status code in the example response.
@@ -348,9 +555,25 @@ components:
           type: string
         value: {}
       type: object
+      x-example-evidence: synthetic
     DeviceStatusEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          dpStatusRelationDTOS:
+            - dpCode: switch_led
+              dpId: 1
+              statusCode: switch_led
+              supportLocal: true
+              valueConvert: synthetic-conversion
+              valueType: Boolean
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-status-001
       properties:
         code:
           description: Provider response code when present.
@@ -371,9 +594,17 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceStatusMapping:
       additionalProperties: true
       description: Device status mapping fields consumed by the library.
+      example:
+        dpCode: switch_led
+        dpId: 1
+        statusCode: switch_led
+        supportLocal: true
+        valueConvert: synthetic-conversion
+        valueType: Boolean
       properties:
         dpCode:
           type: string
@@ -390,9 +621,19 @@ components:
         valueType:
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceStatusResult:
       additionalProperties: true
       description: Device-status result consumed by the library.
+      example:
+        category: dj
+        dpStatusRelationDTOS:
+          - dpCode: switch_led
+            dpId: 1
+            statusCode: switch_led
+            supportLocal: true
+            valueConvert: synthetic-conversion
+            valueType: Boolean
       properties:
         category:
           type: string
@@ -402,9 +643,17 @@ components:
             $ref: '#/components/schemas/DeviceStatusMapping'
           type: array
       type: object
+      x-example-evidence: synthetic
     DeviceUserBody:
       additionalProperties: true
       description: Fields sent by AddDeviceUser and UpdateDeviceUser.
+      example:
+        birthday: 946684800
+        contact: user@example.invalid
+        height: 170
+        nick_name: Synthetic user
+        sex: 0
+        weight: 65
       properties:
         birthday:
           format: int64
@@ -423,9 +672,25 @@ components:
         - nick_name
         - sex
       type: object
+      x-example-evidence: synthetic
     DeviceUserEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          birthday: 946684800
+          contact: user@example.invalid
+          device_id: synthetic-device-001
+          height: 170
+          nick_name: Synthetic user
+          sex: 0
+          user_id: synthetic-user-001
+          weight: 65
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-001
       properties:
         code:
           description: Provider response code when present.
@@ -446,9 +711,19 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     DeviceUserRecord:
       additionalProperties: true
       description: Device-user fields represented by the library.
+      example:
+        birthday: 946684800
+        contact: user@example.invalid
+        device_id: synthetic-device-001
+        height: 170
+        nick_name: Synthetic user
+        sex: 0
+        user_id: synthetic-user-001
+        weight: 65
       properties:
         birthday:
           format: int64
@@ -468,9 +743,21 @@ components:
         weight:
           type: integer
       type: object
+      x-example-evidence: synthetic
     DeviceUsersEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - device_id: synthetic-device-001
+            nick_name: Synthetic user
+            sex: 0
+            user_id: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-users-001
       properties:
         code:
           description: Provider response code when present.
@@ -493,9 +780,12 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     EncryptedDataEnvelope:
       additionalProperties: false
       description: Implementation-derived encrypted HTTP request wrapper used for JSON bodies and query data.
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1wYXlsb2Fk
       properties:
         encdata:
           description: Base64-encoded nonce and AES-GCM ciphertext.
@@ -503,10 +793,18 @@ components:
       required:
         - encdata
       type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedHTTPResponseEnvelope:
       additionalProperties: true
       description: Implementation-derived outer response envelope received before result decryption.
+      example:
+        code: 200
+        msg: success
+        result: c3ludGhldGljLWVuY3J5cHRlZC1yZXNwb25zZQ==
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-encrypted-001
       properties:
         code: {}
         msg: {}
@@ -519,10 +817,18 @@ components:
         tid:
           type: string
       type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedRequestHeaders:
       additionalProperties: false
       description: Implementation-derived authentication and signing headers emitted by EncryptedClient.
+      example:
+        X-appKey: synthetic-app-key
+        X-requestId: synthetic-request-001
+        X-sid: synthetic-session-001
+        X-sign: synthetic-signature
+        X-time: "1700000000000"
+        X-token: synthetic-access-token
       properties:
         X-appKey:
           type: string
@@ -544,11 +850,14 @@ components:
         - X-token
         - X-sign
       type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
       x-go-tuya-header-keys: true
     EncryptedRequestQuery:
       additionalProperties: false
       description: Implementation-derived query keys emitted by encrypted requests.
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1xdWVyeQ==
       properties:
         encdata:
           description: Base64-encoded encrypted query payload.
@@ -556,43 +865,57 @@ components:
       required:
         - encdata
       type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
       x-go-tuya-query-keys: true
     EncryptedSignatureHeaderOrder:
       description: Comma-separated implementation-derived order of header names in the REST signature preimage.
       enum:
         - X-appKey,X-requestId,X-sid,X-time,X-token
+      example: X-appKey,X-requestId,X-sid,X-time,X-token
       type: string
       x-enum-varnames:
         - EncryptedSignatureHeaderOrderCanonical
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedSignatureHeaderPairTemplate:
       description: Implementation-derived key and value format used for each signed request header.
       enum:
         - '%s=%s'
+      example: '%s=%s'
       type: string
       x-enum-varnames:
         - EncryptedSignatureHeaderPairTemplateCanonical
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedSignatureHeaderSeparator:
       description: Implementation-derived separator between signed request header pairs.
       enum:
         - '||'
+      example: '||'
       type: string
       x-enum-varnames:
         - EncryptedSignatureHeaderSeparatorCanonical
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedSignaturePayloadTemplate:
       description: Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
       enum:
         - '%s%s'
+      example: '%s%s'
       type: string
       x-enum-varnames:
         - EncryptedSignaturePayloadTemplateCanonical
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     FactoryInfoRecord:
       additionalProperties: true
       description: Factory information fields represented by the library.
+      example:
+        id: synthetic-device-001
+        mac: "02:00:00:00:00:01"
+        sn: synthetic-serial-001
+        uuid: synthetic-device-uuid-001
       properties:
         id:
           type: string
@@ -603,9 +926,21 @@ components:
         uuid:
           type: string
       type: object
+      x-example-evidence: synthetic
     FactoryInfosEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - id: synthetic-device-001
+            mac: "02:00:00:00:00:01"
+            sn: synthetic-serial-001
+            uuid: synthetic-device-uuid-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-factory-info-001
       properties:
         code:
           description: Provider response code when present.
@@ -628,9 +963,24 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     HomeDevicesEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - category: dj
+            id: synthetic-device-001
+            name: Desk lamp
+            online: true
+            status:
+              - code: switch_led
+                value: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-devices-001
       properties:
         code:
           description: Provider response code when present.
@@ -653,9 +1003,27 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     HomeListEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - background: https://example.invalid/home/synthetic-background.jpg
+            geoName: Synthetic home
+            groupId: 1001
+            id: 2001
+            lat: 37.7749
+            lon: -122.4194
+            name: Apartment
+            ownerId: synthetic-user-001
+            status: true
+            uid: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-001
       properties:
         code:
           description: Provider response code when present.
@@ -678,9 +1046,21 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     HomeRecord:
       additionalProperties: true
       description: Home fields observed in the current implementation and example.
+      example:
+        background: https://example.invalid/home/synthetic-background.jpg
+        geoName: Synthetic home
+        groupId: 1001
+        id: 2001
+        lat: 37.7749
+        lon: -122.4194
+        name: Apartment
+        ownerId: synthetic-user-001
+        status: true
+        uid: synthetic-user-001
       properties:
         background:
           type: string
@@ -706,17 +1086,34 @@ components:
         uid:
           type: string
       type: object
+      x-example-evidence: synthetic
     JSONMediaType:
       description: Implementation-derived JSON media type used by the QR authentication headers.
       enum:
         - application/json
+      example: application/json
       type: string
       x-enum-varnames:
         - JSONMediaTypeApplicationJSON
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     LoginCodeEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          access_token: synthetic-access-token
+          endpoint: https://example.invalid
+          expire_time: 1700003600
+          refresh_token: synthetic-refresh-token
+          terminal_id: synthetic-terminal-001
+          uid: synthetic-user-001
+          username: synthetic-user
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
       properties:
         code:
           description: Provider response code when present.
@@ -737,9 +1134,18 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     LoginCodeResult:
       additionalProperties: true
       description: Login token payload observed by the library.
+      example:
+        access_token: synthetic-access-token
+        endpoint: https://example.invalid
+        expire_time: 1700003600
+        refresh_token: synthetic-refresh-token
+        terminal_id: synthetic-terminal-001
+        uid: synthetic-user-001
+        username: synthetic-user
       properties:
         access_token:
           type: string
@@ -757,18 +1163,39 @@ components:
         username:
           type: string
       type: object
+      x-example-evidence: synthetic
     MessageQueueConfigBody:
       additionalProperties: true
       description: Link identifier payload used to request MQTT connection credentials.
+      example:
+        linkId: synthetic-link-001
       properties:
         linkId:
           type: string
       required:
         - linkId
       type: object
+      x-example-evidence: synthetic
     MessageQueueConfigEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          clientId: synthetic-client-001
+          expireTime: 1700003600
+          password: synthetic-mqtt-password
+          topic:
+            devId:
+              sub: synthetic/device/{devId}/events
+            ownerId:
+              sub: synthetic/owner/events
+          url: mqtts://broker.example.invalid:8883
+          username: synthetic-mqtt-user
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-mqtt-001
       properties:
         code:
           description: Provider response code when present.
@@ -789,9 +1216,21 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     MessageQueueConfiguration:
       additionalProperties: true
       description: MQTT connection fields consumed by the library. Treat credentials as secrets.
+      example:
+        clientId: synthetic-client-001
+        expireTime: 1700003600
+        password: synthetic-mqtt-password
+        topic:
+          devId:
+            sub: synthetic/device/{devId}/events
+          ownerId:
+            sub: synthetic/owner/events
+        url: mqtts://broker.example.invalid:8883
+        username: synthetic-mqtt-user
       properties:
         clientId:
           type: string
@@ -807,34 +1246,57 @@ components:
         username:
           type: string
       type: object
+      x-example-evidence: synthetic
     MessageQueueSubscription:
       additionalProperties: true
       description: MQTT topic subscription data returned by the private config route.
+      example:
+        sub: synthetic/owner/events
       properties:
         sub:
           type: string
       type: object
+      x-example-evidence: synthetic
     MessageQueueTopic:
       additionalProperties: true
       description: MQTT topic groups returned by the private config route.
+      example:
+        devId:
+          sub: synthetic/device/{devId}/events
+        ownerId:
+          sub: synthetic/owner/events
       properties:
         devId:
           $ref: '#/components/schemas/MessageQueueSubscription'
         ownerId:
           $ref: '#/components/schemas/MessageQueueSubscription'
       type: object
+      x-example-evidence: synthetic
     MultiOutletNameRecord:
       additionalProperties: true
       description: Multi-outlet identifier and display name represented by the library.
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
       properties:
         identifier:
           type: string
         name:
           type: string
       type: object
+      x-example-evidence: synthetic
     MultiOutletNamesEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - identifier: synthetic-outlet-001
+            name: Desk lamp outlet
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-outlet-names-001
       properties:
         code:
           description: Provider response code when present.
@@ -857,9 +1319,18 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     QRCodeEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          qrcode: https://example.invalid/qr/synthetic-login
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
       properties:
         code:
           description: Provider response code when present.
@@ -880,24 +1351,37 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     QRCodeResult:
       additionalProperties: true
       description: QR login payload observed by the library.
+      example:
+        qrcode: https://example.invalid/qr/synthetic-login
       properties:
         qrcode:
           type: string
       type: object
+      x-example-evidence: synthetic
     QRCodeTokenPrefix:
       description: Implementation-derived Smart Life QR token prefix; append the returned login code unchanged.
       enum:
         - tuyaSmart--qrLogin?token=
+      example: tuyaSmart--qrLogin?token=
       type: string
       x-enum-varnames:
         - QRCodeTokenPrefixSmartLife
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     RTCOfferBody:
       additionalProperties: true
       description: WebRTC offer payload sent to Tuya signaling.
+      example:
+        sdp: |-
+          v=0
+          o=- synthetic-offer 1 IN IP4 127.0.0.1
+          s=synthetic-offer
+          t=0 0
+        type: offer
       properties:
         sdp:
           type: string
@@ -909,9 +1393,23 @@ components:
         - sdp
         - type
       type: object
+      x-example-evidence: synthetic
     RTCSessionEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          sdp: |-
+            v=0
+            o=- synthetic-answer 1 IN IP4 127.0.0.1
+            s=synthetic-answer
+            t=0 0
+          session_id: synthetic-rtc-session-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-rtc-001
       properties:
         code:
           description: Provider response code when present.
@@ -932,18 +1430,31 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     RTCSessionResult:
       additionalProperties: true
       description: WebRTC signaling response fields consumed by the library.
+      example:
+        sdp: |-
+          v=0
+          o=- synthetic-session 1 IN IP4 127.0.0.1
+          s=synthetic-session
+          t=0 0
+        session_id: synthetic-rtc-session-001
       properties:
         sdp:
           type: string
         session_id:
           type: string
       type: object
+      x-example-evidence: synthetic
     RawDeviceManagementBizData:
       additionalProperties: true
       description: Implementation-derived, extensible business payload for MQTT management events.
+      example:
+        devId: synthetic-device-001
+        time: 1700000000000
+        uid: synthetic-user-002
       properties:
         devId:
           type: string
@@ -955,10 +1466,20 @@ components:
         uid:
           type: string
       type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     RawDeviceManagementData:
       additionalProperties: true
       description: Implementation-derived data payload for MQTT protocol 20 management events.
+      example:
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          name: Desk lamp
+          time: 1700000000000
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        ts: 1700000000000
       properties:
         bizCode:
           type: string
@@ -973,10 +1494,53 @@ components:
           format: int64
           type: integer
       type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementMessage:
+      additionalProperties: true
+      description: Implementation-derived MQTT protocol 20 device-management envelope.
+      example:
+        data:
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            name: Desk lamp
+            time: 1700000000000
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          ts: 1700000000000
+        protocol: 20
+        t: 1700000000000
+      properties:
+        data:
+          $ref: '#/components/schemas/RawDeviceManagementData'
+        protocol:
+          description: Protocol identifier for a device-management event.
+          enum:
+            - 20
+          type: integer
+          x-enum-varnames:
+            - RawDeviceManagementProtocol20
+        t:
+          format: int64
+          type: integer
+      required:
+        - protocol
+        - data
+      type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     RawDeviceReportData:
       additionalProperties: true
       description: Implementation-derived data payload for MQTT protocol 4 device reports.
+      example:
+        dataId: synthetic-report-001
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        status:
+          - code: switch_led
+            t: 1700000000000
+            value: true
       properties:
         dataId:
           type: string
@@ -989,10 +1553,48 @@ components:
             $ref: '#/components/schemas/RawDeviceStatusChange'
           type: array
       type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportMessage:
+      additionalProperties: true
+      description: Implementation-derived MQTT protocol 4 device-report envelope.
+      example:
+        data:
+          dataId: synthetic-report-001
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          status:
+            - code: switch_led
+              t: 1700000000000
+              value: true
+        protocol: 4
+        t: 1700000000000
+      properties:
+        data:
+          $ref: '#/components/schemas/RawDeviceReportData'
+        protocol:
+          description: Protocol identifier for a device report.
+          enum:
+            - 4
+          type: integer
+          x-enum-varnames:
+            - RawDeviceReportProtocol4
+        t:
+          format: int64
+          type: integer
+      required:
+        - protocol
+        - data
+      type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     RawDeviceStatusChange:
       additionalProperties: true
       description: Implementation-derived status item in an MQTT protocol 4 report.
+      example:
+        code: switch_led
+        t: 1700000000000
+        value: true
       properties:
         code:
           type: string
@@ -1002,19 +1604,73 @@ components:
           type: integer
         value: {}
       type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawSharingEvent:
+      description: Implementation-derived MQTT event union. Protocol 4 carries a device report; protocol 20 carries a management event. This is not a provider-verified payload schema.
+      discriminator:
+        mapping:
+          "4": '#/components/schemas/RawDeviceReportMessage'
+          "20": '#/components/schemas/RawDeviceManagementMessage'
+        propertyName: protocol
+      examples:
+        - data:
+            dataId: synthetic-report-001
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            status:
+              - code: switch_led
+                t: 1700000000000
+                value: true
+          protocol: 4
+          t: 1700000000000
+        - data:
+            bizCode: nameUpdate
+            bizData:
+              devId: synthetic-device-001
+              name: Desk lamp
+              time: 1700000000000
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            ts: 1700000000000
+          protocol: 20
+          t: 1700000000000
+        - data:
+            bizCode: bindUser
+            bizData:
+              devId: synthetic-device-001
+              time: 1700000000000
+              uid: synthetic-user-002
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            ts: 1700000000000
+          protocol: 20
+          t: 1700000000000
+      oneOf:
+        - $ref: '#/components/schemas/RawDeviceReportMessage'
+        - $ref: '#/components/schemas/RawDeviceManagementMessage'
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     RawSharingMessage:
       additionalProperties: true
-      description: Implementation-derived MQTT message envelope consumed by pkg/tuya. It is aligned with api/mqtt.asyncapi.yaml and is not a provider-verified payload schema.
+      description: Compatibility projection of the former generic MQTT message envelope. Active runtime decoding uses the protocol-discriminated RawSharingEvent variants.
+      example:
+        data:
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            name: Desk lamp
+            time: 1700000000000
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          ts: 1700000000000
+        protocol: 20
+        t: 1700000000000
       properties:
         data:
           $ref: '#/components/schemas/RawSharingMessageData'
         protocol:
-          description: Legacy device report (4) or management event (20) handled by this client.
-          enum:
-            - 4
-            - 20
-          type: integer
+          $ref: '#/components/schemas/RawSharingMessageProtocol'
         t:
           format: int64
           type: integer
@@ -1022,10 +1678,21 @@ components:
         - protocol
         - data
       type: object
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
       x-go-tuya-evidence: implementation-derived
     RawSharingMessageData:
       additionalProperties: true
-      description: Implementation-derived fields shared across the two MQTT data variants; unrecognized fields remain open.
+      description: Compatibility projection of the former merged protocol 4 and protocol 20 data shape. Active event decoding uses RawDeviceReportData or RawDeviceManagementData according to the outer protocol value.
+      example:
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          name: Desk lamp
+          time: 1700000000000
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        ts: 1700000000000
       properties:
         bizCode:
           type: string
@@ -1046,10 +1713,33 @@ components:
           format: int64
           type: integer
       type: object
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessageProtocol:
+      description: Compatibility projection of the former combined MQTT message protocol enum. Active event decoding uses RawSharingEvent and its protocol-specific envelope types.
+      enum:
+        - 4
+        - 20
+      example: 20
+      type: integer
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
       x-go-tuya-evidence: implementation-derived
     RefreshTokenEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          accessToken: synthetic-access-token-rotated
+          expireTime: 1700007200
+          refreshToken: synthetic-refresh-token-rotated
+          uid: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-003
       properties:
         code:
           description: Provider response code when present.
@@ -1070,9 +1760,15 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     RefreshedTokenResult:
       additionalProperties: true
       description: Refresh-token payload observed by the library.
+      example:
+        accessToken: synthetic-access-token-rotated
+        expireTime: 1700007200
+        refreshToken: synthetic-refresh-token-rotated
+        uid: synthetic-user-001
       properties:
         accessToken:
           type: string
@@ -1084,9 +1780,14 @@ components:
         uid:
           type: string
       type: object
+      x-example-evidence: synthetic
     SendCommandsBody:
       additionalProperties: true
       description: Command payload sent by SendCommands.
+      example:
+        commands:
+          - code: switch_led
+            value: true
       properties:
         commands:
           items:
@@ -1095,9 +1796,17 @@ components:
       required:
         - commands
       type: object
+      x-example-evidence: synthetic
     SpecificationFunction:
       additionalProperties: true
       description: Function fields represented by the library; values are provider-defined.
+      example:
+        code: switch_led
+        desc: Synthetic switch function
+        name: Switch
+        type: Boolean
+        values:
+          type: boolean
       properties:
         code:
           type: string
@@ -1110,9 +1819,16 @@ components:
           type: string
         values: {}
       type: object
+      x-example-evidence: synthetic
     SpecificationStatus:
       additionalProperties: true
       description: Status fields represented by the library; values are provider-defined.
+      example:
+        code: switch_led
+        name: Switch state
+        type: Boolean
+        values:
+          type: boolean
       properties:
         code:
           type: string
@@ -1123,9 +1839,17 @@ components:
           type: string
         values: {}
       type: object
+      x-example-evidence: synthetic
     StringResultEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
       properties:
         code:
           description: Provider response code when present.
@@ -1146,9 +1870,19 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     SubDeviceRecord:
       additionalProperties: true
       description: Sub-device fields represented by the library.
+      example:
+        active_time: 1700000000
+        category: dj
+        id: synthetic-subdevice-001
+        name: Desk lamp child
+        online: true
+        owner_id: synthetic-user-001
+        product_id: synthetic-product-001
+        update_time: 1700000000
       properties:
         active_time:
           format: int64
@@ -1169,9 +1903,25 @@ components:
           format: int64
           type: integer
       type: object
+      x-example-evidence: synthetic
     SubDevicesEnvelope:
       additionalProperties: true
       description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - active_time: 1700000000
+            category: dj
+            id: synthetic-subdevice-001
+            name: Desk lamp child
+            online: true
+            owner_id: synthetic-user-001
+            product_id: synthetic-product-001
+            update_time: 1700000000
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-subdevices-001
       properties:
         code:
           description: Provider response code when present.
@@ -1194,6 +1944,7 @@ components:
           description: Provider trace identifier when present.
           type: string
       type: object
+      x-example-evidence: synthetic
     TuyaBizCode:
       description: Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
       enum:
@@ -1203,6 +1954,7 @@ components:
         - delete
         - bindUser
         - dpNameUpdate
+      example: online
       type: string
       x-enum-varnames:
         - TuyaBizCodeOnline
@@ -1211,6 +1963,7 @@ components:
         - TuyaBizCodeDelete
         - TuyaBizCodeBindUser
         - TuyaBizCodeDpNameUpdate
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     TuyaDataPointCode:
       description: Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
@@ -1235,6 +1988,7 @@ components:
         - basic_indicator
         - camera
         - rtc_session
+      example: switch_led
       type: string
       x-enum-varnames:
         - TuyaDataPointCodeSwitchLed
@@ -1257,6 +2011,7 @@ components:
         - TuyaDataPointCodeBasicIndicator
         - TuyaDataPointCodeCamera
         - TuyaDataPointCodeRtcSession
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     TuyaDeviceCategory:
       description: Device categories used by the standard capability mappings in this client.
@@ -1280,6 +2035,7 @@ components:
         - jtmspro
         - sp
         - ipc
+      example: dj
       type: string
       x-enum-varnames:
         - TuyaDeviceCategoryTgkg
@@ -1301,10 +2057,17 @@ components:
         - TuyaDeviceCategoryJtmspro
         - TuyaDeviceCategorySp
         - TuyaDeviceCategoryIpc
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     TuyaErrorEnvelope:
       additionalProperties: true
       description: Extensible Tuya error response. Error fields vary by endpoint.
+      example:
+        code: 12345
+        msg: Synthetic request rejected
+        success: false
+        t: 1700000000000
+        tid: synthetic-trace-error-001
       properties:
         code:
           type: integer
@@ -1318,9 +2081,13 @@ components:
         tid:
           type: string
       type: object
+      x-example-evidence: synthetic
     UpdateMultiOutletNameBody:
       additionalProperties: true
       description: Payload sent to rename one outlet.
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
       properties:
         identifier:
           type: string
@@ -1330,15 +2097,19 @@ components:
         - identifier
         - name
       type: object
+      x-example-evidence: synthetic
     UpdateNameBody:
       additionalProperties: true
       description: Name payload sent by device and data-point rename operations.
+      example:
+        name: Desk lamp
       properties:
         name:
           type: string
       required:
         - name
       type: object
+      x-example-evidence: synthetic
 info:
   description: Inventory of outbound HTTP routes currently used by pkg/tuya. Operations tagged x-go-tuya-evidence=provider-documented are listed in Tuya Device Management. Operations tagged implementation-derived describe private app/mobile routes observed in go-tuya and are not provider-verified. Request and response objects stay open where the public reference or current implementation does not establish a complete schema. MQTT traffic is a separate protocol; the HTTP route that obtains MQTT credentials is included. EncryptedClient wraps HTTP request bodies and query data, signs requests with the headers, and decrypts the outer response envelope described below.
   title: Tuya Cloud HTTP API routes used by go-tuya

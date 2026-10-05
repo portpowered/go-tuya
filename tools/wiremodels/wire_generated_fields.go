@@ -42,7 +42,7 @@ func generatedWireResolvedModel(name string, models map[string]generatedModel, v
 	return generatedWireResolvedModel(model.Alias, models, visiting)
 }
 
-//nolint:cyclop,gocognit // Generated model provenance crosses declarations and local helper returns.
+//nolint:cyclop,funlen,gocognit // Generated model provenance crosses declarations and local helper returns.
 func generatedWireModelForValue(
 	expression ast.Expr, aliases map[string]bool, path string, models map[string]generatedModel,
 	assignments wireSourceAssignments, visiting map[wireSourceVariable]bool,
@@ -56,8 +56,18 @@ func generatedWireModelForValue(
 		return generatedWireModelForType(expression.Type, aliases, path, models, assignments)
 	case *ast.ParenExpr:
 		return generatedWireModelForValue(expression.X, aliases, path, models, assignments, visiting)
-	case *ast.StarExpr, *ast.UnaryExpr, *ast.TypeAssertExpr:
+	case *ast.IndexExpr:
+		return generatedWireModelForValue(expression.X, aliases, path, models, assignments, visiting)
+	case *ast.SliceExpr:
+		return generatedWireModelForValue(expression.X, aliases, path, models, assignments, visiting)
+	case *ast.StarExpr, *ast.UnaryExpr:
 		return generatedWireModelForValue(wireExpressionOperand(expression), aliases, path, models, assignments, visiting)
+	case *ast.TypeAssertExpr:
+		if name := generatedWireModelForType(expression.Type, aliases, path, models, assignments); name != "" {
+			return name
+		}
+
+		return generatedWireModelForValue(expression.X, aliases, path, models, assignments, visiting)
 	case *ast.Ident:
 		return generatedWireModelForIdentifier(expression, aliases, path, models, assignments, visiting)
 	case *ast.SelectorExpr:
@@ -65,6 +75,19 @@ func generatedWireModelForValue(
 			if name := generatedWireModelForValue(value, aliases, path, models, assignments, visiting); name != "" {
 				return name
 			}
+		}
+
+		if owner := generatedWireModelForValue(expression.X, aliases, path, models, assignments, visiting); owner != "" {
+			model, exists := generatedWireResolvedModel(owner, models, make(map[string]bool))
+			if exists {
+				if fieldType := model.Fields[expression.Sel.Name]; models[fieldType].Name != "" {
+					return fieldType
+				}
+			}
+		}
+
+		if fieldType := wireStaticExpressionType(expression, assignments, make(map[wireSourceVariable]bool)); fieldType != nil {
+			return generatedWireModelForType(fieldType, aliases, path, models, assignments)
 		}
 	case *ast.CallExpr:
 		if name := generatedWireModelForType(expression.Fun, aliases, path, models, assignments); name != "" {
@@ -97,6 +120,144 @@ func generatedWireModelForValue(
 	}
 
 	return ""
+}
+
+// Infer the type along local field/index paths when the source value has no
+// named receiver declaration (for example an anonymous struct field).
+//
+//nolint:cyclop,funlen,gocognit // This switch resolves only syntax forms needed to preserve generated model identity.
+func wireStaticExpressionType(expression ast.Expr, assignments wireSourceAssignments, visiting map[wireSourceVariable]bool) ast.Expr {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return wireStaticExpressionType(expression.X, assignments, visiting)
+	case *ast.StarExpr, *ast.UnaryExpr:
+		return wireStaticExpressionType(wireExpressionOperand(expression), assignments, visiting)
+	case *ast.CompositeLit:
+		return expression.Type
+	case *ast.IndexExpr:
+		return wireStaticContainerElementType(wireStaticExpressionType(expression.X, assignments, visiting), make(map[*ast.TypeSpec]bool))
+	case *ast.SliceExpr:
+		return wireStaticExpressionType(expression.X, assignments, visiting)
+	case *ast.TypeAssertExpr:
+		return expression.Type
+	case *ast.SelectorExpr:
+		owner := wireStaticExpressionType(expression.X, assignments, visiting)
+
+		return wireStaticStructFieldType(owner, expression.Sel.Name, make(map[*ast.TypeSpec]bool))
+	case *ast.CallExpr:
+		if _, generated := expression.Fun.(*ast.SelectorExpr); generated {
+			return expression.Fun
+		}
+
+		for _, results := range wireCallResultLists(expression.Fun, assignments) {
+			if results != nil && len(results.List) != 0 {
+				return results.List[0].Type
+			}
+		}
+	case *ast.Ident:
+		if expression.Obj == nil {
+			return nil
+		}
+
+		declaration, isNode := expression.Obj.Decl.(ast.Node)
+		key := wireSourceVariable{declaration: declaration, name: expression.Name}
+
+		if !isNode || visiting[key] {
+			return nil
+		}
+
+		visiting[key] = true
+		defer delete(visiting, key)
+
+		switch declaration := declaration.(type) {
+		case *ast.Field:
+			return declaration.Type
+		case *ast.TypeSpec:
+			return declaration.Type
+		case *ast.ValueSpec:
+			if declaration.Type != nil {
+				return declaration.Type
+			}
+		case *ast.AssignStmt:
+			for index, left := range declaration.Lhs {
+				identifier, isIdentifier := left.(*ast.Ident)
+				if isIdentifier && identifier.Name == expression.Name && index < len(declaration.Rhs) {
+					return wireStaticExpressionType(declaration.Rhs[index], assignments, visiting)
+				}
+			}
+		}
+
+		if value := wireAliasValue(expression.Name, declaration); value != nil {
+			return wireStaticExpressionType(value, assignments, visiting)
+		}
+	}
+
+	return nil
+}
+
+func wireStaticContainerElementType(expression ast.Expr, visiting map[*ast.TypeSpec]bool) ast.Expr {
+	switch expression := expression.(type) {
+	case *ast.ArrayType:
+		return expression.Elt
+	case *ast.MapType:
+		return expression.Value
+	case *ast.ParenExpr:
+		return wireStaticContainerElementType(expression.X, visiting)
+	case *ast.StarExpr:
+		return wireStaticContainerElementType(expression.X, visiting)
+	case *ast.Ident:
+		if expression.Obj == nil {
+			return nil
+		}
+
+		declaration, isType := expression.Obj.Decl.(*ast.TypeSpec)
+		if !isType || visiting[declaration] {
+			return nil
+		}
+
+		visiting[declaration] = true
+
+		return wireStaticContainerElementType(declaration.Type, visiting)
+	}
+
+	return nil
+}
+
+//nolint:cyclop // Anonymous and named local structs may be reached through pointers or type aliases.
+func wireStaticStructFieldType(expression ast.Expr, name string, visiting map[*ast.TypeSpec]bool) ast.Expr {
+	switch expression := expression.(type) {
+	case *ast.ParenExpr:
+		return wireStaticStructFieldType(expression.X, name, visiting)
+	case *ast.StarExpr:
+		return wireStaticStructFieldType(expression.X, name, visiting)
+	case *ast.StructType:
+		if expression.Fields == nil {
+			return nil
+		}
+
+		for _, field := range expression.Fields.List {
+			for _, identifier := range field.Names {
+				if identifier.Name == name {
+					return field.Type
+				}
+			}
+		}
+	case *ast.Ident:
+		if expression.Obj == nil {
+			return nil
+		}
+
+		declaration, isType := expression.Obj.Decl.(*ast.TypeSpec)
+		if !isType || visiting[declaration] {
+			return nil
+		}
+
+		visiting[declaration] = true
+
+		return wireStaticStructFieldType(declaration.Type, name, visiting)
+	}
+
+	return nil
 }
 
 //nolint:cyclop // Identifier analysis checks declared types before following each source alias.
@@ -158,6 +319,10 @@ func generatedWireModelForType(
 	switch expression := expression.(type) {
 	case *ast.StarExpr, *ast.ParenExpr:
 		return generatedWireModelForType(wireExpressionOperand(expression), aliases, path, models, assignments)
+	case *ast.ArrayType:
+		return generatedWireModelForType(expression.Elt, aliases, path, models, assignments)
+	case *ast.MapType:
+		return generatedWireModelForType(expression.Value, aliases, path, models, assignments)
 	case *ast.SelectorExpr:
 		identifier, isPackage := expression.X.(*ast.Ident)
 
@@ -607,15 +772,27 @@ func wireEnumAssignmentProblem(
 	left ast.Expr, right ast.Expr, aliases map[string]bool, path string,
 	models map[string]generatedModel, assignments wireSourceAssignments,
 ) string {
-	selector, isSelector := left.(*ast.SelectorExpr)
-	if !isSelector {
-		return ""
-	}
-
-	enumName := generatedWireEnumFieldType(selector.X, selector.Sel.Name, aliases, path, models, assignments)
+	enumName := generatedWireEnumValueType(left, aliases, path, models, assignments)
 	if enumName == "" || generatedWireEnumExpressionAllowed(right, enumName, aliases, path, models, assignments, make(map[wireSourceVariable]bool)) {
 		return ""
 	}
 
 	return enumName
+}
+
+func generatedWireEnumValueType(
+	expression ast.Expr, aliases map[string]bool, path string, models map[string]generatedModel, assignments wireSourceAssignments,
+) string {
+	switch expression := expression.(type) {
+	case *ast.IndexExpr:
+		return generatedWireEnumValueType(expression.X, aliases, path, models, assignments)
+	case *ast.SliceExpr:
+		return generatedWireEnumValueType(expression.X, aliases, path, models, assignments)
+	case *ast.ParenExpr:
+		return generatedWireEnumValueType(expression.X, aliases, path, models, assignments)
+	case *ast.SelectorExpr:
+		return generatedWireEnumFieldType(expression.X, expression.Sel.Name, aliases, path, models, assignments)
+	}
+
+	return ""
 }

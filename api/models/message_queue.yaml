@@ -7,6 +7,9 @@ components:
       properties:
         sub:
           type: string
+      example:
+        sub: synthetic/owner/events
+      x-example-evidence: synthetic
     MessageQueueTopic:
       type: object
       description: MQTT topic groups returned by the private config route.
@@ -16,6 +19,12 @@ components:
           $ref: '#/components/schemas/MessageQueueSubscription'
         devId:
           $ref: '#/components/schemas/MessageQueueSubscription'
+      example:
+        ownerId:
+          sub: synthetic/owner/events
+        devId:
+          sub: synthetic/device/{devId}/events
+      x-example-evidence: synthetic
     MessageQueueConfiguration:
       type: object
       description: MQTT connection fields consumed by the library. Treat credentials
@@ -35,6 +44,18 @@ components:
           format: int64
         topic:
           $ref: '#/components/schemas/MessageQueueTopic'
+      example:
+        url: mqtts://broker.example.invalid:8883
+        clientId: synthetic-client-001
+        username: synthetic-mqtt-user
+        password: synthetic-mqtt-password
+        expireTime: 1700003600
+        topic:
+          ownerId:
+            sub: synthetic/owner/events
+          devId:
+            sub: synthetic/device/{devId}/events
+      x-example-evidence: synthetic
     MessageQueueConfigBody:
       type: object
       description: Link identifier payload used to request MQTT connection credentials.
@@ -44,6 +65,9 @@ components:
           type: string
       required:
       - linkId
+      example:
+        linkId: synthetic-link-001
+      x-example-evidence: synthetic
     MessageQueueConfigEnvelope:
       type: object
       description: Tuya response envelope observed by the library. Unspecified envelope
@@ -68,3 +92,21 @@ components:
           description: Provider trace identifier when present.
         result:
           $ref: '#/components/schemas/MessageQueueConfiguration'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-mqtt-001
+        result:
+          url: mqtts://broker.example.invalid:8883
+          clientId: synthetic-client-001
+          username: synthetic-mqtt-user
+          password: synthetic-mqtt-password
+          expireTime: 1700003600
+          topic:
+            ownerId:
+              sub: synthetic/owner/events
+            devId:
+              sub: synthetic/device/{devId}/events
+      x-example-evidence: synthetic

@@ -43,7 +43,7 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 		WithHTTPClient(httpClient),
 		WithClientID(clientFixtureSyntheticClientID),
 		WithAuthenticationURL("https://auth.example.test/"),
-		WithCloudAPIURL("https://cloud.example.test/"),
+		WithCloudAPIURL("https://cloud.example.test/prefix/"),
 		WithMQTTClientFactory(mqttFactory),
 		WithRTCSignaling(rtcSignaling),
 	)
@@ -74,8 +74,8 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 		t.Errorf("AuthenticationURL = %q, want trimmed URL", first.AuthenticationURL)
 	}
 
-	if first.CloudAPIURL != "https://cloud.example.test" {
-		t.Errorf("CloudAPIURL = %q, want trimmed URL", first.CloudAPIURL)
+	if first.CloudAPIURL != "https://cloud.example.test/prefix" {
+		t.Errorf("CloudAPIURL = %q, want trimmed path-prefixed URL", first.CloudAPIURL)
 	}
 
 	if first.rtcSignaling != rtcSignaling {
@@ -157,7 +157,13 @@ func TestNewClientRejectsInvalidOptions(t *testing.T) {
 		{name: "nil HTTP transport", option: WithHTTPTransport(nil)},
 		{name: "empty client ID", option: WithClientID(" \t")},
 		{name: "relative authentication URL", option: WithAuthenticationURL("/login")},
+		{name: "authentication URL with user info", option: WithAuthenticationURL("https://user:pass@auth.example.test")},
+		{name: "authentication URL with query", option: WithAuthenticationURL("https://auth.example.test?tenant=synthetic")},
+		{name: "authentication URL with fragment", option: WithAuthenticationURL("https://auth.example.test#section")},
 		{name: "non HTTP cloud URL", option: WithCloudAPIURL("mqtt://cloud.example.test")},
+		{name: "cloud API URL with user info", option: WithCloudAPIURL("https://user:pass@cloud.example.test")},
+		{name: "cloud API URL with query", option: WithCloudAPIURL("https://cloud.example.test?tenant=synthetic")},
+		{name: "cloud API URL with fragment", option: WithCloudAPIURL("https://cloud.example.test#section")},
 		{name: "unsupported region", option: WithRegion(Region("not-a-region"))},
 		{name: "nil MQTT factory", option: WithMQTTClientFactory(nil)},
 		{name: "nil RTC signaling", option: WithRTCSignaling(nil)},
@@ -399,7 +405,16 @@ func TestCloseIsSafeWithoutRunningMessageQueue(t *testing.T) {
 func TestValidateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	for _, endpoint := range []string{"", "/relative", "file:///tmp/endpoint", "https:///missing-host", "http://"} {
+	for _, endpoint := range []string{
+		"",
+		"/relative",
+		"file:///tmp/endpoint",
+		"https:///missing-host",
+		"http://",
+		"https://user:pass@example.test",
+		"https://example.test?tenant=synthetic",
+		"https://example.test#section",
+	} {
 		t.Run(endpoint, func(t *testing.T) {
 			t.Parallel()
 
@@ -410,23 +425,28 @@ func TestValidateEndpoint(t *testing.T) {
 		})
 	}
 
-	err := validateEndpoint("test endpoint", "http://example.test/path")
-	if err != nil {
-		t.Errorf("validateEndpoint() for absolute HTTP URL = %v", err)
+	for _, endpoint := range []string{"http://example.test/path", "https://example.test/prefix/nested/"} {
+		if err := validateEndpoint("test endpoint", endpoint); err != nil {
+			t.Errorf("validateEndpoint(%q) = %v, want accepted absolute endpoint with path", endpoint, err)
+		}
 	}
 }
 
 func TestAuthClientHTTPTransportCanBeReusedAcrossSessions(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if got, want := request.URL.Path, "/prefix/v1.0/m/life/home-assistant/qrcode/tokens"; got != want {
+			t.Errorf("request path = %q, want path-prefixed route %q", got, want)
+		}
+
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusOK)
 		_, _ = writer.Write([]byte(`{"success":true,"result":{"qrcode":"synthetic-code"}}`))
 	}))
 	defer server.Close()
 
-	client, err := newSyntheticClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL))
+	client, err := newSyntheticClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL+"/prefix/"))
 	if err != nil {
 		t.Fatalf("newSyntheticClient() error = %v", err)
 	}

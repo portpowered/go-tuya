@@ -52,10 +52,14 @@ output-options:
     - RTCSessionResult
     - RawDeviceManagementBizData
     - RawDeviceManagementData
+    - RawDeviceManagementMessage
     - RawDeviceReportData
+    - RawDeviceReportMessage
     - RawDeviceStatusChange
+    - RawSharingEvent
     - RawSharingMessage
     - RawSharingMessageData
+    - RawSharingMessageProtocol
     - RefreshTokenEnvelope
     - RefreshedTokenResult
     - SendCommandsBody

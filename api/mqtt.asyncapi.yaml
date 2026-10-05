@@ -51,4 +51,4 @@ components:
     SharingEvent:
       name: SharingEvent
       payload:
-        $ref: './openapi.yaml#/components/schemas/RawSharingMessage'
+        $ref: './openapi.yaml#/components/schemas/RawSharingEvent'

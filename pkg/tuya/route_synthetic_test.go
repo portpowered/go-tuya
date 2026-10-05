@@ -14,6 +14,7 @@ import (
 const (
 	routeFixtureCode                        = "code"
 	routeFixtureDevice1                     = "device-1"
+	routeFixtureDeskLamp                    = "Desk lamp"
 	routeFixtureHome1                       = "home-1"
 	routeFixtureSwitch                      = "switch"
 	routeFixtureSyntheticAccess             = "synthetic-access"
@@ -31,7 +32,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	device := map[string]any{"id": routeFixtureDevice1, "name": "Desk lamp", "category": "dj"}
+	device := map[string]any{"id": routeFixtureDevice1, "name": routeFixtureDeskLamp, "category": "dj"}
 
 	tests := []struct {
 		name   string
@@ -144,7 +145,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 		{"rename device", http.MethodPut, routeFixtureV10DevicesDevice1, true, func(t *testing.T, s *Session) {
 			t.Helper()
 
-			got, err := s.DevicesService.UpdateDeviceName(ctx, UpdateDeviceNameRequest{DeviceID: routeFixtureDevice1, Name: "Desk lamp"})
+			got, err := s.DevicesService.UpdateDeviceName(ctx, UpdateDeviceNameRequest{DeviceID: routeFixtureDevice1, Name: routeFixtureDeskLamp})
 			if err != nil || !got.Result {
 				t.Fatalf("UpdateDeviceName = %+v, %v", got, err)
 			}
