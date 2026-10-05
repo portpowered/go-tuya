@@ -12,6 +12,9 @@ import (
 	"github.com/portpowered/go-tuya/pkg/tuya"
 )
 
+const deviceCommandUsage = "usage: go-tuya [global flags] device routine <device-id> <routine> <value> | " +
+	"device command (--value-file path|--value-stdin) <device-id> <code>"
+
 type deviceView struct {
 	HomeID string        `json:"home_id"`
 	Device deviceSummary `json:"device"`
@@ -95,16 +98,18 @@ func homesCommand(ctx context.Context, args []string, config settings, out io.Wr
 
 func devicesCommand(ctx context.Context, args []string, config settings, out io.Writer, deps Dependencies) error {
 	if len(args) == 0 {
-		return usageError("usage: go-tuya [global flags] devices list|status|spec")
+		return usageError("usage: go-tuya [global flags] devices list|status|spec|routines")
 	}
 
 	switch args[0] {
 	case commandStatus, "spec":
 		return readDeviceCommand(ctx, args, config, out, deps)
+	case "routines":
+		return deviceRoutinesCommand(ctx, args, config, out, deps)
 	case "list":
 		return listDevicesCommand(ctx, args[1:], config, out, deps)
 	default:
-		return usageError("usage: go-tuya [global flags] devices list|status|spec")
+		return usageError("usage: go-tuya [global flags] devices list|status|spec|routines")
 	}
 }
 
@@ -217,6 +222,18 @@ func writeDeviceViews(out io.Writer, jsonOutput bool, devices []deviceView) erro
 }
 
 func deviceCommand(ctx context.Context, args []string, config settings, input io.Reader, out io.Writer, deps Dependencies) error {
+	if len(args) == 0 {
+		return usageError(deviceCommandUsage)
+	}
+
+	if args[0] == "routine" {
+		return deviceRoutineCommand(ctx, args[1:], config, out, deps)
+	}
+
+	if args[0] != "command" {
+		return usageError(deviceCommandUsage)
+	}
+
 	command, err := parseDeviceCommand(args, input, out)
 	if err != nil {
 		return err

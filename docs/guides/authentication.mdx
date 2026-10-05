@@ -9,10 +9,13 @@ Supply your application's client ID with `WithClientID` and its authentication
 schema in `LoginRequest.Schema`. Both are required; obtain their values from
 your application's Tuya configuration.
 
-The Device Sharing flow starts with `GenerateQrCodeForLogin`. Show its
-`QrFormattedCode` in a QR-capable app, wait for the account owner to approve,
-then validate the returned login code. This example creates a reusable client
-and an account-scoped session:
+The Device Sharing flow starts with `GenerateQrCodeForLogin`. The account owner
+supplies the account-specific access code provided by the Tuya or Smart Life
+app for the selected authentication schema. This is the `AccessCode` and later
+`UserCode` in the SDK flow; it is not the account password. Show
+`QrFormattedCode` in the app, wait for the account owner to approve, then
+validate the returned login code. This example creates a reusable client and
+an account-scoped session:
 
 Reference: [QR challenge](../../openapi/authentication/generateLoginQRCode),
 [login-code validation](../../openapi/authentication/validateLoginCode), and

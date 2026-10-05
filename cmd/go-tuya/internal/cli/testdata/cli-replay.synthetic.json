@@ -112,6 +112,41 @@
       "body": {"success": true, "t": 1700000000000, "result": true}
     }
   },
+  "device_specification": {
+    "request": {
+      "method": "GET",
+      "origin": "https://api.example.invalid",
+      "path": "/v1.1/m/life/device-1/specifications",
+      "query": {},
+      "headers": {
+        "X-appKey": ["synthetic-client-id"],
+        "X-requestId": ["<uuid>"],
+        "X-sign": ["<tuya-signature>"],
+        "X-time": ["<unix-millis>"],
+        "X-token": ["synthetic-access-token"]
+      },
+      "body": ""
+    },
+    "response": {
+      "status": 200,
+      "headers": {"Content-Type": ["application/json"]},
+      "body": {
+        "success": true,
+        "t": 1700000006000,
+        "result": {
+          "category": "dj",
+          "functions": [
+            {"code": "switch_led", "name": "Switch", "type": "Boolean", "values": "{}"},
+            {"code": "bright_value_v2", "name": "Brightness", "type": "Integer", "values": "{\"min\":10,\"max\":1000,\"step\":10}"},
+            {"code": "temp_value", "name": "Temperature", "type": "Integer", "values": "{\"min\":0,\"max\":1000,\"step\":10}"},
+            {"code": "work_mode", "name": "Mode", "type": "Enum", "values": "{\"range\":[\"white\",\"colour\"]}"},
+            {"code": "synthetic_advanced", "name": "Raw Function", "type": "Json", "values": "{}"}
+          ],
+          "status": []
+        }
+      }
+    }
+  },
   "token_refresh": {
     "request": {
       "method": "GET",

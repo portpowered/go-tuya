@@ -90,8 +90,10 @@ Commands:
   devices list [--home id]              List devices in homes
   devices status <device-id>            Read a device's state
   devices spec <device-id>              Read a device's specification
+  devices routines <device-id>          Discover supported typed routines
+  device routine <id> <name> <value>    Send a typed routine from its specification
   device command (--value-file path|--value-stdin) <id> <code>
-                                        Send an explicit device command
+                                        Send an advanced explicit command
   events watch [--duration duration]    Watch account and device events
 
 Global flags:

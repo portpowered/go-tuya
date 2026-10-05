@@ -76,19 +76,36 @@ type replayPair struct {
 }
 
 type replayFixtures struct {
-	Provenance    string       `json:"provenance"`
-	HomesList     replayPair   `json:"homes_list"`
-	Unauthorized  replayPair   `json:"unauthorized"`
-	DeviceStatus  replayPair   `json:"device_status"`
-	DeviceCommand replayPair   `json:"device_command"`
-	TokenRefresh  replayPair   `json:"token_refresh"`
-	QRLogin       []replayPair `json:"qr_login"`
-	Events        []replayPair `json:"events"`
+	Provenance          string       `json:"provenance"`
+	HomesList           replayPair   `json:"homes_list"`
+	Unauthorized        replayPair   `json:"unauthorized"`
+	DeviceStatus        replayPair   `json:"device_status"`
+	DeviceCommand       replayPair   `json:"device_command"`
+	DeviceSpecification replayPair   `json:"device_specification"`
+	TokenRefresh        replayPair   `json:"token_refresh"`
+	QRLogin             []replayPair `json:"qr_login"`
+	Events              []replayPair `json:"events"`
 }
 
 type pairedTransport struct {
 	pairs []replayPair
 	next  int
+}
+
+type cancelOnSecondRequestTransport struct {
+	first   *pairedTransport
+	started chan struct{}
+}
+
+func (transport *cancelOnSecondRequestTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if transport.first.next < len(transport.first.pairs) {
+		return transport.first.RoundTrip(request)
+	}
+
+	close(transport.started)
+	<-request.Context().Done()
+
+	return nil, fmt.Errorf("wait for routine cancellation: %w", request.Context().Err())
 }
 
 var (
@@ -331,7 +348,7 @@ func TestRunHelp(t *testing.T) {
 		t.Fatalf("Run(--help) exit code = %d, want 0; stderr = %s", code, stderr.String())
 	}
 
-	for _, command := range []string{"auth qr", "auth refresh", "device command", "events watch"} {
+	for _, command := range []string{"auth qr", "auth refresh", "devices routines", "device routine", "device command", "events watch"} {
 		if !strings.Contains(stdout.String(), command) {
 			t.Errorf("help output does not mention %q", command)
 		}
@@ -493,6 +510,206 @@ func TestReadAndExplicitCommandPairedRequests(t *testing.T) {
 
 	err = transport.verifyConsumed()
 	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeviceRoutinesDiscoverTypedMetadataPaired(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	transport := &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification}}
+	tokenPath := writeTokenFile(t)
+
+	code, output, stderr := runCommand(commandArgs(tokenPath, "devices", "routines", "device-1"), transport, cli.Dependencies{}, strings.NewReader(""))
+	if code != 0 {
+		t.Fatalf("devices routines exit code = %d, stderr = %s", code, stderr)
+	}
+
+	expectedFields := []string{
+		`"name": "brightness"`, `"type": "integer"`, `"minimum": 10`,
+		`"name": "mode"`, `"options": [`, `"name": "switch"`, `"actions": [`,
+	}
+	for _, expected := range expectedFields {
+		if !strings.Contains(output, expected) {
+			t.Errorf("device routine discovery did not include %q: %s", expected, output)
+		}
+	}
+
+	for _, private := range []string{"bright_value_v2", "switch_led", "synthetic_advanced"} {
+		if strings.Contains(output, private) {
+			t.Errorf("device routine discovery exposed provider function code %q", private)
+		}
+	}
+
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeviceRoutineUsesDiscoveredFunctionPaired(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	transport := &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification, fixtures.DeviceCommand}}
+	tokenPath := writeTokenFile(t)
+
+	args := commandArgs(tokenPath, "device", "routine", "device-1", "switch", "off")
+	code, output, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+
+	if code != 0 {
+		t.Fatalf("device routine exit code = %d, stderr = %s", code, stderr)
+	}
+
+	if !strings.Contains(output, `"routine": "switch"`) || !strings.Contains(output, `"sent": true`) || strings.Contains(output, "switch_led") {
+		t.Fatalf("device routine output = %s", output)
+	}
+
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeviceRoutineAcceptsIntegerAndEnumValuesPaired(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	tokenPath := writeTokenFile(t)
+
+	testCases := []struct {
+		name    string
+		routine string
+		value   string
+	}{
+		{name: "integer", routine: "brightness", value: "420"},
+		{name: "enum", routine: "mode", value: "colour"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			transport := &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification, fixtures.DeviceCommand}}
+			args := commandArgs(tokenPath, "device", "routine", "device-1", testCase.routine, testCase.value)
+			code, output, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+
+			if code != 0 || !strings.Contains(output, `"sent": true`) {
+				t.Fatalf("%s routine exit code = %d, output = %q, stderr = %q", testCase.name, code, output, stderr)
+			}
+
+			if err := transport.verifyConsumed(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDeviceRoutineRejectsWrongTypeAndUnknownRoutineBeforeSend(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	tokenPath := writeTokenFile(t)
+
+	for _, testCase := range []struct {
+		name     string
+		selector string
+		value    string
+		want     string
+		wantCode int
+	}{
+		{name: "wrong type", selector: "brightness", value: "on", want: "whole-number", wantCode: 2},
+		{name: "unknown routine", selector: "lock", value: "on", want: "not supported", wantCode: 1},
+		{name: "unknown enum value", selector: "mode", value: "invalid", want: "enum value", wantCode: 2},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			transport := &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification}}
+			args := commandArgs(tokenPath, "device", "routine", "device-1", testCase.selector, testCase.value)
+			code, output, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+
+			if code != testCase.wantCode || !strings.Contains(output+stderr, testCase.want) {
+				t.Fatalf("device routine exit code = %d, output = %q, stderr = %q", code, output, stderr)
+			}
+
+			if err := transport.verifyConsumed(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDeviceRoutineReportsProviderFailure(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	failure := fixtures.DeviceSpecification
+	failure.Response.Body = json.RawMessage(`{"success":false,"code":"1010","msg":"synthetic token rejected","t":1700000000000}`)
+	transport := &pairedTransport{pairs: []replayPair{failure}}
+	tokenPath := writeTokenFile(t)
+
+	args := commandArgs(tokenPath, "device", "routine", "device-1", "switch", "on")
+	code, output, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+
+	if code == 0 || !strings.Contains(output+stderr, "read device routines failed") || strings.Contains(output+stderr, "synthetic token rejected") {
+		t.Fatalf("provider failure was not reported safely: code=%d output=%q stderr=%q", code, output, stderr)
+	}
+
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeviceRoutineReportsSendFailure(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	failure := fixtures.DeviceCommand
+	failure.Response.Body = json.RawMessage(`{"success":false,"code":"1010","msg":"synthetic token rejected","t":1700000000000}`)
+	transport := &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification, failure}}
+	tokenPath := writeTokenFile(t)
+
+	args := commandArgs(tokenPath, "device", "routine", "device-1", "switch", "on")
+	code, output, stderr := runCommand(args, transport, cli.Dependencies{}, strings.NewReader(""))
+
+	if code == 0 || !strings.Contains(output+stderr, "send device routine failed") || strings.Contains(output+stderr, "synthetic token rejected") {
+		t.Fatalf("send failure was not reported safely: code=%d output=%q stderr=%q", code, output, stderr)
+	}
+
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeviceRoutineCancellationInterruptsControl(t *testing.T) {
+	t.Parallel()
+	fixtures := loadFixtures(t)
+	transport := &cancelOnSecondRequestTransport{
+		first:   &pairedTransport{pairs: []replayPair{fixtures.DeviceSpecification}},
+		started: make(chan struct{}),
+	}
+	tokenPath := writeTokenFile(t)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer cancel()
+
+	var stdout, stderr bytes.Buffer
+
+	result := make(chan int, 1)
+
+	go func() {
+		args := commandArgs(tokenPath, "device", "routine", "device-1", "switch", "on")
+
+		dependencies := cli.Dependencies{HTTPTransport: transport}
+		result <- cli.Run(ctx, args, strings.NewReader(""), &stdout, &stderr, dependencies)
+	}()
+
+	select {
+	case <-transport.started:
+	case <-time.After(10 * time.Second):
+		t.Fatal("routine command did not reach the send request")
+	}
+
+	cancel()
+
+	if code := <-result; code != 130 || !strings.Contains(stdout.String()+stderr.String(), "device routine interrupted") {
+		t.Fatalf("cancelled routine exit code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+	}
+
+	if err := transport.first.verifyConsumed(); err != nil {
 		t.Fatal(err)
 	}
 }
