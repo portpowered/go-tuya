@@ -27,10 +27,28 @@ jobs:
           version: v2.14.0
           only-new-issues: false
           args: --timeout=5m
+      - name: Lint CLI module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: cmd/go-tuya
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
+      - name: Lint authentication example module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: examples/auth
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
       - name: Build
         run: go build ./...
       - name: Check schema-backed wire routes
-        run: go run ./tools/wireroutes -check
+        env:
+          GOTOOLCHAIN: go1.25.0
+        run: make wire-routes
+      - name: Validate canonical schema examples
+        run: make schema-examples
       - name: Test with race detector
         run: go test -race ./...
       - name: Profile library packages
@@ -55,6 +73,18 @@ jobs:
         run: |
           go mod tidy
           git diff --exit-code -- go.mod go.sum
+      - name: Check CLI module metadata
+        working-directory: cmd/go-tuya
+        shell: bash
+        run: |
+          go mod tidy -diff
+          test "$(go list -m)" = "github.com/portpowered/go-tuya/cmd/go-tuya"
+      - name: Build and test CLI module
+        working-directory: cmd/go-tuya
+        run: |
+          go build ./...
+          go test -race ./...
+          go vet ./...
       - name: Build authentication example
         working-directory: examples/auth
         run: go test ./...
@@ -69,3 +99,24 @@ jobs:
         with:
           files: coverage.out
           fail_ci_if_error: false
+
+  generation:
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: off
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+          cache: true
+      - name: Regenerate every schema-owned model and route
+        run: |
+          make generate-wire
+          generated_status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$generated_status" ]; then
+            echo "Regeneration changed tracked files or produced untracked artifacts:"
+            echo "$generated_status"
+            exit 1
+          fi

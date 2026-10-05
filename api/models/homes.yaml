@@ -1,0 +1,127 @@
+components:
+  schemas:
+    HomeRecord:
+      type: object
+      description: Home fields observed in the current implementation and example.
+      additionalProperties: true
+      properties:
+        geoName:
+          type: string
+        groupId:
+          type: integer
+        name:
+          type: string
+        ownerId:
+          type: string
+        id:
+          type: integer
+          format: int64
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        background:
+          type: string
+        status:
+          type: boolean
+        uid:
+          type: string
+      example:
+        geoName: Synthetic home
+        groupId: 1001
+        name: Apartment
+        ownerId: synthetic-user-001
+        id: 2001
+        lat: 37.7749
+        lon: -122.4194
+        background: https://example.invalid/home/synthetic-background.jpg
+        status: true
+        uid: synthetic-user-001
+      x-example-evidence: synthetic
+    HomeListEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-001
+        result:
+        - geoName: Synthetic home
+          groupId: 1001
+          name: Apartment
+          ownerId: synthetic-user-001
+          id: 2001
+          lat: 37.7749
+          lon: -122.4194
+          background: https://example.invalid/home/synthetic-background.jpg
+          status: true
+          uid: synthetic-user-001
+      x-example-evidence: synthetic
+    HomeDevicesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-devices-001
+        result:
+        - id: synthetic-device-001
+          name: Desk lamp
+          category: dj
+          online: true
+          status:
+          - code: switch_led
+            value: true
+      x-example-evidence: synthetic

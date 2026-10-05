@@ -32,6 +32,5 @@ The result exposes `Devices`, `Total`, and `LastID`. Device fields can include
 timestamp strings for `StartTime` and `EndTime`; Tuya's reference types these as
 integers, while the public Go request uses strings.
 
-This client sends the route through Device Sharing encryption. The maintainer
-reports successful account testing, but no sanitized exchange records the
-transport behavior. See the [provider evidence review](../provider-evidence).
+Tuya documents this route and selected response fields. The Device Sharing
+signing and encryption used by this client are implementation-derived.

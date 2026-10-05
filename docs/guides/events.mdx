@@ -41,17 +41,11 @@ a slow callback delays later MQTT message delivery. Keep callbacks short or
 move work into an application-managed bounded queue.
 
 The parser handles device-state protocol 4 and device-management protocol 20
-messages. Unknown management codes remain generic management events. Synthetic
-tests cover these parser cases; they do not define Tuya's full event catalog or
-guarantee which events an account or device will send. Handle callback
-concurrency in your application and close the session when finished.
+messages. Unknown management codes remain generic management events. This
+implementation-derived event support is not a complete Tuya event catalog.
 
 The built-in client subscribes over MQTT to owner and device status topics
-supplied by Tuya's message queue configuration. The schema also defines a
-local device topic template for callers that request local topic formatting;
-the current client does not subscribe to it. The [AsyncAPI inventory](https://github.com/portpowered/go-tuya/blob/main/api/mqtt.asyncapi.yaml)
-records the current implementation-derived channel behavior; it is not a
-provider-verified event catalog. The client does not provide a built-in
+supplied by Tuya's message queue configuration. It does not provide a
 WebSocket event connection.
 
 See the generated references for [owner events](../../asyncapi/message-events/receiveOwnerEvents)

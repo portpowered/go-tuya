@@ -123,6 +123,10 @@ linters:
       - path: pkg/tuya/route_synthetic_test\.go
         text: "package should be `tuya_test` instead of `tuya`"
         linters: [testpackage]
+      # Wire key validation tests exercise the private JSON-to-query/header converter.
+      - path: pkg/tuya/wire_decode_test\.go
+        text: "package should be `tuya_test` instead of `tuya`"
+        linters: [testpackage]
       # The SID argument stays available for provider authorization context; current Tuya requests set it empty.
       - path: pkg/tuya/encryption\.go
         text: 'sid always receives ""'
@@ -146,6 +150,30 @@ linters:
       - path: tools/coverage/main\.go
         text: 'fmt\.Print'
         linters: [forbidigo]
+      # The CLI's paired HTTP/MQTT test intentionally constructs partial fixtures and detailed assertion errors.
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "is missing fields?"
+        linters: [exhaustruct, exhaustruct_v5]
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "do not define dynamic errors"
+        linters: [err113]
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "G304:"
+        linters: [gosec]
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "calculated cyclomatic complexity"
+        linters: [cyclop]
+      # These end-to-end tests keep each paired command sequence and its output assertions together.
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "Function '.*' (has too many statements|is too long)"
+        linters: [funlen]
+      - path: cmd/go-tuya/internal/cli/cli_test\.go
+        text: "avoid inline error handling"
+        linters: [noinlineerr]
+      # The development-only local replace lets this CLI module test the untagged SDK change. The release workflow rejects it.
+      - path: cmd/go-tuya/go\.mod
+        text: "local replacement are not allowed"
+        linters: [gomoddirectives]
   settings:
     depguard:
       rules:

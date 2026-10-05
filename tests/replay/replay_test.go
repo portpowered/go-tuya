@@ -33,11 +33,13 @@ import (
 const (
 	replayFixtureSyntheticAccessToken             = "synthetic-access-token"
 	replayFixtureSyntheticClientID                = "synthetic-client-id"
+	replayFixtureSyntheticAuthenticationSchema    = "synthetic-app-schema"
 	replayFixtureSyntheticProduct01               = "synthetic-product-01"
 	replayFixtureSyntheticRefreshToken            = "synthetic-refresh-token"
 	replayFixtureSyntheticUserCode                = "synthetic-user-code"
 	replayFixtureV10MLifeHomeAssistantQrcodeRoute = "/v1.0/m/life/home-assistant/qrcode/tokens"
 	replayFixtureV10MLifeUsersHomes               = "/v1.0/m/life/users/homes"
+	replayFixtureQRCreated                        = "auth/synthetic/qr-created.synthetic.json"
 )
 
 type replayKey struct {
@@ -79,17 +81,33 @@ type fixtureTransport struct {
 	calls []replayKey
 }
 
+type trackedFixtureBody struct {
+	io.Reader
+
+	closed *bool
+}
+
+func (body trackedFixtureBody) Close() error {
+	*body.closed = true
+
+	return nil
+}
+
 func (transport *fixtureTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if request == nil || request.URL == nil {
+		return nil, testMismatchf("request URL is missing")
+	}
+
 	key := replayKey{method: request.Method, path: request.URL.Path}
 
 	replay, ok := transport.cases[key]
 
 	if !ok {
-		return nil, testMismatchf("unexpected replay request: %s", key)
+		return nil, testMismatchf("unexpected replay request does not match an expected route")
 	}
 
 	if slices.Contains(transport.calls, key) {
-		return nil, testMismatchf("duplicate replay request: %s", key)
+		return nil, testMismatchf("duplicate replay request for an expected route")
 	}
 
 	data, err := os.ReadFile(filepath.Join("fixtures", replay.fixture))
@@ -103,13 +121,13 @@ func (transport *fixtureTransport) RoundTrip(request *http.Request) (*http.Respo
 	}
 
 	if err := matchFixtureRequest(request, exchange); err != nil {
-		return nil, fmt.Errorf("replay request %s: %w", key, err)
+		return nil, fmt.Errorf("replay request does not match fixture: %w", err)
 	}
 
 	if replay.validate != nil {
 		err := replay.validate(request)
 		if err != nil {
-			return nil, fmt.Errorf("validate replay request %s: %w", key, err)
+			return nil, fmt.Errorf("replay request validation failed: %w", err)
 		}
 	}
 
@@ -132,29 +150,46 @@ func (transport *fixtureTransport) verifyConsumed() error {
 }
 
 func matchFixtureRequest(request *http.Request, exchange fixtureExchange) error {
-	want := exchange.Request
-	if request.Method != want.Method || request.URL.Scheme+"://"+request.URL.Host != want.Origin || request.URL.EscapedPath() != want.Path {
-		return testMismatchf(
-			"method/origin/path = %s %s%s, want %s %s%s",
-			request.Method,
-			request.URL.Scheme+"://"+request.URL.Host,
-			request.URL.EscapedPath(),
-			want.Method,
-			want.Origin,
-			want.Path,
-		)
-	}
-
-	if err := matchFixtureQueryValues(request.URL.Query(), want.Query); err != nil {
+	if err := validateFixtureRequestURL(request); err != nil {
 		return err
 	}
 
-	if err := matchFixtureHeaders(request.Header, want.Headers); err != nil {
+	fixtureOrigin, err := parseFixtureOrigin(exchange.Request.Origin)
+	if err != nil {
 		return err
 	}
 
+	if err := matchFixtureRequestIdentity(request, exchange.Request, fixtureOrigin); err != nil {
+		return err
+	}
+
+	if err := matchFixtureRequestFields(request, exchange.Request); err != nil {
+		return err
+	}
+
+	return matchFixtureRequestPayload(request, exchange.Request)
+}
+
+func matchFixtureRequestFields(request *http.Request, want fixtureRequest) error {
+	actualQuery, err := url.ParseQuery(request.URL.RawQuery)
+	if err != nil {
+		return testMismatchf("request query string is malformed")
+	}
+
+	if err := matchFixtureQueryValues(actualQuery, want.Query); err != nil {
+		return err
+	}
+
+	return matchFixtureHeaders(request.Header, want.Headers)
+}
+
+func matchFixtureRequestPayload(request *http.Request, want fixtureRequest) error {
 	body, err := readFixtureRequestBody(request)
 	if err != nil {
+		return err
+	}
+
+	if err := matchFixtureRequestFraming(request, body, want); err != nil {
 		return err
 	}
 
@@ -166,8 +201,113 @@ func matchFixtureRequest(request *http.Request, exchange fixtureExchange) error 
 		return err
 	}
 
-	if err := matchFixtureSignature(request, body, want); err != nil {
+	return matchFixtureSignature(request, body, want)
+}
+
+func validateFixtureRequestURL(request *http.Request) error {
+	if request == nil || request.URL == nil {
+		return testMismatchf("request URL is missing")
+	}
+
+	if request.RequestURI != "" {
+		return testMismatchf("request RequestURI is not allowed for outbound replay")
+	}
+
+	if request.URL.User != nil {
+		return testMismatchf("request URL user information is not allowed")
+	}
+
+	if request.URL.Opaque != "" {
+		return testMismatchf("opaque request URLs are not allowed")
+	}
+
+	if request.URL.Fragment != "" || request.URL.RawFragment != "" {
+		return testMismatchf("request URL fragments are not allowed")
+	}
+
+	return nil
+}
+
+func parseFixtureOrigin(origin string) (*url.URL, error) {
+	fixtureOrigin, err := url.Parse(origin)
+	if err != nil {
+		return nil, fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	if err := validateFixtureOrigin(fixtureOrigin); err != nil {
+		return nil, err
+	}
+
+	return fixtureOrigin, nil
+}
+
+func validateFixtureOrigin(origin *url.URL) error {
+	if err := validateFixtureOriginAuthority(origin); err != nil {
 		return err
+	}
+
+	if err := validateFixtureOriginPath(origin); err != nil {
+		return err
+	}
+
+	if !strings.EqualFold(origin.Scheme, "http") && !strings.EqualFold(origin.Scheme, "https") {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	return nil
+}
+
+func validateFixtureOriginAuthority(origin *url.URL) error {
+	if origin.Host == "" {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	if origin.User != nil {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	if origin.Opaque != "" {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	return nil
+}
+
+func validateFixtureOriginPath(origin *url.URL) error {
+	if origin.Path != "" || origin.RawPath != "" {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	if origin.RawQuery != "" || origin.ForceQuery {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	if origin.Fragment != "" || origin.RawFragment != "" {
+		return fmt.Errorf("paired fixture origin is invalid: %w", errReplayTestInvalidFixture)
+	}
+
+	return nil
+}
+
+func matchFixtureRequestIdentity(request *http.Request, want fixtureRequest, fixtureOrigin *url.URL) error {
+	if request.Method != want.Method {
+		return testMismatchf("request method does not match fixture")
+	}
+
+	if !strings.EqualFold(request.URL.Scheme, fixtureOrigin.Scheme) {
+		return testMismatchf("request scheme does not match fixture origin")
+	}
+
+	if !strings.EqualFold(request.URL.Host, fixtureOrigin.Host) {
+		return testMismatchf("request URL authority does not match fixture origin")
+	}
+
+	if request.URL.EscapedPath() != want.Path {
+		return testMismatchf("request escaped path does not match fixture")
+	}
+
+	if request.Host != "" && !strings.EqualFold(request.Host, fixtureOrigin.Host) {
+		return testMismatchf("request Host authority does not match fixture origin")
 	}
 
 	return nil
@@ -175,18 +315,18 @@ func matchFixtureRequest(request *http.Request, exchange fixtureExchange) error 
 
 func matchFixtureQueryValues(actual, expected map[string][]string) error {
 	if len(actual) != len(expected) {
-		return testMismatchf("query keys = %v, want %v", actual, expected)
+		return testMismatchf("request query parameters do not match fixture")
 	}
 
 	for name, values := range expected {
 		got := actual[name]
 		if len(got) != len(values) {
-			return testMismatchf("query %s = %v, want %v", name, got, values)
+			return testMismatchf("request query parameters do not match fixture")
 		}
 
 		for i, value := range values {
 			if !matchFixtureValue(got[i], value) {
-				return testMismatchf("query %s[%d] = %q, want %q", name, i, got[i], value)
+				return testMismatchf("request query parameters do not match fixture")
 			}
 		}
 	}
@@ -198,12 +338,12 @@ func matchFixtureHeaders(actual http.Header, expected map[string][]string) error
 	for name, values := range expected {
 		got := actual.Values(name)
 		if len(got) != len(values) {
-			return testMismatchf("header %s = %v, want %v", name, got, values)
+			return testMismatchf("request headers do not match fixture")
 		}
 
 		for i, value := range values {
 			if !matchFixtureValue(got[i], value) {
-				return testMismatchf("header %s[%d] = %q, want %q", name, i, got[i], value)
+				return testMismatchf("request headers do not match fixture")
 			}
 		}
 	}
@@ -227,14 +367,113 @@ func readFixtureRequestBody(request *http.Request) ([]byte, error) {
 		return nil, nil
 	}
 
-	body, err := io.ReadAll(request.Body)
-	if err != nil {
-		return nil, fmt.Errorf("paired replay validation: %w", err)
-	}
+	originalBody := request.Body
+	body, readErr := io.ReadAll(originalBody)
+
+	closeErr := originalBody.Close()
 
 	request.Body = io.NopCloser(bytes.NewReader(body))
 
+	if readErr != nil || closeErr != nil {
+		return nil, testMismatchf("request body could not be read")
+	}
+
 	return body, nil
+}
+
+func TestReadFixtureRequestBodyClosesAndRestoresBody(t *testing.T) {
+	t.Parallel()
+
+	closed := false
+	request := &http.Request{
+		Body: trackedFixtureBody{
+			Reader: strings.NewReader("synthetic-request-body"),
+			closed: &closed,
+		},
+	}
+
+	body, err := readFixtureRequestBody(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !closed {
+		t.Fatal("original request body was not closed")
+	}
+
+	if string(body) != "synthetic-request-body" {
+		t.Fatal("read request body did not match synthetic input")
+	}
+
+	restored, err := io.ReadAll(request.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := request.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if string(restored) != "synthetic-request-body" {
+		t.Fatal("request body was not restored after matching")
+	}
+}
+
+func matchFixtureRequestFraming(request *http.Request, body []byte, want fixtureRequest) error {
+	wantBody := want.Body != ""
+	if err := validateFixtureRequestFraming(request, body, wantBody); err != nil {
+		return err
+	}
+
+	if !wantBody {
+		if request.GetBody != nil {
+			return testMismatchf("unexpected request body factory")
+		}
+
+		return nil
+	}
+
+	return matchFixtureBodyFactory(request, body)
+}
+
+func validateFixtureRequestFraming(request *http.Request, body []byte, wantBody bool) error {
+	if (request.Body != nil) != wantBody {
+		return testMismatchf("request body framing does not match fixture")
+	}
+
+	if request.ContentLength != int64(len(body)) {
+		return testMismatchf("request body framing does not match fixture")
+	}
+
+	if len(request.TransferEncoding) != 0 {
+		return testMismatchf("request body framing does not match fixture")
+	}
+
+	if request.Close {
+		return testMismatchf("request body framing does not match fixture")
+	}
+
+	return nil
+}
+
+func matchFixtureBodyFactory(request *http.Request, body []byte) error {
+	if request.GetBody == nil {
+		return testMismatchf("request body factory is missing")
+	}
+
+	replayBody, err := request.GetBody()
+	if err != nil || replayBody == nil {
+		return testMismatchf("request body factory failed")
+	}
+
+	replayed, readErr := io.ReadAll(replayBody)
+
+	closeErr := replayBody.Close()
+	if readErr != nil || closeErr != nil || !bytes.Equal(replayed, body) {
+		return testMismatchf("request body factory does not reproduce the request body")
+	}
+
+	return nil
 }
 
 func matchFixtureBody(request *http.Request, body []byte, want fixtureRequest) error {
@@ -243,7 +482,7 @@ func matchFixtureBody(request *http.Request, body []byte, want fixtureRequest) e
 	}
 
 	if want.Body != "<encrypted-json>" {
-		return testMismatchf("request body = %q, want %q", body, want.Body)
+		return testMismatchf("request body does not match fixture")
 	}
 
 	var envelope struct {
@@ -251,20 +490,20 @@ func matchFixtureBody(request *http.Request, body []byte, want fixtureRequest) e
 	}
 
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return fmt.Errorf("request body is not an encrypted JSON envelope: %w", err)
+		return testMismatchf("request body is not an encrypted JSON envelope")
 	}
 
 	if envelope.Encdata == "" {
-		return fmt.Errorf("request body is not an encrypted JSON envelope: %w", errReplayTestInvalidFixture)
+		return testMismatchf("request body is not an encrypted JSON envelope")
 	}
 
 	plain, err := decryptEncdata(envelope.Encdata, request.Header.Get("X-Requestid"), replayFixtureSyntheticRefreshToken)
 	if err != nil {
-		return fmt.Errorf("encrypted body = %#v, want %#v: %w", plain, want.PlainBody, err)
+		return fmt.Errorf("cannot validate encrypted request body: %w", err)
 	}
 
 	if !matchJSONMeaning(plain, want.PlainBody) {
-		return fmt.Errorf("encrypted body = %#v, want %#v: %w", plain, want.PlainBody, errReplayTestMismatch)
+		return testMismatchf("decrypted request body does not match fixture")
 	}
 
 	return nil
@@ -278,11 +517,11 @@ func matchFixtureEncryptedQuery(request *http.Request, want fixtureRequest) erro
 
 	plain, err := decryptEncryptedQuery(request, replayFixtureSyntheticRefreshToken)
 	if err != nil {
-		return fmt.Errorf("encrypted query = %#v, want %#v: %w", plain, want.PlainQuery, err)
+		return fmt.Errorf("cannot validate encrypted request query: %w", err)
 	}
 
 	if want.PlainQuery != nil && !matchJSONMeaning(plain, want.PlainQuery) {
-		return fmt.Errorf("encrypted query = %#v, want %#v: %w", plain, want.PlainQuery, errReplayTestMismatch)
+		return testMismatchf("decrypted request query does not match fixture")
 	}
 
 	return nil
@@ -407,9 +646,9 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 	t.Parallel()
 
 	key := replayKey{method: http.MethodPost, path: replayFixtureV10MLifeHomeAssistantQrcodeRoute}
-	transport := &fixtureTransport{cases: map[replayKey]replayCase{
-		key: {fixture: "auth/synthetic/qr-created.synthetic.json"},
-	}}
+	fixtureCases := map[replayKey]replayCase{
+		key: {fixture: replayFixtureQRCreated},
+	}
 	request := func(query string) *http.Request {
 		t.Helper()
 
@@ -423,26 +662,34 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 		return req
 	}
 
-	bad := request("clientid=synthetic-client-id&schema=haauthorize&usercode=wrong")
-	if response, err := transport.RoundTrip(bad); err == nil || response != nil {
-		if response != nil && response.Body != nil {
-			_ = response.Body.Close()
-		}
-
-		t.Fatalf("request mismatch returned response %v, error %v", response, err)
-	}
-
-	goodQuery := "clientid=synthetic-client-id&schema=haauthorize&usercode=synthetic-user-code"
+	goodQuery := "clientid=synthetic-client-id&schema=" + replayFixtureSyntheticAuthenticationSchema + "&usercode=synthetic-user-code"
+	diagnosticSecret := "diagnostic-secret-value"
 
 	for _, mutation := range []struct {
-		name string
-		edit func(*http.Request)
+		name         string
+		edit         func(*http.Request)
+		secretToHide string
 	}{
-		{"origin", func(r *http.Request) { r.URL.Host = "other.example.invalid" }},
-		{"escaped path", func(r *http.Request) { r.URL.RawPath = "/v1.0/m/life/home-assistant/qrcode/%74okens" }},
-		{"header", func(r *http.Request) { r.Header.Del("Content-Type") }},
-		{"body", func(r *http.Request) { r.Body = io.NopCloser(strings.NewReader(`{}`)) }},
-		{"unexpected call", func(r *http.Request) { r.URL.Path = "/v1.0/unknown" }},
+		{"origin", func(r *http.Request) { r.URL.Host = "other.example.invalid" }, ""},
+		{"Host authority override", func(r *http.Request) { r.Host = "attacker.invalid" }, ""},
+		{"URL user information", func(r *http.Request) {
+			r.URL.User = url.UserPassword(diagnosticSecret, "diagnostic-password")
+		}, diagnosticSecret},
+		{"opaque URL", func(r *http.Request) { r.URL.Opaque = "//login.example.invalid" + key.path }, ""},
+		{"malformed query", func(r *http.Request) { r.URL.RawQuery = goodQuery + "&bad=%ZZ" }, ""},
+		{"query secret", func(r *http.Request) {
+			r.URL.RawQuery = strings.Replace(goodQuery, "synthetic-user-code", diagnosticSecret, 1)
+		}, diagnosticSecret},
+		{"escaped path", func(r *http.Request) { r.URL.RawPath = "/v1.0/m/life/home-assistant/qrcode/%74okens" }, ""},
+		{"header secret", func(r *http.Request) { r.Header.Set("Content-Type", diagnosticSecret) }, diagnosticSecret},
+		{"body secret", func(r *http.Request) {
+			body := []byte(diagnosticSecret)
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			r.ContentLength = int64(len(body))
+		}, diagnosticSecret},
+		{"fragment", func(r *http.Request) { r.URL.Fragment = diagnosticSecret }, diagnosticSecret},
+		{"RequestURI", func(r *http.Request) { r.RequestURI = "/?token=" + diagnosticSecret }, diagnosticSecret},
+		{"unexpected call", func(r *http.Request) { r.URL.Path = "/v1.0/unknown" }, ""},
 	} {
 		t.Run(mutation.name, func(t *testing.T) {
 			t.Parallel()
@@ -450,7 +697,9 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 			candidate := request(goodQuery)
 			mutation.edit(candidate)
 
-			response, err := transport.RoundTrip(candidate)
+			mutationTransport := &fixtureTransport{cases: fixtureCases}
+
+			response, err := mutationTransport.RoundTrip(candidate)
 			if response != nil && response.Body != nil {
 				closeErr := response.Body.Close()
 				if closeErr != nil {
@@ -461,13 +710,33 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 			if err == nil || response != nil {
 				t.Fatalf("mismatched request returned response %v, error %v", response, err)
 			}
+
+			if mutation.secretToHide != "" && strings.Contains(err.Error(), mutation.secretToHide) {
+				t.Fatalf("mismatch diagnostic exposed a request value: %v", err)
+			}
+
+			if len(mutationTransport.calls) != 0 {
+				t.Fatalf("mismatched request consumed an exchange: %v", mutationTransport.calls)
+			}
+
+			response, err = mutationTransport.RoundTrip(request(goodQuery))
+			if err != nil || response == nil {
+				t.Fatalf("valid request after %s rejection returned response %v, error %v", mutation.name, response, err)
+			}
+
+			if response.Body != nil {
+				if closeErr := response.Body.Close(); closeErr != nil {
+					t.Fatalf("close valid response after %s rejection: %v", mutation.name, closeErr)
+				}
+			}
+
+			if err := mutationTransport.verifyConsumed(); err != nil {
+				t.Fatalf("valid request after %s rejection did not consume the exchange: %v", mutation.name, err)
+			}
 		})
 	}
 
-	err := transport.verifyConsumed()
-	if err == nil {
-		t.Fatal("unconsumed exchange was accepted")
-	}
+	transport := &fixtureTransport{cases: fixtureCases}
 
 	response, err := transport.RoundTrip(request(goodQuery))
 	if err != nil || response == nil {
@@ -481,8 +750,7 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 		}
 	}
 
-	err = transport.verifyConsumed()
-	if err != nil {
+	if err := transport.verifyConsumed(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -496,6 +764,40 @@ func TestFixtureTransportRejectsRequestMismatchAndDuplicate(t *testing.T) {
 
 	if err == nil || response != nil {
 		t.Fatalf("duplicate request returned response %v, error %v", response, err)
+	}
+}
+
+func TestFixtureTransportAcceptsMatchingHostOverride(t *testing.T) {
+	t.Parallel()
+
+	key := replayKey{method: http.MethodPost, path: replayFixtureV10MLifeHomeAssistantQrcodeRoute}
+	transport := &fixtureTransport{cases: map[replayKey]replayCase{
+		key: {fixture: replayFixtureQRCreated},
+	}}
+	requestURL := "https://login.example.invalid" + key.path + "?" +
+		"clientid=synthetic-client-id&schema=" + replayFixtureSyntheticAuthenticationSchema + "&usercode=synthetic-user-code"
+
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, requestURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request.Host = "LOGIN.EXAMPLE.INVALID"
+	request.Header.Set("Content-Type", "application/json")
+
+	response, err := transport.RoundTrip(request)
+	if err != nil || response == nil {
+		t.Fatalf("matching Host override returned response %v, error %v", response, err)
+	}
+
+	if response.Body != nil {
+		if err := response.Body.Close(); err != nil {
+			t.Fatalf("close successful response body: %v", err)
+		}
+	}
+
+	if err := transport.verifyConsumed(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -555,16 +857,16 @@ func assertReplayCalls(t *testing.T, transport *fixtureTransport, want ...replay
 
 func requireAuthRequest(request *http.Request, method, path string, query url.Values) error {
 	if request.Method != method {
-		return testMismatchf("method = %q, want %q", request.Method, method)
+		return testMismatchf("request method does not match authentication fixture")
 	}
 
 	if request.URL.Path != path {
-		return testMismatchf("path = %q, want %q", request.URL.Path, path)
+		return testMismatchf("request path does not match authentication fixture")
 	}
 
 	for name, want := range query {
 		if got := request.URL.Query()[name]; !reflect.DeepEqual(got, want) {
-			return testMismatchf("query %s = %q, want %q", name, got, want)
+			return testMismatchf("authentication query parameters do not match fixture")
 		}
 	}
 
@@ -625,11 +927,11 @@ func decryptEncdata(encoded, requestID, refreshToken string) (map[string]any, er
 
 func requireEncryptedReadRequest(request *http.Request, path string, hasEncodedQuery bool) error {
 	if request.Method != http.MethodGet {
-		return testMismatchf("method = %q, want GET", request.Method)
+		return testMismatchf("request method does not match encrypted read fixture")
 	}
 
 	if request.URL.Path != path {
-		return testMismatchf("path = %q, want %q", request.URL.Path, path)
+		return testMismatchf("request path does not match encrypted read fixture")
 	}
 
 	if hasEncodedQuery && request.URL.Query().Get("encdata") == "" {
@@ -637,7 +939,7 @@ func requireEncryptedReadRequest(request *http.Request, path string, hasEncodedQ
 	}
 
 	if got := request.Header.Get("X-Appkey"); got != replayFixtureSyntheticClientID {
-		return testMismatchf("X-appKey = %q, want synthetic client id", got)
+		return testMismatchf("X-Appkey does not match encrypted read fixture")
 	}
 
 	if request.Header.Get("X-Requestid") == "" {
@@ -649,11 +951,11 @@ func requireEncryptedReadRequest(request *http.Request, path string, hasEncodedQ
 	}
 
 	if got := request.Header.Get("X-Token"); got != replayFixtureSyntheticAccessToken {
-		return testMismatchf("X-token = %q, want synthetic access token", got)
+		return testMismatchf("X-Token does not match encrypted read fixture")
 	}
 
 	if _, err := strconv.ParseInt(request.Header.Get("X-Time"), 10, 64); err != nil {
-		return fmt.Errorf("X-time is not an integer: %w", err)
+		return testMismatchf("X-Time is not an integer")
 	}
 
 	return nil
@@ -666,12 +968,12 @@ func TestLoginReplay_QRAndValidation(t *testing.T) {
 	transport := &fixtureTransport{
 		cases: map[replayKey]replayCase{
 			{method: http.MethodPost, path: replayFixtureV10MLifeHomeAssistantQrcodeRoute}: {
-				fixture: "auth/synthetic/qr-created.synthetic.json",
+				fixture: replayFixtureQRCreated,
 				validate: func(request *http.Request) error {
 					return requireAuthRequest(request, http.MethodPost, replayFixtureV10MLifeHomeAssistantQrcodeRoute, url.Values{
 						"clientid": {replayFixtureSyntheticClientID},
 						"usercode": {replayFixtureSyntheticUserCode},
-						"schema":   {"haauthorize"},
+						"schema":   {replayFixtureSyntheticAuthenticationSchema},
 					})
 				},
 			},
@@ -690,6 +992,7 @@ func TestLoginReplay_QRAndValidation(t *testing.T) {
 
 	qrCode, err := client.AuthService.GenerateQrCodeForLogin(context.Background(), tuya.LoginRequest{
 		AccessCode: replayFixtureSyntheticUserCode,
+		Schema:     replayFixtureSyntheticAuthenticationSchema,
 	})
 	if err != nil {
 		t.Fatalf("GenerateQrCodeForLogin() error = %v", err)
@@ -754,7 +1057,7 @@ func TestDeviceReadReplay_HomesDevicesAndStatus(t *testing.T) {
 					}
 
 					if got := parameters["homeId"]; got != "synthetic-home-01" {
-						return testMismatchf("encrypted homeId = %v, want synthetic-home-01", got)
+						return testMismatchf("decrypted home ID does not match fixture")
 					}
 
 					return nil
@@ -860,7 +1163,7 @@ func TestQueryDevicesReplay_DocumentedList(t *testing.T) {
 						"last_id":    "synthetic-list-cursor-before",
 					}
 					if !reflect.DeepEqual(parameters, want) {
-						return testMismatchf("encrypted parameters = %#v, want %#v", parameters, want)
+						return testMismatchf("decrypted query parameters do not match fixture")
 					}
 
 					return nil

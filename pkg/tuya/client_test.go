@@ -12,8 +12,18 @@ import (
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
 const (
-	clientFixtureSyntheticAccess   = "synthetic-access"
-	clientFixtureSyntheticClientID = "synthetic-client-id"
+	clientFixtureSyntheticAccess        = "synthetic-access"
+	clientFixtureSyntheticAccessOne     = "synthetic-access-one"
+	clientFixtureSyntheticAccessTwo     = "synthetic-access-two"
+	clientFixtureSyntheticClientID      = "synthetic-client-id"
+	clientFixtureSyntheticRefreshOne    = "synthetic-refresh-one"
+	clientFixtureSyntheticRefreshTwo    = "synthetic-refresh-two"
+	clientFixtureSyntheticAccountCookie = "account"
+	clientFixtureSyntheticAccountOne    = "first"
+	clientFixtureSyntheticAccountTwo    = "second"
+	clientFixtureSyntheticCallerCookie  = "caller-only"
+	clientFixtureSyntheticCallerValue   = "caller"
+	clientFixtureSyntheticServerCookie  = "server-only"
 )
 
 //nolint:cyclop,funlen // This test checks each constructor option and the resulting account-session wiring together.
@@ -29,29 +39,31 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 
 	rtcSignaling := &recordingRTCSignaling{}
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPClient(httpClient),
 		WithClientID(clientFixtureSyntheticClientID),
 		WithAuthenticationURL("https://auth.example.test/"),
-		WithCloudAPIURL("https://cloud.example.test/"),
+		WithCloudAPIURL("https://cloud.example.test/prefix/"),
 		WithMQTTClientFactory(mqttFactory),
 		WithRTCSignaling(rtcSignaling),
 	)
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
-	firstTokens := Tokens{AccessToken: "synthetic-access-one", RefreshToken: "synthetic-refresh-one", ExpireTime: 1000}
-	secondTokens := Tokens{AccessToken: "synthetic-access-two", RefreshToken: "synthetic-refresh-two", ExpireTime: 2000}
+	firstTokens := Tokens{AccessToken: clientFixtureSyntheticAccessOne, RefreshToken: clientFixtureSyntheticRefreshOne, ExpireTime: 1000}
+	secondTokens := Tokens{AccessToken: clientFixtureSyntheticAccessTwo, RefreshToken: clientFixtureSyntheticRefreshTwo, ExpireTime: 2000}
 	first := client.NewSession(firstTokens)
 	second := client.NewSession(secondTokens)
 
-	if first.HTTPClient != httpClient {
-		t.Fatal("session did not retain the configured HTTP client")
+	if client.options.httpClient == httpClient || first.HTTPClient == httpClient ||
+		second.HTTPClient == httpClient || first.HTTPClient == second.HTTPClient {
+		t.Fatal("configured and session HTTP clients were not snapshotted independently")
 	}
 
-	if first.HTTPClient.Transport == nil {
-		t.Fatal("configured HTTP client has no transport")
+	if !sameTransport(first.HTTPClient.Transport, transport) || !sameTransport(second.HTTPClient.Transport, transport) ||
+		!sameTransport(client.options.httpClient.Transport, transport) {
+		t.Fatal("HTTP client snapshots did not preserve the configured transport")
 	}
 
 	if first.ClientID != clientFixtureSyntheticClientID {
@@ -62,8 +74,8 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 		t.Errorf("AuthenticationURL = %q, want trimmed URL", first.AuthenticationURL)
 	}
 
-	if first.CloudAPIURL != "https://cloud.example.test" {
-		t.Errorf("CloudAPIURL = %q, want trimmed URL", first.CloudAPIURL)
+	if first.CloudAPIURL != "https://cloud.example.test/prefix" {
+		t.Errorf("CloudAPIURL = %q, want trimmed path-prefixed URL", first.CloudAPIURL)
 	}
 
 	if first.rtcSignaling != rtcSignaling {
@@ -94,12 +106,12 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 	}
 }
 
-func TestNewClientDefaults(t *testing.T) {
+func TestNewClientTransportDefaults(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -107,8 +119,8 @@ func TestNewClientDefaults(t *testing.T) {
 		t.Fatal("default network edges were not initialized")
 	}
 
-	if session.ClientID != clientID {
-		t.Errorf("ClientID = %q, want default %q", session.ClientID, clientID)
+	if session.ClientID != clientFixtureSyntheticClientID {
+		t.Errorf("ClientID = %q, want configured %q", session.ClientID, clientFixtureSyntheticClientID)
 	}
 
 	if session.AuthenticationURL != LoginURI {
@@ -123,9 +135,9 @@ func TestNewClientDefaults(t *testing.T) {
 func TestWithRegionSelectsCloudEndpoint(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient(WithRegion(TuyaRegionEU))
+	client, err := newSyntheticClient(WithRegion(TuyaRegionEU))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	if got, want := client.NewSession(Tokens{}).CloudAPIURL, regionAPIEndpointEU; got != want {
@@ -145,7 +157,13 @@ func TestNewClientRejectsInvalidOptions(t *testing.T) {
 		{name: "nil HTTP transport", option: WithHTTPTransport(nil)},
 		{name: "empty client ID", option: WithClientID(" \t")},
 		{name: "relative authentication URL", option: WithAuthenticationURL("/login")},
+		{name: "authentication URL with user info", option: WithAuthenticationURL("https://user:pass@auth.example.test")},
+		{name: "authentication URL with query", option: WithAuthenticationURL("https://auth.example.test?tenant=synthetic")},
+		{name: "authentication URL with fragment", option: WithAuthenticationURL("https://auth.example.test#section")},
 		{name: "non HTTP cloud URL", option: WithCloudAPIURL("mqtt://cloud.example.test")},
+		{name: "cloud API URL with user info", option: WithCloudAPIURL("https://user:pass@cloud.example.test")},
+		{name: "cloud API URL with query", option: WithCloudAPIURL("https://cloud.example.test?tenant=synthetic")},
+		{name: "cloud API URL with fragment", option: WithCloudAPIURL("https://cloud.example.test#section")},
 		{name: "unsupported region", option: WithRegion(Region("not-a-region"))},
 		{name: "nil MQTT factory", option: WithMQTTClientFactory(nil)},
 		{name: "nil RTC signaling", option: WithRTCSignaling(nil)},
@@ -155,8 +173,8 @@ func TestNewClientRejectsInvalidOptions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if _, err := NewClient(test.option); err == nil {
-				t.Fatal("NewClient() error = nil, want validation error")
+			if _, err := newSyntheticClient(test.option); err == nil {
+				t.Fatal("newSyntheticClient() error = nil, want validation error")
 			}
 		})
 	}
@@ -170,7 +188,7 @@ func TestNewClientRejectsConflictingHTTPOptions(t *testing.T) {
 		{WithHTTPClient(&http.Client{}), WithHTTPTransport(transport)},
 		{WithHTTPTransport(transport), WithHTTPClient(&http.Client{})},
 	} {
-		if _, err := NewClient(options...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		if _, err := newSyntheticClient(options...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 			t.Fatalf("conflicting HTTP options: got %v", err)
 		}
 	}
@@ -195,13 +213,15 @@ func TestWithHTTPTransportIsUsedByAuthenticationRequests(t *testing.T) {
 		}, nil
 	})
 
-	client, err := NewClient(WithHTTPTransport(transport), WithAuthenticationURL("https://auth.example.test"))
+	client, err := newSyntheticClient(WithHTTPTransport(transport), WithAuthenticationURL("https://auth.example.test"))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
-	if _, err := session.AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{AccessCode: "synthetic-code"}); err == nil {
+	if _, err := session.AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{
+		Schema: authFixtureSchema, AccessCode: "synthetic-code",
+	}); err == nil {
 		t.Fatal("expected malformed empty mock response error")
 	}
 
@@ -220,9 +240,9 @@ func TestClientDoesNotRefreshTokensDuringRequests(t *testing.T) {
 		return nil, errTestRequestRequiresTokens
 	})
 
-	client, err := NewClient(WithHTTPTransport(transport))
+	client, err := newSyntheticClient(WithHTTPTransport(transport))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -265,9 +285,9 @@ func TestRTCSignalingCanBeReplaced(t *testing.T) {
 
 	signaling := &recordingRTCSignaling{}
 
-	client, err := NewClient(WithRTCSignaling(signaling))
+	client, err := newSyntheticClient(WithRTCSignaling(signaling))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{})
@@ -302,8 +322,8 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 
-		response := `{"success":true,"result":{"url":"tcp://mqtt.example.test:1883",` +
-			`"clientId":"synthetic-mqtt-client","username":"synthetic-user","password":"synthetic-password",` +
+		response := `{"success":true,"result":{"url":"tcp://mqtt.example.test:1883","clientId":"` +
+			syntheticMQTTClientID + `","username":"` + syntheticMQTTUsername + `","password":"` + syntheticMQTTPassword + `",` +
 			`"expireTime":3600,"topic":{"ownerId":{"sub":"cloud/owner/{ownerId}/in/#"},` +
 			`"devId":{"sub":"cloud/device/{devId}/in/#"}}}}`
 		_, _ = writer.Write([]byte(response))
@@ -314,7 +334,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 
 	var receivedOptions *mqtt.ClientOptions
 
-	client, err := NewClient(
+	client, err := newSyntheticClient(
 		WithHTTPClient(server.Client()),
 		WithCloudAPIURL(server.URL),
 		WithMQTTClientFactory(func(options *mqtt.ClientOptions) mqtt.Client {
@@ -325,7 +345,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 		}),
 	)
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	session := client.NewSession(Tokens{AccessToken: clientFixtureSyntheticAccess, RefreshToken: syntheticRefreshFixture})
@@ -337,7 +357,7 @@ func TestMQTTClientFactoryCanBeReplaced(t *testing.T) {
 		t.Errorf("MQTT client factory calls = %d, want 1", factoryCalls)
 	}
 
-	if receivedOptions == nil || receivedOptions.ClientID != "synthetic-mqtt-client" {
+	if receivedOptions == nil || receivedOptions.ClientID != syntheticMQTTClientID {
 		t.Errorf("factory received MQTT options %#v, expected configured client ID", receivedOptions)
 	}
 }
@@ -372,9 +392,9 @@ func (stubMQTTToken) Error() error { return nil }
 func TestCloseIsSafeWithoutRunningMessageQueue(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewClient()
+	client, err := newSyntheticClient()
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
 	if err := client.NewSession(Tokens{}).Close(context.Background()); err != nil {
@@ -385,7 +405,16 @@ func TestCloseIsSafeWithoutRunningMessageQueue(t *testing.T) {
 func TestValidateEndpoint(t *testing.T) {
 	t.Parallel()
 
-	for _, endpoint := range []string{"", "/relative", "file:///tmp/endpoint", "https:///missing-host", "http://"} {
+	for _, endpoint := range []string{
+		"",
+		"/relative",
+		"file:///tmp/endpoint",
+		"https:///missing-host",
+		"http://",
+		"https://user:pass@example.test",
+		"https://example.test?tenant=synthetic",
+		"https://example.test#section",
+	} {
 		t.Run(endpoint, func(t *testing.T) {
 			t.Parallel()
 
@@ -396,30 +425,57 @@ func TestValidateEndpoint(t *testing.T) {
 		})
 	}
 
-	err := validateEndpoint("test endpoint", "http://example.test/path")
-	if err != nil {
-		t.Errorf("validateEndpoint() for absolute HTTP URL = %v", err)
+	for _, endpoint := range []string{"http://example.test/path", "https://example.test/prefix/nested/"} {
+		if err := validateEndpoint("test endpoint", endpoint); err != nil {
+			t.Errorf("validateEndpoint(%q) = %v, want accepted absolute endpoint with path", endpoint, err)
+		}
 	}
 }
 
 func TestAuthClientHTTPTransportCanBeReusedAcrossSessions(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if got, want := request.URL.Path, "/prefix/v1.0/m/life/home-assistant/qrcode/tokens"; got != want {
+			t.Errorf("request path = %q, want path-prefixed route %q", got, want)
+		}
+
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(http.StatusOK)
 		_, _ = writer.Write([]byte(`{"success":true,"result":{"qrcode":"synthetic-code"}}`))
 	}))
 	defer server.Close()
 
-	client, err := NewClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL))
+	client, err := newSyntheticClient(WithHTTPClient(server.Client()), WithAuthenticationURL(server.URL+"/prefix/"))
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
+	request := LoginRequest{Schema: authFixtureSchema, AccessCode: "synthetic-access-code"}
 	for range 2 {
-		if _, err := client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(context.Background(), LoginRequest{AccessCode: "synthetic-user"}); err != nil {
+		_, err := client.NewSession(Tokens{}).AuthService.GenerateQrCodeForLogin(
+			context.Background(),
+			request,
+		)
+		if err != nil {
 			t.Fatalf("GenerateQrCodeForLogin() error = %v", err)
 		}
+	}
+}
+
+func newSyntheticClient(options ...Option) (*Client, error) {
+	fixtureOptions := make([]Option, 0, 1+len(options))
+	fixtureOptions = append(fixtureOptions, WithClientID(clientFixtureSyntheticClientID))
+	fixtureOptions = append(fixtureOptions, options...)
+
+	return NewClient(fixtureOptions...)
+}
+
+func TestNewClientRequiresApplicationIdentity(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewClient()
+	if err == nil || !strings.Contains(err.Error(), "client ID") {
+		t.Fatalf("NewClient() error = %v, want missing application identity", err)
 	}
 }

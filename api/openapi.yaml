@@ -1,2201 +1,834 @@
-openapi: 3.1.0
-info:
-  title: Tuya Cloud HTTP API routes used by go-tuya
-  version: 1.0.0
-  description: Inventory of outbound HTTP routes currently used by pkg/tuya. Operations tagged x-go-tuya-evidence=provider-documented
-    are listed in Tuya Device Management. Operations tagged implementation-derived describe private app/mobile
-    routes observed in go-tuya and are not provider-verified. Request and response objects stay open where
-    the public reference or current implementation does not establish a complete schema. MQTT traffic
-    is a separate protocol; the HTTP route that obtains MQTT credentials is included. EncryptedClient wraps
-    HTTP request bodies and query data, signs requests with the headers, and decrypts the outer response
-    envelope described below.
-  x-go-tuya-encrypted-transport:
-    request-envelope:
-      $ref: '#/components/schemas/EncryptedDataEnvelope'
-    request-headers:
-      $ref: '#/components/schemas/EncryptedRequestHeaders'
-    response-envelope:
-      $ref: '#/components/schemas/EncryptedHTTPResponseEnvelope'
-servers:
-- url: https://apigw.tuyaus.com
-  description: Default US Device Sharing cloud endpoint used by this library. Set WithRegion or WithCloudAPIURL to choose another cloud endpoint.
-- url: https://openapi.tuyacn.com
-  description: China cloud endpoint selected by WithRegion(TuyaRegionChina).
-- url: https://openapi.tuyaeu.com
-  description: Europe cloud endpoint selected by WithRegion(TuyaRegionEU).
-- url: https://openapi.tuyain.com
-  description: India cloud endpoint selected by WithRegion(TuyaRegionIndia).
-paths:
-  /v1.0/devices/{device_id}:
-    get:
-      operationId: getDeviceDetails
-      summary: Get device details
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceDetailsEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-    delete:
-      operationId: deleteDevice
-      summary: Delete a device
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-    put:
-      operationId: updateDeviceName
-      summary: Modify a device name
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateNameBody'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/users/{uid}/devices:
-    get:
-      operationId: getDevicesByUser
-      summary: Get devices under a specified user
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: uid
-        in: path
-        required: true
-        description: Tuya user ID.
-        schema:
-          type: string
-      - name: from
-        in: query
-        required: false
-        description: Source filter; Tuya documents home and sharing.
-        schema:
-          type: string
-      - name: page_no
-        in: query
-        required: false
-        description: Current page number.
-        schema:
-          type: integer
-      - name: page_size
-        in: query
-        required: false
-        description: Number of devices per page.
-        schema:
-          type: integer
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceListByUserEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices:
-    get:
-      operationId: getDeviceList
-      summary: Get a device list
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_ids
-        in: query
-        required: false
-        description: Comma-separated device IDs.
-        schema:
-          type: string
-      - name: product_id
-        in: query
-        required: false
-        description: Product ID filter.
-        schema:
-          type: string
-      - name: schema
-        in: query
-        required: false
-        description: Application schema filter.
-        schema:
-          type: string
-      - name: last_id
-        in: query
-        required: false
-        description: Continuation cursor shown in Tuya examples and used by the client.
-        schema:
-          type: string
-      - name: page_size
-        in: query
-        required: true
-        description: Number of entries returned per page.
-        schema:
-          type: integer
-      - name: page_no
-        in: query
-        required: true
-        description: Current page number.
-        schema:
-          type: integer
-      - name: start_time
-        in: query
-        required: false
-        description: 10-digit start timestamp as documented by Tuya.
-        schema:
-          type: string
-      - name: end_time
-        in: query
-        required: false
-        description: 10-digit end timestamp as documented by Tuya.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceListEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/functions/{function_code}:
-    put:
-      operationId: updateDeviceFunctionName
-      summary: Modify a data-point name
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      - name: function_code
-        in: path
-        required: true
-        description: Data-point code.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateNameBody'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/logs:
-    get:
-      operationId: getDeviceLogs
-      summary: Query device logs
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      - name: type
-        in: query
-        required: true
-        description: Comma-separated event types.
-        schema:
-          type: string
-      - name: start_time
-        in: query
-        required: true
-        description: 13-digit start timestamp.
-        schema:
-          type: integer
-      - name: end_time
-        in: query
-        required: true
-        description: 13-digit end timestamp.
-        schema:
-          type: integer
-      - name: codes
-        in: query
-        required: false
-        description: Comma-separated data-point codes.
-        schema:
-          type: string
-      - name: start_row_key
-        in: query
-        required: false
-        description: Starting row key when supported.
-        schema:
-          type: string
-      - name: last_row_key
-        in: query
-        required: false
-        description: Last row key for pagination when supported.
-        schema:
-          type: string
-      - name: last_event_time
-        in: query
-        required: false
-        description: Last event time for pagination when supported.
-        schema:
-          type: integer
-      - name: size
-        in: query
-        required: false
-        description: Maximum number of returned log rows.
-        schema:
-          type: integer
-      - name: query_type
-        in: query
-        required: false
-        description: Tuya query type.
-        schema:
-          type: integer
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceLogsEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/reset-factory:
-    put:
-      operationId: resetDeviceFactory
-      summary: Restore device factory defaults
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/sub-devices:
-    get:
-      operationId: getSubDevices
-      summary: List devices under a gateway
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Gateway device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubDevicesEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/factory-infos:
-    get:
-      operationId: getFactoryInfos
-      summary: Get device factory information
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_ids
-        in: query
-        required: true
-        description: Comma-separated device IDs.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FactoryInfosEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/user:
-    post:
-      operationId: addDeviceUser
-      summary: Add a device user
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StringResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeviceUserBody'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/users/{user_id}:
-    delete:
-      operationId: deleteDeviceUser
-      summary: Delete a device user
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      - name: user_id
-        in: path
-        required: true
-        description: User ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-    put:
-      operationId: updateDeviceUser
-      summary: Modify a device user
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      - name: user_id
-        in: path
-        required: true
-        description: User ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeviceUserBody'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-    get:
-      operationId: getDeviceUser
-      summary: Get a device user
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      - name: user_id
-        in: path
-        required: true
-        description: User ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceUserEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/users:
-    get:
-      operationId: listDeviceUsers
-      summary: List users associated with a device
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceUsersEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/multiple-name:
-    put:
-      operationId: updateMultiOutletName
-      summary: Modify a multi-outlet name
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateMultiOutletNameBody'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/devices/{device_id}/multiple-names:
-    get:
-      operationId: listMultiOutletNames
-      summary: Get multi-outlet names
-      description: Provider-documented in Tuya’s Device Management API reference.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Device management
-      x-go-tuya-evidence: provider-documented
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MultiOutletNamesEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      externalDocs:
-        description: Tuya Device Management API
-        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
-  /v1.0/m/token/{refresh_token}:
-    get:
-      operationId: refreshAccessToken
-      summary: Explicitly refresh an access token
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Authentication
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: refresh_token
-        in: path
-        required: true
-        description: Refresh token supplied by the caller.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RefreshTokenEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.0/m/life/home-assistant/qrcode/tokens:
-    post:
-      operationId: generateLoginQRCode
-      servers:
-      - url: https://apigw.iotbing.com
-        description: Default QR authentication endpoint used by this library. Override with WithAuthenticationURL.
-      summary: Create a QR login token
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use the QR client flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
-      tags:
-      - Authentication
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: clientid
-        in: query
-        required: true
-        description: Configured Tuya client identifier.
-        schema:
-          type: string
-      - name: usercode
-        in: query
-        required: true
-        description: Home Assistant authorization access code.
-        schema:
-          type: string
-      - name: schema
-        in: query
-        required: true
-        description: Authentication schema; defaults to the package constant.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QRCodeEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.0/m/life/home-assistant/qrcode/tokens/{login_code}:
-    get:
-      operationId: validateLoginCode
-      servers:
-      - url: https://apigw.iotbing.com
-        description: Default QR authentication endpoint used by this library. Override with WithAuthenticationURL.
-      summary: Validate a scanned QR login code
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use the QR client flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
-      tags:
-      - Authentication
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: login_code
-        in: path
-        required: true
-        description: Login code returned by QR generation.
-        schema:
-          type: string
-      - name: clientid
-        in: query
-        required: true
-        description: Configured Tuya client identifier.
-        schema:
-          type: string
-      - name: usercode
-        in: query
-        required: true
-        description: Home Assistant authorization access code.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginCodeEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.0/m/life/users/homes:
-    get:
-      operationId: queryHomes
-      summary: List homes for the authenticated user
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeListEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.0/m/life/ha/home/devices:
-    get:
-      operationId: queryHomeDevices
-      summary: List home devices or selected devices
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: homeId
-        in: query
-        required: false
-        description: Home identifier used by home-device queries.
-        schema:
-          type: string
-      - name: deviceIds
-        in: query
-        required: false
-        description: Comma-separated device IDs used by device-ID queries.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HomeDevicesEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.1/m/thing/{device_id}/commands:
-    post:
-      operationId: sendDeviceCommands
-      summary: Send device commands
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SendCommandsBody'
-  /v1.0/m/life/devices/{device_id}/status:
-    get:
-      operationId: queryDeviceStatus
-      summary: Get device status mappings
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceStatusEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.1/m/life/{device_id}/specifications:
-    get:
-      operationId: queryDeviceSpecification
-      summary: Get device specifications
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceSpecificationEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-  /v1.0/m/life/ha/access/config:
-    post:
-      operationId: getMessageQueueConfig
-      summary: Get MQTT connection configuration
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageQueueConfigEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MessageQueueConfigBody'
-  /v1.0/m/life/ipc/{device_id}/webrtc/session:
-    post:
-      operationId: startRTCSession
-      summary: Start a WebRTC signaling session
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Camera device ID.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RTCSessionEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RTCOfferBody'
-  /v1.0/m/life/ipc/{device_id}/webrtc/session/{session_id}:
-    delete:
-      operationId: stopRTCSession
-      summary: Stop a WebRTC signaling session
-      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not
-        provider-verified.
-        Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/schema/.
-      tags:
-      - Tuya private routes
-      x-go-tuya-evidence: implementation-derived
-      parameters:
-      - name: device_id
-        in: path
-        required: true
-        description: Camera device ID.
-        schema:
-          type: string
-      - name: session_id
-        in: path
-        required: true
-        description: Session ID returned when the session started.
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Successful response envelope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BooleanResultEnvelope'
-        default:
-          description: Error envelope varies by provider route.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TuyaErrorEnvelope'
+# Generated by tools/wiremodels from api/http.openapi.yaml and api/models/*.yaml. DO NOT EDIT.
 components:
   schemas:
-    DeviceListEnvelope:
-      type: object
-      description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
+    AuthenticationOrigin:
+      description: Implementation-derived default QR authentication origin.
+      enum:
+        - https://apigw.iotbing.com
+      example: https://apigw.iotbing.com
+      type: string
+      x-enum-varnames:
+        - AuthenticationOriginDefault
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    BooleanResultEnvelope:
       additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          type: boolean
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    CloudAPIOrigin:
+      description: Implementation-derived built-in Device Sharing cloud origins.
+      enum:
+        - https://openapi.tuyacn.com
+        - https://apigw.tuyaus.com
+        - https://openapi.tuyaeu.com
+        - https://openapi.tuyain.com
+      example: https://apigw.tuyaus.com
+      type: string
+      x-enum-varnames:
+        - CloudAPIOriginChina
+        - CloudAPIOriginUS
+        - CloudAPIOriginEU
+        - CloudAPIOriginIndia
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    CloudRegion:
+      description: Built-in cloud region identifiers accepted by the SDK.
+      enum:
+        - CN
+        - US
+        - EU
+        - IN
+      example: US
+      type: string
+      x-enum-varnames:
+        - CloudRegionChina
+        - CloudRegionUS
+        - CloudRegionEU
+        - CloudRegionIndia
+      x-example-evidence: synthetic
+    DeviceCommand:
+      additionalProperties: true
+      description: A device command. The value is device-specific.
+      example:
+        code: switch_led
+        value: true
+      properties:
+        code:
+          type: string
+        value: {}
+      required:
+        - code
+        - value
+      type: object
+      x-example-evidence: synthetic
+    DeviceDetailsEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          id: synthetic-device-001
+          ip: 192.0.2.10
+          name: Desk lamp
+          online: true
+          status:
+            - code: switch_led
+              value: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-detail-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceRecord'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceListByUserEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - category: dj
+            id: synthetic-device-001
+            ip: 192.0.2.10
+            name: Desk lamp
+            online: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-list-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceListEnvelope:
+      additionalProperties: true
+      description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          devices:
+            - active_time: 1700000000
+              biz_type: 0
+              category: dj
+              create_time: 1700000000
+              icon: https://example.invalid/icons/synthetic-lamp.png
+              id: synthetic-device-001
+              ip: 192.0.2.10
+              model: synthetic-model-001
+              name: Desk lamp
+              online: true
+              owner_id: synthetic-user-001
+              product_id: synthetic-product-001
+              product_name: Synthetic lamp
+              status:
+                - code: switch_led
+                  type: Boolean
+                  value: true
+              sub: false
+              time_zone: "+00:00"
+              uid: synthetic-user-001
+              update_time: 1700000000
+              uuid: synthetic-device-uuid-001
+          last_id: synthetic-page-001
+          total: 1
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-list-001
       properties:
         code:
           type: integer
         msg:
-          type: string
-        success:
-          type: boolean
-        t:
-          type: integer
-          format: int64
-        tid:
           type: string
         result:
           $ref: '#/components/schemas/DeviceListResult'
-    DeviceListResult:
-      type: object
-      description: Official Tuya device-list result. The reference documents total, devices, and last_id
-        but does not define requiredness for every response.
-      properties:
-        total:
-          type: integer
-          format: int64
-          description: Total number of entries.
-        devices:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeviceRecord'
-        last_id:
-          type: string
-          description: Last query ID for device pagination.
-      additionalProperties: true
-    DeviceRecord:
-      type: object
-      description: Fields below appear in Tuya's official example response for this operation. The reference
-        does not define requiredness or an exhaustive field set. Additional properties are retained for
-        forward compatibility.
-      properties:
-        id:
-          type: string
-          description: Device identifier in the example response.
-        uuid:
-          type: string
-          description: Device UUID in the example response.
-        name:
-          type: string
-          description: Device name in the example response.
-        owner_id:
-          type: string
-          description: Device owner identifier in the example response.
-        uid:
-          type: string
-          description: User identifier in the example response.
-        product_id:
-          type: string
-          description: Product identifier in the example response.
-        product_name:
-          type: string
-          description: Product name in the example response.
-        category:
-          type: string
-          description: Product category in the example response.
-        icon:
-          type: string
-          description: Device icon path in the example response.
-        ip:
-          type: string
-          description: IP address in the example response.
-        local_key:
-          type: string
-          description: Local key field shown in Tuya's example. Treat values as secrets and never log
-            or publish them.
-        online:
-          type: boolean
-          description: Online state in the example response.
-        sub:
-          type: boolean
-          description: Whether the device is a sub-device in the example response.
-        biz_type:
-          type: integer
-          description: Business type value in the example response.
-        active_time:
-          type: integer
-          format: int64
-          description: Activation timestamp value in the example response.
-        create_time:
-          type: integer
-          format: int64
-          description: Creation timestamp value in the example response.
-        update_time:
-          type: integer
-          format: int64
-          description: Update timestamp value in the example response.
-        time_zone:
-          type: string
-          description: Time zone string in the example response.
-        model:
-          type: string
-          description: Product model in the example response.
-        status:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeviceStatus'
-      additionalProperties: true
-    DeviceStatus:
-      type: object
-      description: A status entry in Tuya's example response. The example uses a string value; the reference
-        does not constrain the value type, so it remains an unconstrained JSON value.
-      properties:
-        code:
-          type: string
-          description: Status code in the example response.
-        value: {}
-        type:
-          type: string
-          description: Status data-point type where returned.
-      additionalProperties: true
-    TuyaErrorEnvelope:
-      type: object
-      description: Extensible Tuya error response. Error fields vary by endpoint.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-        msg:
-          type: string
         success:
           type: boolean
         t:
-          type: integer
           format: int64
+          type: integer
         tid:
           type: string
-    DeviceLogRecord:
       type: object
-      description: Log record fields consumed or exposed by the library.
+      x-example-evidence: synthetic
+    DeviceListResult:
       additionalProperties: true
+      description: Official Tuya device-list result. The reference documents total, devices, and last_id but does not define requiredness for every response.
+      example:
+        devices:
+          - category: dj
+            id: synthetic-device-001
+            ip: 192.0.2.10
+            name: Desk lamp
+            online: true
+            status:
+              - code: switch_led
+                value: true
+        last_id: synthetic-page-001
+        total: 1
+      properties:
+        devices:
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+          type: array
+        last_id:
+          description: Last query ID for device pagination.
+          type: string
+        total:
+          description: Total number of entries.
+          format: int64
+          type: integer
+      type: object
+      x-example-evidence: synthetic
+    DeviceLogRecord:
+      additionalProperties: true
+      description: Log record fields consumed or exposed by the library.
+      example:
+        code: switch_led
+        event_from: synthetic-device
+        event_id: 101
+        event_time: 1700000000000
+        row: synthetic-log-row-001
+        status: success
+        value: true
       properties:
         code:
           type: string
-        value: {}
-        event_time:
-          type: integer
-          format: int64
         event_from:
           type: string
         event_id:
           type: integer
-        status:
-          type: string
+        event_time:
+          format: int64
+          type: integer
         row:
           type: string
-    DeviceLogsResult:
-      type: object
-      description: Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
-      additionalProperties: true
-      properties:
-        logs:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeviceLogRecord'
-        has_next:
-          type: boolean
-        device_id:
+        status:
           type: string
+        value: {}
+      type: object
+      x-example-evidence: synthetic
+    DeviceLogsEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          count: 1
+          current_row_key: synthetic-log-row-001
+          device_id: synthetic-device-001
+          has_next: false
+          logs:
+            - code: switch_led
+              event_from: synthetic-device
+              event_id: 101
+              event_time: 1700000000000
+              row: synthetic-log-row-001
+              status: success
+              value: true
+          next_row_key: synthetic-log-row-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-logs-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceLogsResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceLogsResult:
+      additionalProperties: true
+      description: Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+      example:
+        count: 1
+        current_row_key: synthetic-log-row-001
+        device_id: synthetic-device-001
+        has_next: false
+        logs:
+          - code: switch_led
+            event_from: synthetic-device
+            event_id: 101
+            event_time: 1700000000000
+            row: synthetic-log-row-001
+            status: success
+            value: true
+        next_row_key: synthetic-log-row-001
+      properties:
+        count:
+          format: int64
+          type: integer
         current_row_key:
           type: string
-        next_row_key:
-          type: string
-        count:
-          type: integer
-          format: int64
-    SubDeviceRecord:
-      type: object
-      description: Sub-device fields represented by the library.
-      additionalProperties: true
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        online:
-          type: boolean
-        owner_id:
-          type: string
-        category:
-          type: string
-        product_id:
-          type: string
-        active_time:
-          type: integer
-          format: int64
-        update_time:
-          type: integer
-          format: int64
-    FactoryInfoRecord:
-      type: object
-      description: Factory information fields represented by the library.
-      additionalProperties: true
-      properties:
-        id:
-          type: string
-        uuid:
-          type: string
-        sn:
-          type: string
-        mac:
-          type: string
-    DeviceUserRecord:
-      type: object
-      description: Device-user fields represented by the library.
-      additionalProperties: true
-      properties:
         device_id:
           type: string
-        nick_name:
+        has_next:
+          type: boolean
+        logs:
+          items:
+            $ref: '#/components/schemas/DeviceLogRecord'
+          type: array
+        next_row_key:
           type: string
-        sex:
-          type: integer
-        birthday:
-          type: integer
+      type: object
+      x-example-evidence: synthetic
+    DeviceRecord:
+      additionalProperties: true
+      description: Fields below appear in Tuya's official example response for this operation. The reference does not define requiredness or an exhaustive field set. Additional properties are retained for forward compatibility.
+      example:
+        active_time: 1700000000
+        biz_type: 0
+        category: dj
+        create_time: 1700000000
+        icon: https://example.invalid/icons/synthetic-lamp.png
+        id: synthetic-device-001
+        ip: 192.0.2.10
+        lat: "37.7749"
+        lon: "-122.4194"
+        model: synthetic-model-001
+        name: Desk lamp
+        online: true
+        owner_id: synthetic-user-001
+        product_id: synthetic-product-001
+        product_name: Synthetic lamp
+        status:
+          - code: switch_led
+            type: Boolean
+            value: true
+        sub: false
+        subCategory: synthetic-category-001
+        time_zone: "+00:00"
+        uid: synthetic-user-001
+        update_time: 1700000000
+        uuid: synthetic-device-uuid-001
+      properties:
+        active_time:
+          description: Activation timestamp value in the example response.
           format: int64
-        height:
           type: integer
-        weight:
+        biz_type:
+          description: Business type value in the example response.
           type: integer
-        contact:
+        category:
+          description: Product category in the example response.
           type: string
-        user_id:
-          type: string
-    MultiOutletNameRecord:
-      type: object
-      description: Multi-outlet identifier and display name represented by the library.
-      additionalProperties: true
-      properties:
-        identifier:
-          type: string
-        name:
-          type: string
-    HomeRecord:
-      type: object
-      description: Home fields observed in the current implementation and example.
-      additionalProperties: true
-      properties:
-        geoName:
-          type: string
-        groupId:
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
+        create_time:
+          description: Creation timestamp value in the example response.
+          format: int64
           type: integer
-        name:
-          type: string
-        ownerId:
+        icon:
+          description: Device icon path in the example response.
           type: string
         id:
-          type: integer
-          format: int64
+          description: Device identifier in the example response.
+          type: string
+        ip:
+          description: IP address in the example response.
+          type: string
         lat:
-          type: number
-          format: double
+          description: Implementation-derived Device Sharing field consumed by this client; absent from the official device-list example.
+          type: string
+          x-provenance: implementation-derived
+        local_key:
+          description: Local key field shown in Tuya's example. Treat values as secrets and never log or publish them.
+          type: string
         lon:
-          type: number
-          format: double
-        background:
+          description: Implementation-derived Device Sharing field consumed by this client; absent from the official device-list example.
+          type: string
+          x-provenance: implementation-derived
+        model:
+          description: Product model in the example response.
+          type: string
+        name:
+          description: Device name in the example response.
+          type: string
+        online:
+          description: Online state in the example response.
+          type: boolean
+        owner_id:
+          description: Device owner identifier in the example response.
+          type: string
+        product_id:
+          description: Product identifier in the example response.
+          type: string
+        product_name:
+          description: Product name in the example response.
           type: string
         status:
+          items:
+            $ref: '#/components/schemas/DeviceStatus'
+          type: array
+        sub:
+          description: Whether the device is a sub-device in the example response.
           type: boolean
-        uid:
+        subCategory:
+          description: Implementation-derived Device Sharing field consumed by this client; absent from the official device-list example.
           type: string
-    DeviceStatusMapping:
+          x-provenance: implementation-derived
+        time_zone:
+          description: Time zone string in the example response.
+          type: string
+        uid:
+          description: User identifier in the example response.
+          type: string
+        update_time:
+          description: Update timestamp value in the example response.
+          format: int64
+          type: integer
+        uuid:
+          description: Device UUID in the example response.
+          type: string
       type: object
-      description: Device status mapping fields consumed by the library.
+      x-example-evidence: synthetic
+    DeviceSpecification:
       additionalProperties: true
+      description: Specification result consumed by the library; category-specific fields are open.
+      example:
+        category: dj
+        functions:
+          - code: switch_led
+            desc: Synthetic switch function
+            name: Switch
+            type: Boolean
+            values:
+              type: boolean
+        status:
+          - code: switch_led
+            name: Switch state
+            type: Boolean
+            values:
+              type: boolean
+      properties:
+        category:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
+        functions:
+          items:
+            $ref: '#/components/schemas/SpecificationFunction'
+          type: array
+        status:
+          items:
+            $ref: '#/components/schemas/SpecificationStatus'
+          type: array
+      type: object
+      x-example-evidence: synthetic
+    DeviceSpecificationEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          functions:
+            - code: switch_led
+              desc: Synthetic switch function
+              name: Switch
+              type: Boolean
+              values:
+                type: boolean
+          status:
+            - code: switch_led
+              name: Switch state
+              type: Boolean
+              values:
+                type: boolean
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-spec-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceSpecification'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceStatus:
+      additionalProperties: true
+      description: A status entry in Tuya's example response. The example uses a string value; the reference does not constrain the value type, so it remains an unconstrained JSON value.
+      example:
+        code: switch_led
+        type: Boolean
+        value: true
+      properties:
+        code:
+          description: Status code in the example response.
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        type:
+          description: Status data-point type where returned.
+          type: string
+        value: {}
+      type: object
+      x-example-evidence: synthetic
+    DeviceStatusEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          category: dj
+          dpStatusRelationDTOS:
+            - dpCode: switch_led
+              dpId: 1
+              statusCode: switch_led
+              supportLocal: true
+              valueConvert: synthetic-conversion
+              valueType: Boolean
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-status-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceStatusResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceStatusMapping:
+      additionalProperties: true
+      description: Device status mapping fields consumed by the library.
+      example:
+        dpCode: switch_led
+        dpId: 1
+        statusCode: switch_led
+        supportLocal: true
+        valueConvert: synthetic-conversion
+        valueType: Boolean
       properties:
         dpCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         dpId:
           type: integer
         statusCode:
           type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
         supportLocal:
           type: boolean
         valueConvert:
           type: string
         valueType:
           type: string
-    DeviceStatusResult:
       type: object
-      description: Device-status result consumed by the library.
+      x-example-evidence: synthetic
+    DeviceStatusResult:
       additionalProperties: true
+      description: Device-status result consumed by the library.
+      example:
+        category: dj
+        dpStatusRelationDTOS:
+          - dpCode: switch_led
+            dpId: 1
+            statusCode: switch_led
+            supportLocal: true
+            valueConvert: synthetic-conversion
+            valueType: Boolean
       properties:
         category:
           type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
         dpStatusRelationDTOS:
-          type: array
           items:
             $ref: '#/components/schemas/DeviceStatusMapping'
-    SpecificationFunction:
-      type: object
-      description: Function fields represented by the library; values are provider-defined.
-      additionalProperties: true
-      properties:
-        code:
-          type: string
-        name:
-          type: string
-        desc:
-          type: string
-        type:
-          type: string
-        values: {}
-    SpecificationStatus:
-      type: object
-      description: Status fields represented by the library; values are provider-defined.
-      additionalProperties: true
-      properties:
-        code:
-          type: string
-        name:
-          type: string
-        type:
-          type: string
-        values: {}
-    DeviceSpecification:
-      type: object
-      description: Specification result consumed by the library; category-specific fields are open.
-      additionalProperties: true
-      properties:
-        functions:
           type: array
-          items:
-            $ref: '#/components/schemas/SpecificationFunction'
-        status:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpecificationStatus'
-        category:
-          type: string
-    MessageQueueSubscription:
       type: object
-      description: MQTT topic subscription data returned by the private config route.
-      additionalProperties: true
-      properties:
-        sub:
-          type: string
-    MessageQueueTopic:
-      type: object
-      description: MQTT topic groups returned by the private config route.
-      additionalProperties: true
-      properties:
-        ownerId:
-          $ref: '#/components/schemas/MessageQueueSubscription'
-        devId:
-          $ref: '#/components/schemas/MessageQueueSubscription'
-    MessageQueueConfiguration:
-      type: object
-      description: MQTT connection fields consumed by the library. Treat credentials as secrets.
-      additionalProperties: true
-      properties:
-        url:
-          type: string
-        clientId:
-          type: string
-        username:
-          type: string
-        password:
-          type: string
-        expireTime:
-          type: integer
-          format: int64
-        topic:
-          $ref: '#/components/schemas/MessageQueueTopic'
-    QRCodeResult:
-      type: object
-      description: QR login payload observed by the library.
-      additionalProperties: true
-      properties:
-        qrcode:
-          type: string
-    LoginCodeResult:
-      type: object
-      description: Login token payload observed by the library.
-      additionalProperties: true
-      properties:
-        access_token:
-          type: string
-        refresh_token:
-          type: string
-        expire_time:
-          type: integer
-          format: int64
-        terminal_id:
-          type: string
-        uid:
-          type: string
-        username:
-          type: string
-        endpoint:
-          type: string
-    RefreshedTokenResult:
-      type: object
-      description: Refresh-token payload observed by the library.
-      additionalProperties: true
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        expireTime:
-          type: integer
-          format: int64
-        uid:
-          type: string
-    RTCSessionResult:
-      type: object
-      description: WebRTC signaling response fields consumed by the library.
-      additionalProperties: true
-      properties:
-        session_id:
-          type: string
-        sdp:
-          type: string
+      x-example-evidence: synthetic
     DeviceUserBody:
-      type: object
-      description: Fields sent by AddDeviceUser and UpdateDeviceUser.
       additionalProperties: true
+      description: Fields sent by AddDeviceUser and UpdateDeviceUser.
+      example:
+        birthday: 946684800
+        contact: user@example.invalid
+        height: 170
+        nick_name: Synthetic user
+        sex: 0
+        weight: 65
       properties:
+        birthday:
+          format: int64
+          type: integer
+        contact:
+          type: string
+        height:
+          type: integer
         nick_name:
           type: string
         sex:
           type: integer
-        birthday:
-          type: integer
-          format: int64
-        height:
-          type: integer
         weight:
+          type: integer
+      required:
+        - nick_name
+        - sex
+      type: object
+      x-example-evidence: synthetic
+    DeviceUserEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          birthday: 946684800
+          contact: user@example.invalid
+          device_id: synthetic-device-001
+          height: 170
+          nick_name: Synthetic user
+          sex: 0
+          user_id: synthetic-user-001
+          weight: 65
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceUserRecord'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    DeviceUserRecord:
+      additionalProperties: true
+      description: Device-user fields represented by the library.
+      example:
+        birthday: 946684800
+        contact: user@example.invalid
+        device_id: synthetic-device-001
+        height: 170
+        nick_name: Synthetic user
+        sex: 0
+        user_id: synthetic-user-001
+        weight: 65
+      properties:
+        birthday:
+          format: int64
           type: integer
         contact:
           type: string
-      required:
-      - nick_name
-      - sex
-    SendCommandsBody:
+        device_id:
+          type: string
+        height:
+          type: integer
+        nick_name:
+          type: string
+        sex:
+          type: integer
+        user_id:
+          type: string
+        weight:
+          type: integer
       type: object
-      description: Command payload sent by SendCommands.
-      additionalProperties: true
-      properties:
-        commands:
-          type: array
-          items:
-            type: object
-            description: A device command. The value is device-specific.
-            additionalProperties: true
-            properties:
-              code:
-                type: string
-              value: {}
-            required:
-            - code
-            - value
-      required:
-      - commands
-    UpdateNameBody:
-      type: object
-      description: Name payload sent by device and data-point rename operations.
-      additionalProperties: true
-      properties:
-        name:
-          type: string
-      required:
-      - name
-    UpdateMultiOutletNameBody:
-      type: object
-      description: Payload sent to rename one outlet.
-      additionalProperties: true
-      properties:
-        identifier:
-          type: string
-        name:
-          type: string
-      required:
-      - identifier
-      - name
-    MessageQueueConfigBody:
-      type: object
-      description: Link identifier payload used to request MQTT connection credentials.
-      additionalProperties: true
-      properties:
-        linkId:
-          type: string
-      required:
-      - linkId
-    RTCOfferBody:
-      type: object
-      description: WebRTC offer payload sent to Tuya signaling.
-      additionalProperties: true
-      properties:
-        sdp:
-          type: string
-        type:
-          type: string
-          enum:
-          - offer
-      required:
-      - sdp
-      - type
-    DeviceDetailsEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/DeviceRecord'
-    DeviceListByUserEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeviceRecord'
-    BooleanResultEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: boolean
-    StringResultEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: string
-    DeviceLogsEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/DeviceLogsResult'
-    SubDevicesEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: array
-          items:
-            $ref: '#/components/schemas/SubDeviceRecord'
-    FactoryInfosEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: array
-          items:
-            $ref: '#/components/schemas/FactoryInfoRecord'
-    DeviceUserEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/DeviceUserRecord'
+      x-example-evidence: synthetic
     DeviceUsersEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
       additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - device_id: synthetic-device-001
+            nick_name: Synthetic user
+            sex: 0
+            user_id: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-users-001
       properties:
         code:
-          type: integer
           description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
           type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
+        msg:
+          description: Provider response message when present.
           type: string
-          description: Provider trace identifier when present.
         result:
-          type: array
           items:
             $ref: '#/components/schemas/DeviceUserRecord'
-    MultiOutletNamesEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
           type: array
-          items:
-            $ref: '#/components/schemas/MultiOutletNameRecord'
-    HomeListEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
         success:
-          type: boolean
           description: Whether the operation succeeded, when present.
+          type: boolean
         t:
-          type: integer
           description: Provider response timestamp when present.
           format: int64
+          type: integer
         tid:
-          type: string
           description: Provider trace identifier when present.
-        result:
-          type: array
-          items:
-            $ref: '#/components/schemas/HomeRecord'
-    HomeDevicesEnvelope:
+          type: string
       type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeviceRecord'
-    DeviceStatusEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/DeviceStatusResult'
-    DeviceSpecificationEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/DeviceSpecification'
-    MessageQueueConfigEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/MessageQueueConfiguration'
-    QRCodeEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/QRCodeResult'
-    LoginCodeEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/LoginCodeResult'
-    RefreshTokenEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/RefreshedTokenResult'
-    RTCSessionEnvelope:
-      type: object
-      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
-      additionalProperties: true
-      properties:
-        code:
-          type: integer
-          description: Provider response code when present.
-        msg:
-          type: string
-          description: Provider response message when present.
-        success:
-          type: boolean
-          description: Whether the operation succeeded, when present.
-        t:
-          type: integer
-          description: Provider response timestamp when present.
-          format: int64
-        tid:
-          type: string
-          description: Provider trace identifier when present.
-        result:
-          $ref: '#/components/schemas/RTCSessionResult'
-    RawSharingMessage:
-      type: object
-      description: Implementation-derived MQTT message envelope consumed by pkg/tuya. It is aligned with
-        api/mqtt.asyncapi.yaml and is not a provider-verified payload schema.
-      required:
-      - protocol
-      - data
-      properties:
-        protocol:
-          type: integer
-          enum:
-          - 4
-          - 20
-          description: Legacy device report (4) or management event (20) handled by this client.
-        data:
-          $ref: '#/components/schemas/RawSharingMessageData'
-        t:
-          type: integer
-          format: int64
-      additionalProperties: true
-      x-go-tuya-evidence: implementation-derived
-    RawSharingMessageData:
-      type: object
-      description: Implementation-derived fields shared across the two MQTT data variants; unrecognized fields remain open.
-      additionalProperties: true
-      properties:
-        dataId:
-          type: string
-        devId:
-          type: string
-        productKey:
-          type: string
-        status:
-          type: array
-          items:
-            $ref: '#/components/schemas/RawDeviceStatusChange'
-        bizCode:
-          type: string
-        bizData:
-          $ref: '#/components/schemas/RawDeviceManagementBizData'
-        ts:
-          type: integer
-          format: int64
-      x-go-tuya-evidence: implementation-derived
-    RawDeviceReportData:
-      type: object
-      description: Implementation-derived data payload for MQTT protocol 4 device reports.
-      additionalProperties: true
-      properties:
-        dataId:
-          type: string
-        devId:
-          type: string
-        productKey:
-          type: string
-        status:
-          type: array
-          items:
-            $ref: '#/components/schemas/RawDeviceStatusChange'
-      x-go-tuya-evidence: implementation-derived
-    RawDeviceStatusChange:
-      type: object
-      description: Implementation-derived status item in an MQTT protocol 4 report.
-      additionalProperties: true
-      properties:
-        code:
-          type: string
-        value: {}
-        t:
-          type: integer
-          format: int64
-      x-go-tuya-evidence: implementation-derived
-    RawDeviceManagementData:
-      type: object
-      description: Implementation-derived data payload for MQTT protocol 20 management events.
-      additionalProperties: true
-      properties:
-        devId:
-          type: string
-        productKey:
-          type: string
-        bizCode:
-          type: string
-        bizData:
-          $ref: '#/components/schemas/RawDeviceManagementBizData'
-        ts:
-          type: integer
-          format: int64
-      x-go-tuya-evidence: implementation-derived
-    RawDeviceManagementBizData:
-      type: object
-      description: Implementation-derived, extensible business payload for MQTT management events.
-      additionalProperties: true
-      properties:
-        devId:
-          type: string
-        time:
-          type: integer
-          format: int64
-        name:
-          type: string
-        uid:
-          type: string
-      x-go-tuya-evidence: implementation-derived
+      x-example-evidence: synthetic
     EncryptedDataEnvelope:
-      type: object
+      additionalProperties: false
       description: Implementation-derived encrypted HTTP request wrapper used for JSON bodies and query data.
-      required:
-      - encdata
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1wYXlsb2Fk
       properties:
         encdata:
-          type: string
           description: Base64-encoded nonce and AES-GCM ciphertext.
-      additionalProperties: false
+          type: string
+      required:
+        - encdata
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    EncryptedHTTPResponseEnvelope:
+      additionalProperties: true
+      description: Implementation-derived outer response envelope received before result decryption.
+      example:
+        code: 200
+        msg: success
+        result: c3ludGhldGljLWVuY3J5cHRlZC1yZXNwb25zZQ==
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-encrypted-001
+      properties:
+        code: {}
+        msg: {}
+        result: {}
+        success:
+          type: boolean
+        t:
+          format: int64
+          type: integer
+        tid:
+          type: string
+      type: object
+      x-example-evidence: synthetic
       x-go-tuya-evidence: implementation-derived
     EncryptedRequestHeaders:
-      type: object
+      additionalProperties: false
       description: Implementation-derived authentication and signing headers emitted by EncryptedClient.
-      required:
-      - X-appKey
-      - X-requestId
-      - X-sid
-      - X-time
-      - X-token
-      - X-sign
+      example:
+        X-appKey: synthetic-app-key
+        X-requestId: synthetic-request-001
+        X-sid: synthetic-session-001
+        X-sign: synthetic-signature
+        X-time: "1700000000000"
+        X-token: synthetic-access-token
       properties:
         X-appKey:
           type: string
@@ -2203,27 +836,2356 @@ components:
           type: string
         X-sid:
           type: string
+        X-sign:
+          type: string
         X-time:
           type: string
         X-token:
           type: string
-        X-sign:
-          type: string
-      additionalProperties: false
-      x-go-tuya-evidence: implementation-derived
-    EncryptedHTTPResponseEnvelope:
+      required:
+        - X-appKey
+        - X-requestId
+        - X-sid
+        - X-time
+        - X-token
+        - X-sign
       type: object
-      description: Implementation-derived outer response envelope received before result decryption.
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-header-keys: true
+    EncryptedRequestQuery:
+      additionalProperties: false
+      description: Implementation-derived query keys emitted by encrypted requests.
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1xdWVyeQ==
       properties:
-        code: {}
-        msg: {}
+        encdata:
+          description: Base64-encoded encrypted query payload.
+          type: string
+      required:
+        - encdata
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-query-keys: true
+    EncryptedSignatureHeaderOrder:
+      description: Comma-separated implementation-derived order of header names in the REST signature preimage.
+      enum:
+        - X-appKey,X-requestId,X-sid,X-time,X-token
+      example: X-appKey,X-requestId,X-sid,X-time,X-token
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderOrderCanonical
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderPairTemplate:
+      description: Implementation-derived key and value format used for each signed request header.
+      enum:
+        - '%s=%s'
+      example: '%s=%s'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderPairTemplateCanonical
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderSeparator:
+      description: Implementation-derived separator between signed request header pairs.
+      enum:
+        - '||'
+      example: '||'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderSeparatorCanonical
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignaturePayloadTemplate:
+      description: Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
+      enum:
+        - '%s%s'
+      example: '%s%s'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignaturePayloadTemplateCanonical
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    FactoryInfoRecord:
+      additionalProperties: true
+      description: Factory information fields represented by the library.
+      example:
+        id: synthetic-device-001
+        mac: "02:00:00:00:00:01"
+        sn: synthetic-serial-001
+        uuid: synthetic-device-uuid-001
+      properties:
+        id:
+          type: string
+        mac:
+          type: string
+        sn:
+          type: string
+        uuid:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    FactoryInfosEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - id: synthetic-device-001
+            mac: "02:00:00:00:00:01"
+            sn: synthetic-serial-001
+            uuid: synthetic-device-uuid-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-factory-info-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/FactoryInfoRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    HomeDevicesEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - category: dj
+            id: synthetic-device-001
+            name: Desk lamp
+            online: true
+            status:
+              - code: switch_led
+                value: true
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-devices-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    HomeListEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - background: https://example.invalid/home/synthetic-background.jpg
+            geoName: Synthetic home
+            groupId: 1001
+            id: 2001
+            lat: 37.7749
+            lon: -122.4194
+            name: Apartment
+            ownerId: synthetic-user-001
+            status: true
+            uid: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-home-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/HomeRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    HomeRecord:
+      additionalProperties: true
+      description: Home fields observed in the current implementation and example.
+      example:
+        background: https://example.invalid/home/synthetic-background.jpg
+        geoName: Synthetic home
+        groupId: 1001
+        id: 2001
+        lat: 37.7749
+        lon: -122.4194
+        name: Apartment
+        ownerId: synthetic-user-001
+        status: true
+        uid: synthetic-user-001
+      properties:
+        background:
+          type: string
+        geoName:
+          type: string
+        groupId:
+          type: integer
+        id:
+          format: int64
+          type: integer
+        lat:
+          format: double
+          type: number
+        lon:
+          format: double
+          type: number
+        name:
+          type: string
+        ownerId:
+          type: string
+        status:
+          type: boolean
+        uid:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    JSONMediaType:
+      description: Implementation-derived JSON media type used by the QR authentication headers.
+      enum:
+        - application/json
+      example: application/json
+      type: string
+      x-enum-varnames:
+        - JSONMediaTypeApplicationJSON
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    LoginCodeEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          access_token: synthetic-access-token
+          endpoint: https://example.invalid
+          expire_time: 1700003600
+          refresh_token: synthetic-refresh-token
+          terminal_id: synthetic-terminal-001
+          uid: synthetic-user-001
+          username: synthetic-user
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/LoginCodeResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    LoginCodeResult:
+      additionalProperties: true
+      description: Login token payload observed by the library.
+      example:
+        access_token: synthetic-access-token
+        endpoint: https://example.invalid
+        expire_time: 1700003600
+        refresh_token: synthetic-refresh-token
+        terminal_id: synthetic-terminal-001
+        uid: synthetic-user-001
+        username: synthetic-user
+      properties:
+        access_token:
+          type: string
+        endpoint:
+          type: string
+        expire_time:
+          format: int64
+          type: integer
+        refresh_token:
+          type: string
+        terminal_id:
+          type: string
+        uid:
+          type: string
+        username:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    MessageQueueConfigBody:
+      additionalProperties: true
+      description: Link identifier payload used to request MQTT connection credentials.
+      example:
+        linkId: synthetic-link-001
+      properties:
+        linkId:
+          type: string
+      required:
+        - linkId
+      type: object
+      x-example-evidence: synthetic
+    MessageQueueConfigEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          clientId: synthetic-client-001
+          expireTime: 1700003600
+          password: synthetic-mqtt-password
+          topic:
+            devId:
+              sub: synthetic/device/{devId}/events
+            ownerId:
+              sub: synthetic/owner/events
+          url: mqtts://broker.example.invalid:8883
+          username: synthetic-mqtt-user
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-mqtt-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/MessageQueueConfiguration'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    MessageQueueConfiguration:
+      additionalProperties: true
+      description: MQTT connection fields consumed by the library. Treat credentials as secrets.
+      example:
+        clientId: synthetic-client-001
+        expireTime: 1700003600
+        password: synthetic-mqtt-password
+        topic:
+          devId:
+            sub: synthetic/device/{devId}/events
+          ownerId:
+            sub: synthetic/owner/events
+        url: mqtts://broker.example.invalid:8883
+        username: synthetic-mqtt-user
+      properties:
+        clientId:
+          type: string
+        expireTime:
+          format: int64
+          type: integer
+        password:
+          type: string
+        topic:
+          $ref: '#/components/schemas/MessageQueueTopic'
+        url:
+          type: string
+        username:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    MessageQueueSubscription:
+      additionalProperties: true
+      description: MQTT topic subscription data returned by the private config route.
+      example:
+        sub: synthetic/owner/events
+      properties:
+        sub:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    MessageQueueTopic:
+      additionalProperties: true
+      description: MQTT topic groups returned by the private config route.
+      example:
+        devId:
+          sub: synthetic/device/{devId}/events
+        ownerId:
+          sub: synthetic/owner/events
+      properties:
+        devId:
+          $ref: '#/components/schemas/MessageQueueSubscription'
+        ownerId:
+          $ref: '#/components/schemas/MessageQueueSubscription'
+      type: object
+      x-example-evidence: synthetic
+    MultiOutletNameRecord:
+      additionalProperties: true
+      description: Multi-outlet identifier and display name represented by the library.
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    MultiOutletNamesEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - identifier: synthetic-outlet-001
+            name: Desk lamp outlet
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-outlet-names-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/MultiOutletNameRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    QRCodeEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          qrcode: https://example.invalid/qr/synthetic-login
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/QRCodeResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    QRCodeResult:
+      additionalProperties: true
+      description: QR login payload observed by the library.
+      example:
+        qrcode: https://example.invalid/qr/synthetic-login
+      properties:
+        qrcode:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    QRCodeTokenPrefix:
+      description: Implementation-derived Smart Life QR token prefix; append the returned login code unchanged.
+      enum:
+        - tuyaSmart--qrLogin?token=
+      example: tuyaSmart--qrLogin?token=
+      type: string
+      x-enum-varnames:
+        - QRCodeTokenPrefixSmartLife
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RTCOfferBody:
+      additionalProperties: true
+      description: WebRTC offer payload sent to Tuya signaling.
+      example:
+        sdp: |-
+          v=0
+          o=- synthetic-offer 1 IN IP4 127.0.0.1
+          s=synthetic-offer
+          t=0 0
+        type: offer
+      properties:
+        sdp:
+          type: string
+        type:
+          enum:
+            - offer
+          type: string
+      required:
+        - sdp
+        - type
+      type: object
+      x-example-evidence: synthetic
+    RTCSessionEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          sdp: |-
+            v=0
+            o=- synthetic-answer 1 IN IP4 127.0.0.1
+            s=synthetic-answer
+            t=0 0
+          session_id: synthetic-rtc-session-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-rtc-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/RTCSessionResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    RTCSessionResult:
+      additionalProperties: true
+      description: WebRTC signaling response fields consumed by the library.
+      example:
+        sdp: |-
+          v=0
+          o=- synthetic-session 1 IN IP4 127.0.0.1
+          s=synthetic-session
+          t=0 0
+        session_id: synthetic-rtc-session-001
+      properties:
+        sdp:
+          type: string
+        session_id:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    RawDeviceManagementBizData:
+      additionalProperties: true
+      description: Implementation-derived, extensible business payload for MQTT management events.
+      example:
+        devId: synthetic-device-001
+        time: 1700000000000
+        uid: synthetic-user-002
+      properties:
+        devId:
+          type: string
+        name:
+          type: string
+        time:
+          format: int64
+          type: integer
+        uid:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementData:
+      additionalProperties: true
+      description: Implementation-derived data payload for MQTT protocol 20 management events.
+      example:
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          name: Desk lamp
+          time: 1700000000000
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        ts: 1700000000000
+      properties:
+        bizCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        devId:
+          type: string
+        productKey:
+          type: string
+        ts:
+          format: int64
+          type: integer
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementMessage:
+      additionalProperties: true
+      description: Implementation-derived MQTT protocol 20 device-management envelope.
+      example:
+        data:
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            name: Desk lamp
+            time: 1700000000000
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          ts: 1700000000000
+        protocol: 20
+        t: 1700000000000
+      properties:
+        data:
+          $ref: '#/components/schemas/RawDeviceManagementData'
+        protocol:
+          description: Protocol identifier for a device-management event.
+          enum:
+            - 20
+          type: integer
+          x-enum-varnames:
+            - RawDeviceManagementProtocol20
+        t:
+          format: int64
+          type: integer
+      required:
+        - protocol
+        - data
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportData:
+      additionalProperties: true
+      description: Implementation-derived data payload for MQTT protocol 4 device reports.
+      example:
+        dataId: synthetic-report-001
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        status:
+          - code: switch_led
+            t: 1700000000000
+            value: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+          type: array
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportMessage:
+      additionalProperties: true
+      description: Implementation-derived MQTT protocol 4 device-report envelope.
+      example:
+        data:
+          dataId: synthetic-report-001
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          status:
+            - code: switch_led
+              t: 1700000000000
+              value: true
+        protocol: 4
+        t: 1700000000000
+      properties:
+        data:
+          $ref: '#/components/schemas/RawDeviceReportData'
+        protocol:
+          description: Protocol identifier for a device report.
+          enum:
+            - 4
+          type: integer
+          x-enum-varnames:
+            - RawDeviceReportProtocol4
+        t:
+          format: int64
+          type: integer
+      required:
+        - protocol
+        - data
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceStatusChange:
+      additionalProperties: true
+      description: Implementation-derived status item in an MQTT protocol 4 report.
+      example:
+        code: switch_led
+        t: 1700000000000
+        value: true
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        t:
+          format: int64
+          type: integer
+        value: {}
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawSharingEvent:
+      description: Implementation-derived MQTT event union. Protocol 4 carries a device report; protocol 20 carries a management event. This is not a provider-verified payload schema.
+      discriminator:
+        mapping:
+          "4": '#/components/schemas/RawDeviceReportMessage'
+          "20": '#/components/schemas/RawDeviceManagementMessage'
+        propertyName: protocol
+      examples:
+        - data:
+            dataId: synthetic-report-001
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            status:
+              - code: switch_led
+                t: 1700000000000
+                value: true
+          protocol: 4
+          t: 1700000000000
+        - data:
+            bizCode: nameUpdate
+            bizData:
+              devId: synthetic-device-001
+              name: Desk lamp
+              time: 1700000000000
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            ts: 1700000000000
+          protocol: 20
+          t: 1700000000000
+        - data:
+            bizCode: bindUser
+            bizData:
+              devId: synthetic-device-001
+              time: 1700000000000
+              uid: synthetic-user-002
+            devId: synthetic-device-001
+            productKey: synthetic-product-001
+            ts: 1700000000000
+          protocol: 20
+          t: 1700000000000
+      oneOf:
+        - $ref: '#/components/schemas/RawDeviceReportMessage'
+        - $ref: '#/components/schemas/RawDeviceManagementMessage'
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessage:
+      additionalProperties: true
+      description: Compatibility projection of the former generic MQTT message envelope. Active runtime decoding uses the protocol-discriminated RawSharingEvent variants.
+      example:
+        data:
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            name: Desk lamp
+            time: 1700000000000
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          ts: 1700000000000
+        protocol: 20
+        t: 1700000000000
+      properties:
+        data:
+          $ref: '#/components/schemas/RawSharingMessageData'
+        protocol:
+          $ref: '#/components/schemas/RawSharingMessageProtocol'
+        t:
+          format: int64
+          type: integer
+      required:
+        - protocol
+        - data
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessageData:
+      additionalProperties: true
+      description: Compatibility projection of the former merged protocol 4 and protocol 20 data shape. Active event decoding uses RawDeviceReportData or RawDeviceManagementData according to the outer protocol value.
+      example:
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          name: Desk lamp
+          time: 1700000000000
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        ts: 1700000000000
+      properties:
+        bizCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+          type: array
+        ts:
+          format: int64
+          type: integer
+      type: object
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
+      x-go-tuya-evidence: implementation-derived
+    RawSharingMessageProtocol:
+      description: Compatibility projection of the former combined MQTT message protocol enum. Active event decoding uses RawSharingEvent and its protocol-specific envelope types.
+      enum:
+        - 4
+        - 20
+      example: 20
+      type: integer
+      x-example-evidence: synthetic
+      x-go-tuya-compatibility-projection: true
+      x-go-tuya-evidence: implementation-derived
+    RefreshTokenEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          accessToken: synthetic-access-token-rotated
+          expireTime: 1700007200
+          refreshToken: synthetic-refresh-token-rotated
+          uid: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-003
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          $ref: '#/components/schemas/RefreshedTokenResult'
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    RefreshedTokenResult:
+      additionalProperties: true
+      description: Refresh-token payload observed by the library.
+      example:
+        accessToken: synthetic-access-token-rotated
+        expireTime: 1700007200
+        refreshToken: synthetic-refresh-token-rotated
+        uid: synthetic-user-001
+      properties:
+        accessToken:
+          type: string
+        expireTime:
+          format: int64
+          type: integer
+        refreshToken:
+          type: string
+        uid:
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    SendCommandsBody:
+      additionalProperties: true
+      description: Command payload sent by SendCommands.
+      example:
+        commands:
+          - code: switch_led
+            value: true
+      properties:
+        commands:
+          items:
+            $ref: '#/components/schemas/DeviceCommand'
+          type: array
+      required:
+        - commands
+      type: object
+      x-example-evidence: synthetic
+    SpecificationFunction:
+      additionalProperties: true
+      description: Function fields represented by the library; values are provider-defined.
+      example:
+        code: switch_led
+        desc: Synthetic switch function
+        name: Switch
+        type: Boolean
+        values:
+          type: boolean
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        desc:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        values: {}
+      type: object
+      x-example-evidence: synthetic
+    SpecificationStatus:
+      additionalProperties: true
+      description: Status fields represented by the library; values are provider-defined.
+      example:
+        code: switch_led
+        name: Switch state
+        type: Boolean
+        values:
+          type: boolean
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        name:
+          type: string
+        type:
+          type: string
+        values: {}
+      type: object
+      x-example-evidence: synthetic
+    StringResultEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result: synthetic-user-001
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          type: string
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    SubDeviceRecord:
+      additionalProperties: true
+      description: Sub-device fields represented by the library.
+      example:
+        active_time: 1700000000
+        category: dj
+        id: synthetic-subdevice-001
+        name: Desk lamp child
+        online: true
+        owner_id: synthetic-user-001
+        product_id: synthetic-product-001
+        update_time: 1700000000
+      properties:
+        active_time:
+          format: int64
+          type: integer
+        category:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        online:
+          type: boolean
+        owner_id:
+          type: string
+        product_id:
+          type: string
+        update_time:
+          format: int64
+          type: integer
+      type: object
+      x-example-evidence: synthetic
+    SubDevicesEnvelope:
+      additionalProperties: true
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      example:
+        code: 200
+        msg: success
+        result:
+          - active_time: 1700000000
+            category: dj
+            id: synthetic-subdevice-001
+            name: Desk lamp child
+            online: true
+            owner_id: synthetic-user-001
+            product_id: synthetic-product-001
+            update_time: 1700000000
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-subdevices-001
+      properties:
+        code:
+          description: Provider response code when present.
+          type: integer
+        msg:
+          description: Provider response message when present.
+          type: string
+        result:
+          items:
+            $ref: '#/components/schemas/SubDeviceRecord'
+          type: array
+        success:
+          description: Whether the operation succeeded, when present.
+          type: boolean
+        t:
+          description: Provider response timestamp when present.
+          format: int64
+          type: integer
+        tid:
+          description: Provider trace identifier when present.
+          type: string
+      type: object
+      x-example-evidence: synthetic
+    TuyaBizCode:
+      description: Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
+      enum:
+        - online
+        - offline
+        - nameUpdate
+        - delete
+        - bindUser
+        - dpNameUpdate
+      example: online
+      type: string
+      x-enum-varnames:
+        - TuyaBizCodeOnline
+        - TuyaBizCodeOffline
+        - TuyaBizCodeNameUpdate
+        - TuyaBizCodeDelete
+        - TuyaBizCodeBindUser
+        - TuyaBizCodeDpNameUpdate
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    TuyaDataPointCode:
+      description: Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
+      enum:
+        - switch_led
+        - bright_value
+        - temp_value
+        - colour_data
+        - switch_1
+        - switch_led_1
+        - bright_value_1
+        - bright_value_v2
+        - colour_data_v2
+        - va_temperature
+        - va_humidity
+        - doorcontact_state
+        - switch_fan
+        - fan_speed_percent
+        - control
+        - percent_control
+        - closed_opened
+        - basic_indicator
+        - camera
+        - rtc_session
+      example: switch_led
+      type: string
+      x-enum-varnames:
+        - TuyaDataPointCodeSwitchLed
+        - TuyaDataPointCodeBrightValue
+        - TuyaDataPointCodeTempValue
+        - TuyaDataPointCodeColourData
+        - TuyaDataPointCodeSwitch1
+        - TuyaDataPointCodeSwitchLed1
+        - TuyaDataPointCodeBrightValue1
+        - TuyaDataPointCodeBrightValueV2
+        - TuyaDataPointCodeColourDataV2
+        - TuyaDataPointCodeVaTemperature
+        - TuyaDataPointCodeVaHumidity
+        - TuyaDataPointCodeDoorcontactState
+        - TuyaDataPointCodeSwitchFan
+        - TuyaDataPointCodeFanSpeedPercent
+        - TuyaDataPointCodeControl
+        - TuyaDataPointCodePercentControl
+        - TuyaDataPointCodeClosedOpened
+        - TuyaDataPointCodeBasicIndicator
+        - TuyaDataPointCodeCamera
+        - TuyaDataPointCodeRtcSession
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    TuyaDeviceCategory:
+      description: Device categories used by the standard capability mappings in this client.
+      enum:
+        - tgkg
+        - tgq
+        - dj
+        - dd
+        - kg
+        - cz
+        - pc
+        - wsdcg
+        - mcs
+        - dc
+        - fwd
+        - fs
+        - fsd
+        - cl
+        - clkg
+        - ms
+        - jtmspro
+        - sp
+        - ipc
+      example: dj
+      type: string
+      x-enum-varnames:
+        - TuyaDeviceCategoryTgkg
+        - TuyaDeviceCategoryTgq
+        - TuyaDeviceCategoryDj
+        - TuyaDeviceCategoryDd
+        - TuyaDeviceCategoryKg
+        - TuyaDeviceCategoryCz
+        - TuyaDeviceCategoryPc
+        - TuyaDeviceCategoryWsdcg
+        - TuyaDeviceCategoryMcs
+        - TuyaDeviceCategoryDc
+        - TuyaDeviceCategoryFwd
+        - TuyaDeviceCategoryFs
+        - TuyaDeviceCategoryFsd
+        - TuyaDeviceCategoryCl
+        - TuyaDeviceCategoryClkg
+        - TuyaDeviceCategoryMs
+        - TuyaDeviceCategoryJtmspro
+        - TuyaDeviceCategorySp
+        - TuyaDeviceCategoryIpc
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    TuyaErrorEnvelope:
+      additionalProperties: true
+      description: Extensible Tuya error response. Error fields vary by endpoint.
+      example:
+        code: 12345
+        msg: Synthetic request rejected
+        success: false
+        t: 1700000000000
+        tid: synthetic-trace-error-001
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
         success:
           type: boolean
-        result: {}
         t:
-          type: integer
           format: int64
+          type: integer
         tid:
           type: string
+      type: object
+      x-example-evidence: synthetic
+    UpdateMultiOutletNameBody:
       additionalProperties: true
+      description: Payload sent to rename one outlet.
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      required:
+        - identifier
+        - name
+      type: object
+      x-example-evidence: synthetic
+    UpdateNameBody:
+      additionalProperties: true
+      description: Name payload sent by device and data-point rename operations.
+      example:
+        name: Desk lamp
+      properties:
+        name:
+          type: string
+      required:
+        - name
+      type: object
+      x-example-evidence: synthetic
+info:
+  description: Inventory of outbound HTTP routes currently used by pkg/tuya. Operations tagged x-go-tuya-evidence=provider-documented are listed in Tuya Device Management. Operations tagged implementation-derived describe private app/mobile routes observed in go-tuya and are not provider-verified. Request and response objects stay open where the public reference or current implementation does not establish a complete schema. MQTT traffic is a separate protocol; the HTTP route that obtains MQTT credentials is included. EncryptedClient wraps HTTP request bodies and query data, signs requests with the headers, and decrypts the outer response envelope described below.
+  title: Tuya Cloud HTTP API routes used by go-tuya
+  version: 1.0.0
+  x-go-tuya-encrypted-transport:
+    request-envelope:
+      $ref: '#/components/schemas/EncryptedDataEnvelope'
+    request-headers:
+      $ref: '#/components/schemas/EncryptedRequestHeaders'
+    response-envelope:
+      $ref: '#/components/schemas/EncryptedHTTPResponseEnvelope'
+openapi: 3.1.0
+paths:
+  /v1.0/devices:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getDeviceList
+      parameters:
+        - description: Comma-separated device IDs.
+          in: query
+          name: device_ids
+          required: false
+          schema:
+            type: string
+        - description: Product ID filter.
+          in: query
+          name: product_id
+          required: false
+          schema:
+            type: string
+        - description: Application schema filter.
+          in: query
+          name: schema
+          required: false
+          schema:
+            type: string
+        - description: Continuation cursor shown in Tuya examples and used by the client.
+          in: query
+          name: last_id
+          required: false
+          schema:
+            type: string
+        - description: Number of entries returned per page.
+          in: query
+          name: page_size
+          required: true
+          schema:
+            type: integer
+        - description: Current page number.
+          in: query
+          name: page_no
+          required: true
+          schema:
+            type: integer
+        - description: 10-digit start timestamp as documented by Tuya.
+          in: query
+          name: start_time
+          required: false
+          schema:
+            type: string
+        - description: 10-digit end timestamp as documented by Tuya.
+          in: query
+          name: end_time
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get a device list
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}:
+    delete:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: deleteDevice
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Delete a device
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getDeviceDetails
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDetailsEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get device details
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+    put:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: updateDeviceName
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNameBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Modify a device name
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/functions/{function_code}:
+    put:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: updateDeviceFunctionName
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: Data-point code.
+          in: path
+          name: function_code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNameBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Modify a data-point name
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/logs:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getDeviceLogs
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: Comma-separated event types.
+          in: query
+          name: type
+          required: true
+          schema:
+            type: string
+        - description: 13-digit start timestamp.
+          in: query
+          name: start_time
+          required: true
+          schema:
+            type: integer
+        - description: 13-digit end timestamp.
+          in: query
+          name: end_time
+          required: true
+          schema:
+            type: integer
+        - description: Comma-separated data-point codes.
+          in: query
+          name: codes
+          required: false
+          schema:
+            type: string
+        - description: Starting row key when supported.
+          in: query
+          name: start_row_key
+          required: false
+          schema:
+            type: string
+        - description: Last row key for pagination when supported.
+          in: query
+          name: last_row_key
+          required: false
+          schema:
+            type: string
+        - description: Last event time for pagination when supported.
+          in: query
+          name: last_event_time
+          required: false
+          schema:
+            type: integer
+        - description: Maximum number of returned log rows.
+          in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+        - description: Tuya query type.
+          in: query
+          name: query_type
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceLogsEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Query device logs
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/multiple-name:
+    put:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: updateMultiOutletName
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMultiOutletNameBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Modify a multi-outlet name
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/multiple-names:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: listMultiOutletNames
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiOutletNamesEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get multi-outlet names
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/reset-factory:
+    put:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: resetDeviceFactory
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Restore device factory defaults
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/sub-devices:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getSubDevices
+      parameters:
+        - description: Gateway device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubDevicesEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: List devices under a gateway
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/user:
+    post:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: addDeviceUser
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUserBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Add a device user
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/users:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: listDeviceUsers
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceUsersEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: List users associated with a device
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/{device_id}/users/{user_id}:
+    delete:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: deleteDeviceUser
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: User ID.
+          in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Delete a device user
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getDeviceUser
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: User ID.
+          in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceUserEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get a device user
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+    put:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: updateDeviceUser
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: User ID.
+          in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUserBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Modify a device user
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/devices/factory-infos:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getFactoryInfos
+      parameters:
+        - description: Comma-separated device IDs.
+          in: query
+          name: device_ids
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FactoryInfosEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get device factory information
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.0/m/life/devices/{device_id}/status:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: queryDeviceStatus
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatusEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get device status mappings
+      tags:
+        - Tuya private routes
       x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/ha/access/config:
+    post:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: getMessageQueueConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageQueueConfigBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageQueueConfigEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get MQTT connection configuration
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/ha/home/devices:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: queryHomeDevices
+      parameters:
+        - description: Home identifier used by home-device queries.
+          in: query
+          name: homeId
+          required: false
+          schema:
+            type: string
+        - description: Comma-separated device IDs used by device-ID queries.
+          in: query
+          name: deviceIds
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeDevicesEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: List home devices or selected devices
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/home-assistant/qrcode/tokens:
+    post:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use the QR client flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
+      operationId: generateLoginQRCode
+      parameters:
+        - description: Configured Tuya client identifier.
+          in: query
+          name: clientid
+          required: true
+          schema:
+            type: string
+        - description: Home Assistant authorization access code.
+          in: query
+          name: usercode
+          required: true
+          schema:
+            type: string
+        - description: Authentication schema; defaults to the package constant.
+          in: query
+          name: schema
+          required: true
+          schema:
+            type: string
+        - description: JSON response content type requested by this implementation.
+          in: header
+          name: Content-Type
+          required: true
+          schema:
+            $ref: '#/components/schemas/JSONMediaType'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRCodeEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      servers:
+        - description: Default QR authentication endpoint used by this library. Override with WithAuthenticationURL.
+          url: https://apigw.iotbing.com
+      summary: Create a QR login token
+      tags:
+        - Authentication
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/home-assistant/qrcode/tokens/{login_code}:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use the QR client flow and protect credentials. See https://portpowered.github.io/go-tuya/docs/guides/authentication/.
+      operationId: validateLoginCode
+      parameters:
+        - description: Login code returned by QR generation.
+          in: path
+          name: login_code
+          required: true
+          schema:
+            type: string
+        - description: Configured Tuya client identifier.
+          in: query
+          name: clientid
+          required: true
+          schema:
+            type: string
+        - description: Home Assistant authorization access code.
+          in: query
+          name: usercode
+          required: true
+          schema:
+            type: string
+        - description: JSON response content type requested by this implementation.
+          in: header
+          name: Content-Type
+          required: true
+          schema:
+            $ref: '#/components/schemas/JSONMediaType'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginCodeEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      servers:
+        - description: Default QR authentication endpoint used by this library. Override with WithAuthenticationURL.
+          url: https://apigw.iotbing.com
+      summary: Validate a scanned QR login code
+      tags:
+        - Authentication
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/ipc/{device_id}/webrtc/session:
+    post:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: startRTCSession
+      parameters:
+        - description: Camera device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RTCOfferBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RTCSessionEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Start a WebRTC signaling session
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/ipc/{device_id}/webrtc/session/{session_id}:
+    delete:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: stopRTCSession
+      parameters:
+        - description: Camera device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - description: Session ID returned when the session started.
+          in: path
+          name: session_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Stop a WebRTC signaling session
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/life/users/homes:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: queryHomes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeListEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: List homes for the authenticated user
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/m/token/{refresh_token}:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: refreshAccessToken
+      parameters:
+        - description: Refresh token supplied by the caller.
+          in: path
+          name: refresh_token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Explicitly refresh an access token
+      tags:
+        - Authentication
+      x-go-tuya-evidence: implementation-derived
+  /v1.0/users/{uid}/devices:
+    get:
+      description: Provider-documented in Tuya’s Device Management API reference. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      externalDocs:
+        description: Tuya Device Management API
+        url: https://developer.tuya.com/en/docs/cloud/device-management?id=K9g6rfntdz78a
+      operationId: getDevicesByUser
+      parameters:
+        - description: Tuya user ID.
+          in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+        - description: Source filter; Tuya documents home and sharing.
+          in: query
+          name: from
+          required: false
+          schema:
+            type: string
+        - description: Current page number.
+          in: query
+          name: page_no
+          required: false
+          schema:
+            type: integer
+        - description: Number of devices per page.
+          in: query
+          name: page_size
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListByUserEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get devices under a specified user
+      tags:
+        - Device management
+      x-go-tuya-evidence: provider-documented
+  /v1.1/m/life/{device_id}/specifications:
+    get:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: queryDeviceSpecification
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceSpecificationEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Get device specifications
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+  /v1.1/m/thing/{device_id}/commands:
+    post:
+      description: Implementation-derived from go-tuya request encoding and synthetic route tests; not provider-verified. Route illustration only. Use pkg/tuya for signed headers and encrypted query/body data. See https://portpowered.github.io/go-tuya/docs/guides/tuya/.
+      operationId: sendDeviceCommands
+      parameters:
+        - description: Device ID.
+          in: path
+          name: device_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCommandsBody'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooleanResultEnvelope'
+          description: Successful response envelope.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TuyaErrorEnvelope'
+          description: Error envelope varies by provider route.
+      summary: Send device commands
+      tags:
+        - Tuya private routes
+      x-go-tuya-evidence: implementation-derived
+servers:
+  - description: Default US Device Sharing cloud endpoint used by this library. Set WithRegion or WithCloudAPIURL to choose another cloud endpoint.
+    url: https://apigw.tuyaus.com
+  - description: China cloud endpoint selected by WithRegion(TuyaRegionChina).
+    url: https://openapi.tuyacn.com
+  - description: Europe cloud endpoint selected by WithRegion(TuyaRegionEU).
+    url: https://openapi.tuyaeu.com
+  - description: India cloud endpoint selected by WithRegion(TuyaRegionIndia).
+    url: https://openapi.tuyain.com

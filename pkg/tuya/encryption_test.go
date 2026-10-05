@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/md5" // #nosec G501 -- the test reproduces Tuya's protocol-mandated request-key derivation.
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
@@ -23,6 +27,7 @@ const (
 	encryptionFixtureRetained          = "retained"
 	encryptionFixtureSyntheticAccess   = "synthetic-access"
 	encryptionFixtureSyntheticClientID = "synthetic-client-id"
+	encryptionFixtureMarker            = "synthetic"
 	encryptionFixtureValue             = "value"
 )
 
@@ -138,8 +143,21 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 			t.Fatalf("unexpected X-sign header, expected %s got %s", expectedSign, gotSign)
 		}
 
+		responseBody, err := json.Marshal(map[string]any{
+			"success":       true,
+			"code":          200,
+			"msg":           "ok",
+			"result":        map[string]any{"marker": encryptionFixtureMarker},
+			"providerField": encryptionFixtureRetained,
+		})
+		if err != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
 		responseWriter.WriteHeader(http.StatusOK)
-		_, _ = responseWriter.Write([]byte(`{"success":true,"code":200,"msg":"ok","result":{"marker":"synthetic"},"providerField":"retained"}`))
+		_, _ = responseWriter.Write(responseBody)
 	}))
 	defer server.Close()
 
@@ -160,7 +178,7 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 	}
 
 	result, ok := response.Body["result"].(map[string]any)
-	if !ok || result["marker"] != "synthetic" || response.Body["providerField"] != encryptionFixtureRetained {
+	if !ok || result["marker"] != encryptionFixtureMarker || response.Body["providerField"] != encryptionFixtureRetained {
 		t.Fatalf("open transport response fields were not retained: %#v", response.Body)
 	}
 
@@ -202,8 +220,52 @@ func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
 	session.EncryptedClient = &EncryptedClient{Client: session}
 
 	_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
-	if err == nil || !strings.Contains(err.Error(), "failed to create request") {
+	if err == nil || !strings.Contains(err.Error(), "origin") {
 		t.Fatalf("request error = %v, want URL construction error", err)
+	}
+}
+
+func TestRestfulSignUsesSchemaGeneratedCanonicalization(t *testing.T) {
+	t.Parallel()
+
+	if got := string(wire.EncryptedSignatureHeaderPairTemplateCanonical); got != "%s=%s" {
+		t.Fatalf("generated header-pair template = %q, want schema-owned key/value format", got)
+	}
+
+	if got := string(wire.EncryptedSignatureHeaderSeparatorCanonical); got != "||" {
+		t.Fatalf("generated header separator = %q, want schema-owned separator", got)
+	}
+
+	if got := string(wire.EncryptedSignatureHeaderOrderCanonical); got != "X-appKey,X-requestId,X-sid,X-time,X-token" {
+		t.Fatalf("generated signature header order = %q, want schema-owned order", got)
+	}
+
+	if got := string(wire.EncryptedSignaturePayloadTemplateCanonical); got != "%s%s" {
+		t.Fatalf("generated payload template = %q, want schema-owned query/body concatenation", got)
+	}
+
+	const hashKey = "synthetic-hash-key"
+
+	headerOrder := strings.Split(string(wire.EncryptedSignatureHeaderOrderCanonical), ",")
+	headers := map[string]string{
+		headerOrder[0]: "synthetic-client",
+		headerOrder[1]: "synthetic-request",
+		headerOrder[2]: "",
+		headerOrder[3]: "1700000000000",
+		headerOrder[4]: "synthetic-token",
+	}
+
+	const preimage = "X-appKey=synthetic-client||X-requestId=synthetic-request||X-time=1700000000000||X-token=synthetic-tokenquery-ciphertextbody-ciphertext"
+
+	mac := hmac.New(sha256.New, []byte(hashKey))
+	if _, err := mac.Write([]byte(preimage)); err != nil {
+		t.Fatalf("write synthetic signature preimage: %v", err)
+	}
+
+	want := hex.EncodeToString(mac.Sum(nil))
+
+	if got := restfulSign(hashKey, "query-ciphertext", "body-ciphertext", headers); got != want {
+		t.Fatalf("signature = %s, want canonical preimage HMAC %s", got, want)
 	}
 }
 
@@ -219,7 +281,14 @@ func TestEncryptedClientRejectsUnschematizedOperation(t *testing.T) {
 		{http.MethodPost, "/v1.0/devices"},
 		{http.MethodGet, "/v1.0/devices?unexpected=1"},
 	} {
-		_, err := session.EncryptedClient.makeRequest(context.Background(), candidate.method, candidate.path, nil, nil, testOperationRequest{})
+		_, err := session.EncryptedClient.makeRequest(
+			context.Background(),
+			wire.Operation{Method: candidate.method, Path: candidate.path},
+			nil,
+			nil,
+			nil,
+			testOperationRequest{},
+		)
 		if err == nil || !strings.Contains(err.Error(), "not in api/openapi.yaml") {
 			t.Fatalf("%s %s: got %v, want schema rejection", candidate.method, candidate.path, err)
 		}

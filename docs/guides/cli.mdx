@@ -1,0 +1,155 @@
+---
+title: Standalone CLI
+description: Install and use the separately released go-tuya command-line client.
+---
+
+# Standalone CLI
+
+The `go-tuya` CLI is a separate Go module that calls the public
+[`pkg/tuya` SDK](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya).
+It provides a customer-facing way to test authentication, reads, commands, and
+events without writing an application.
+
+The standalone CLI's first release is planned as `v0.4.0` and is pending
+publication. Until then, run from a checkout:
+
+```sh
+cd cmd/go-tuya
+go run . --help
+```
+
+The CLI has its own release tag under `cmd/go-tuya/vMAJOR.MINOR.PATCH`. After
+`v0.4.0` is published, install it with:
+
+```sh
+go install github.com/portpowered/go-tuya/cmd/go-tuya@v0.4.0
+go-tuya --help
+```
+
+Global flags go before the command. Use `--json` for JSON results and JSON
+Lines event output. Commands that contact Tuya use a 30-second request timeout
+by default; set `--request-timeout` to adjust it for a local sandbox.
+
+## Credentials
+
+Network commands require your application's client ID through `--client-id`
+or `TUYA_CLIENT_ID`. QR login also requires `--schema` or `TUYA_AUTH_SCHEMA`.
+Set both from your Tuya application configuration:
+
+```sh
+export TUYA_CLIENT_ID="<application-client-id>"
+export TUYA_AUTH_SCHEMA="<authentication-schema>"
+```
+
+The CLI stores token pairs in a protected file under the operating system's
+user configuration directory. Set `--token-file` and `--pending-file` to
+choose alternate paths. On Unix, credential files are restricted to the
+current user; on Windows, the current user's ACL is applied.
+
+For QR login, use the account access code supplied by the Tuya or Smart Life
+app for the selected Device Sharing authentication schema. This is the
+account-specific code used by the SDK's `GenerateQrCodeForLogin` and
+`ValidateLoginCode` flow; it is not the account password. Start QR
+authentication by entering it at the hidden terminal prompt, or supply it
+through a protected file or `TUYA_ACCESS_CODE`:
+
+```sh
+go-tuya auth qr --access-code-file ./access-code.txt
+go-tuya auth poll
+```
+
+Scan the displayed QR code in the Tuya or Smart Life app and approve the login
+as the account owner, then run `go-tuya auth poll --wait 2m`. Without `--wait`,
+the command checks once. Tokens are written to the protected token file only
+after approval. Keep access code files readable only by the current user.
+
+Existing token JSON can be imported from stdin or a file with `auth import
+--stdin` or `auth import --file path`; input must contain `access_token`,
+`refresh_token`, and an optional Unix-millisecond `expire_time`. `auth export
+--output path` writes the saved token pair to another protected file.
+`auth refresh` explicitly rotates and saves both tokens. The CLI does not
+refresh tokens implicitly while running a read or command. For ephemeral
+automation, `TUYA_AUTH_TOKEN` and `TUYA_REFRESH_TOKEN` can supply a pair without
+creating the default file. Do not put tokens in shell history, command-line
+arguments, checked-in files, or logs.
+
+## Read homes and devices
+
+```sh
+go-tuya homes list
+go-tuya devices list
+go-tuya devices list --home HOME_ID
+go-tuya devices status DEVICE_ID
+go-tuya devices spec DEVICE_ID
+go-tuya devices routines DEVICE_ID
+```
+
+Human output is concise. Device list output omits local keys and other
+credential fields. Status displays the online state and device-reported
+properties. `devices routines` reads the discovered function metadata and lists
+the typed actions available for that device. Each device exposes only the
+routines present in its specification.
+
+## Run a typed routine
+
+Use the routine name shown by `devices routines` and the matching typed value:
+
+```sh
+go-tuya device routine DEVICE_ID switch on
+go-tuya device routine DEVICE_ID brightness 420
+go-tuya device routine DEVICE_ID temperature 420
+```
+
+Boolean routines accept `on` or `off`; integer routines accept whole numbers
+within the discovered bounds; enum routines accept one of the options shown by
+`devices routines`. A routine is available only when that device's
+specification contains a matching boolean, integer, or enum function. Values
+use the scale and units reported by that specification.
+
+When finished, remove the saved credentials and any pending QR login:
+
+```sh
+go-tuya auth logout
+```
+
+## Advanced explicit command
+
+Command values are read from a file or stdin so the value is not exposed as a
+process argument:
+
+```sh
+go-tuya device command --value-file ./switch-value.json DEVICE_ID switch
+```
+
+This low-level command accepts a provider code and JSON value. Use it only for
+functions that are not exposed by the typed routine list. Check the device
+specification and review the target and value before running it; it changes a
+real device when used with live credentials. You can pass the value through
+stdin instead:
+
+```sh
+printf 'true\n' | go-tuya device command --value-stdin DEVICE_ID switch
+```
+
+## Watch events
+
+```sh
+go-tuya --json events watch --duration 5m
+```
+
+The command lists homes and devices, registers account and device event
+listeners, and watches the Tuya message queue for the selected home(s). Output
+includes event type and device ID when available; event payloads and broker
+credentials are suppressed. Ctrl+C cancels the watch, stops the queue, and
+closes the session.
+
+## Local sandbox endpoints
+
+For offline and local integration testing, the CLI accepts `--cloud-api-url`,
+`--auth-url`, `--http-proxy`, and `--mqtt-broker-url`. Insecure `http`, `ws`, or
+`tcp` overrides are accepted only for loopback hosts. Keep test endpoints on
+local machines and avoid passing credentials to untrusted services. Normal
+cloud and MQTT traffic uses TLS by default.
+
+The CLI can use custom endpoints for local development. Keep credentials out
+of arguments and avoid sending them to untrusted endpoints.

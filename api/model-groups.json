@@ -1,0 +1,83 @@
+{
+  "input": "api/http.openapi.yaml",
+  "groups": [
+    {
+      "name": "authentication",
+      "source": "api/models/authentication.yaml",
+      "operations": [
+        "refreshAccessToken",
+        "generateLoginQRCode",
+        "validateLoginCode"
+      ]
+    },
+    {
+      "name": "homes",
+      "source": "api/models/homes.yaml",
+      "operations": [
+        "queryHomes",
+        "queryHomeDevices"
+      ]
+    },
+    {
+      "name": "devices",
+      "source": "api/models/devices.yaml",
+      "operations": [
+        "getDeviceDetails",
+        "deleteDevice",
+        "updateDeviceName",
+        "getDevicesByUser",
+        "getDeviceList",
+        "updateDeviceFunctionName",
+        "getDeviceLogs",
+        "resetDeviceFactory",
+        "getSubDevices",
+        "getFactoryInfos",
+        "addDeviceUser",
+        "deleteDeviceUser",
+        "updateDeviceUser",
+        "getDeviceUser",
+        "listDeviceUsers",
+        "updateMultiOutletName",
+        "listMultiOutletNames",
+        "sendDeviceCommands",
+        "queryDeviceStatus",
+        "queryDeviceSpecification"
+      ]
+    },
+    {
+      "name": "message_queue",
+      "source": "api/models/message_queue.yaml",
+      "operations": [
+        "getMessageQueueConfig"
+      ]
+    },
+    {
+      "name": "events",
+      "source": "api/models/events.yaml",
+      "operations": []
+    },
+    {
+      "name": "events_compatibility_projection",
+      "source": "api/models/events_compatibility_projection.yaml",
+      "operations": []
+    },
+    {
+      "name": "rtc",
+      "source": "api/models/rtc.yaml",
+      "operations": [
+        "startRTCSession",
+        "stopRTCSession"
+      ]
+    },
+    {
+      "name": "encryption",
+      "source": "api/models/encryption.yaml",
+      "operations": []
+    },
+    {
+      "name": "common",
+      "source": "api/models/common.yaml",
+      "operations": []
+    }
+  ]
+}

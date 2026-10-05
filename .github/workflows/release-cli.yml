@@ -1,0 +1,105 @@
+name: Release CLI
+
+on:
+  push:
+    tags: ['cmd/go-tuya/v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+      CLI_MODULE: github.com/portpowered/go-tuya/cmd/go-tuya
+      SDK_MODULE: github.com/portpowered/go-tuya
+    defaults:
+      run:
+        working-directory: cmd/go-tuya
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+          cache-dependency-path: cmd/go-tuya/go.sum
+      - name: Lint CLI module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: cmd/go-tuya
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
+      - name: Check nested module path, metadata, and public SDK dependency
+        run: |
+          test "$(go list -m)" = "$CLI_MODULE"
+          go mod tidy -diff
+          if grep -Eq '^replace[[:space:]]+github\.com/portpowered/go-tuya' go.mod; then
+            echo "The released CLI module must use the public SDK module."
+            exit 1
+          fi
+          sdk_version="$(go list -m -f '{{.Version}}' "$SDK_MODULE")"
+          test "$sdk_version" = "v0.4.0"
+      - name: Check tag matches nested module version
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          test "$(git describe --tags --exact-match HEAD)" = "$GITHUB_REF_NAME"
+      - name: Build
+        run: go build ./...
+      - name: Test with race detector
+        run: go test -race ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Verify tagged CLI module from a fresh consumer through the public proxy
+        env:
+          VERSION: ${{ github.ref_name }}
+          GOPROXY: https://proxy.golang.org
+          GOBIN: ${{ runner.temp }}/go-tuya-bin
+        shell: bash
+        run: |
+          version="${VERSION#cmd/go-tuya/}"
+          check_dir="$(mktemp -d)"
+          trap 'rm -rf "$check_dir"' EXIT
+          mkdir -p "$GOBIN"
+          cd "$check_dir"
+          go mod init example.com/tuya-cli-check
+          module_ready=false
+          for attempt in {1..12}; do
+            if go get "${CLI_MODULE}@${version}"; then
+              module_ready=true
+              break
+            fi
+            echo "CLI module not available through the Go module proxy yet (attempt ${attempt}/12)"
+            sleep 10
+          done
+          if [ "$module_ready" != true ]; then
+            echo "Could not fetch the tagged CLI module after twelve attempts."
+            exit 1
+          fi
+          resolved_module="$(go list -m -f '{{.Path}}@{{.Version}}' "$CLI_MODULE")"
+          expected_module="${CLI_MODULE}@${version}"
+          test "$resolved_module" = "$expected_module"
+          go install "${CLI_MODULE}@${version}"
+          "$GOBIN/go-tuya" --help
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish GitHub release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes \
+            --notes "The standalone go-tuya CLI is separately versioned from the public SDK module. Install with go install github.com/portpowered/go-tuya/cmd/go-tuya@${VERSION#cmd/go-tuya/}. See https://portpowered.github.io/go-tuya/docs/guides/cli/."

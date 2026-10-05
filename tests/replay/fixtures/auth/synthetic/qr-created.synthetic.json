@@ -8,7 +8,7 @@
         "synthetic-client-id"
       ],
       "schema": [
-        "haauthorize"
+        "synthetic-app-schema"
       ],
       "usercode": [
         "synthetic-user-code"

@@ -1,0 +1,222 @@
+components:
+  schemas:
+    RawSharingEvent:
+      description: Implementation-derived MQTT event union. Protocol 4 carries a
+        device report; protocol 20 carries a management event. This is not a
+        provider-verified payload schema.
+      oneOf:
+      - $ref: '#/components/schemas/RawDeviceReportMessage'
+      - $ref: '#/components/schemas/RawDeviceManagementMessage'
+      discriminator:
+        propertyName: protocol
+        mapping:
+          '4': '#/components/schemas/RawDeviceReportMessage'
+          '20': '#/components/schemas/RawDeviceManagementMessage'
+      examples:
+      - protocol: 4
+        data:
+          dataId: synthetic-report-001
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          status:
+          - code: switch_led
+            value: true
+            t: 1700000000000
+        t: 1700000000000
+      - protocol: 20
+        data:
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            time: 1700000000000
+            name: Desk lamp
+          ts: 1700000000000
+        t: 1700000000000
+      - protocol: 20
+        data:
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          bizCode: bindUser
+          bizData:
+            devId: synthetic-device-001
+            time: 1700000000000
+            uid: synthetic-user-002
+          ts: 1700000000000
+        t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportMessage:
+      type: object
+      description: Implementation-derived MQTT protocol 4 device-report envelope.
+      required: [protocol, data]
+      properties:
+        protocol:
+          type: integer
+          enum: [4]
+          x-enum-varnames: [RawDeviceReportProtocol4]
+          description: Protocol identifier for a device report.
+        data:
+          $ref: '#/components/schemas/RawDeviceReportData'
+        t:
+          type: integer
+          format: int64
+      additionalProperties: true
+      example:
+        protocol: 4
+        data:
+          dataId: synthetic-report-001
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          status:
+          - code: switch_led
+            value: true
+            t: 1700000000000
+        t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementMessage:
+      type: object
+      description: Implementation-derived MQTT protocol 20 device-management envelope.
+      required: [protocol, data]
+      properties:
+        protocol:
+          type: integer
+          enum: [20]
+          x-enum-varnames: [RawDeviceManagementProtocol20]
+          description: Protocol identifier for a device-management event.
+        data:
+          $ref: '#/components/schemas/RawDeviceManagementData'
+        t:
+          type: integer
+          format: int64
+      additionalProperties: true
+      example:
+        protocol: 20
+        data:
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            time: 1700000000000
+            name: Desk lamp
+          ts: 1700000000000
+        t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    TuyaBizCode:
+      type: string
+      description: Known Tuya device-management business codes handled by this client. The bizCode wire fields remain open strings for forward compatibility.
+      enum:
+      - online
+      - offline
+      - nameUpdate
+      - delete
+      - bindUser
+      - dpNameUpdate
+      x-enum-varnames:
+      - TuyaBizCodeOnline
+      - TuyaBizCodeOffline
+      - TuyaBizCodeNameUpdate
+      - TuyaBizCodeDelete
+      - TuyaBizCodeBindUser
+      - TuyaBizCodeDpNameUpdate
+      example: online
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceReportData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 4 device
+        reports.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+      example:
+        dataId: synthetic-report-001
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        status:
+        - code: switch_led
+          value: true
+          t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceStatusChange:
+      type: object
+      description: Implementation-derived status item in an MQTT protocol 4 report.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        value: {}
+        t:
+          type: integer
+          format: int64
+      example:
+        code: switch_led
+        value: true
+        t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementData:
+      type: object
+      description: Implementation-derived data payload for MQTT protocol 20 management
+        events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        productKey:
+          type: string
+        bizCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      example:
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          time: 1700000000000
+          name: Desk lamp
+        ts: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    RawDeviceManagementBizData:
+      type: object
+      description: Implementation-derived, extensible business payload for MQTT management
+        events.
+      additionalProperties: true
+      properties:
+        devId:
+          type: string
+        time:
+          type: integer
+          format: int64
+        name:
+          type: string
+        uid:
+          type: string
+      example:
+        devId: synthetic-device-001
+        time: 1700000000000
+        uid: synthetic-user-002
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived

@@ -3,6 +3,7 @@
 from html.parser import HTMLParser
 from pathlib import Path
 import os
+import re
 import sys
 from urllib.parse import unquote, urljoin, urlparse
 
@@ -29,13 +30,23 @@ def main():
     broken = []
     external = set()
     pages = list(root.rglob("*.html"))
-    for page in pages:
-        relative = page.relative_to(root).as_posix()
-        route = relative[: -len("index.html")] if relative.endswith("index.html") else relative
+    # API renderers load externalDocs URLs from schemas at runtime; those links
+    # need not appear as anchors in the generated HTML. Include description URLs
+    # as well as externalDocs, without treating sentence punctuation as a path.
+    schema_links = re.compile(r"https://portpowered\.github\.io/[^\s'\"<>\)\]]+")
+    sources = [(page, page.relative_to(root).as_posix(), False) for page in pages]
+    sources.extend((path, path.as_posix(), True) for path in Path("api").rglob("*.yaml"))
+    for page, relative, schema in sources:
+        route = "" if schema else relative[: -len("index.html")] if relative.endswith("index.html") else relative
         base = f"https://site.invalid/{project}/{route}"
-        parser = Links()
-        parser.feed(page.read_text(encoding="utf-8"))
-        for href in parser.hrefs:
+        content = page.read_text(encoding="utf-8")
+        if schema:
+            hrefs = [url.rstrip(".,;:") for url in schema_links.findall(content)]
+        else:
+            parser = Links()
+            parser.feed(content)
+            hrefs = parser.hrefs
+        for href in hrefs:
             resolved = urlparse(urljoin(base, href))
             if resolved.scheme not in ("http", "https"):
                 continue

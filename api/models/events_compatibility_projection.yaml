@@ -1,0 +1,73 @@
+components:
+  schemas:
+    RawSharingMessageProtocol:
+      type: integer
+      description: Compatibility projection of the former combined MQTT message protocol enum. Active event decoding uses RawSharingEvent and its protocol-specific envelope types.
+      enum: [4, 20]
+      example: 20
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-compatibility-projection: true
+    RawSharingMessageData:
+      type: object
+      description: Compatibility projection of the former merged protocol 4 and protocol 20 data shape. Active event decoding uses RawDeviceReportData or RawDeviceManagementData according to the outer protocol value.
+      additionalProperties: true
+      properties:
+        dataId:
+          type: string
+        devId:
+          type: string
+        productKey:
+          type: string
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawDeviceStatusChange'
+        bizCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaBizCode
+        bizData:
+          $ref: '#/components/schemas/RawDeviceManagementBizData'
+        ts:
+          type: integer
+          format: int64
+      example:
+        devId: synthetic-device-001
+        productKey: synthetic-product-001
+        bizCode: nameUpdate
+        bizData:
+          devId: synthetic-device-001
+          time: 1700000000000
+          name: Desk lamp
+        ts: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-compatibility-projection: true
+    RawSharingMessage:
+      type: object
+      description: Compatibility projection of the former generic MQTT message envelope. Active runtime decoding uses the protocol-discriminated RawSharingEvent variants.
+      required: [protocol, data]
+      properties:
+        protocol:
+          $ref: '#/components/schemas/RawSharingMessageProtocol'
+        data:
+          $ref: '#/components/schemas/RawSharingMessageData'
+        t:
+          type: integer
+          format: int64
+      additionalProperties: true
+      example:
+        protocol: 20
+        data:
+          devId: synthetic-device-001
+          productKey: synthetic-product-001
+          bizCode: nameUpdate
+          bizData:
+            devId: synthetic-device-001
+            time: 1700000000000
+            name: Desk lamp
+          ts: 1700000000000
+        t: 1700000000000
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-compatibility-projection: true

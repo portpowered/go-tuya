@@ -2,11 +2,14 @@ package tuya
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 )
+
+var errHTTPClientCookieJar = errors.New("HTTP client CookieJar must be nil; configure account cookies on each Session.HTTPClient")
 
 // Option configures a reusable Client.
 type Option func(*clientOptions) error
@@ -23,7 +26,8 @@ type clientOptions struct {
 }
 
 // Client contains reusable endpoint and transport configuration. Account
-// credentials and live connections belong to Session values created from it.
+// credentials, cookies, and live connections belong to Session values created
+// from it.
 type Client struct {
 	options clientOptions
 }
@@ -43,12 +47,13 @@ type Tokens struct {
 type AuthInformation = Tokens
 
 // NewClient creates a reusable Tuya client from functional options.
+// WithClientID must supply the caller's Tuya application identity.
 func NewClient(options ...Option) (*Client, error) {
 	configured := clientOptions{
 		httpClient:        new(http.Client),
 		httpClientSet:     false,
 		httpTransportSet:  false,
-		clientID:          clientID,
+		clientID:          "",
 		authenticationURL: LoginURI,
 		cloudAPIURL:       regionAPIEndpointUS,
 		mqttClientFactory: newMQTTClient,
@@ -70,6 +75,10 @@ func NewClient(options ...Option) (*Client, error) {
 		return nil, clientError(ErrorInvalidOperation, errHTTPClientRequired)
 	}
 
+	if configured.httpClient.Jar != nil {
+		return nil, clientError(ErrorInvalidOperation, errHTTPClientCookieJar)
+	}
+
 	if strings.TrimSpace(configured.clientID) == "" {
 		return nil, clientError(ErrorInvalidOperation, errClientIDRequired)
 	}
@@ -88,11 +97,26 @@ func NewClient(options ...Option) (*Client, error) {
 		return nil, clientError(ErrorInvalidOperation, errMQTTFactoryRequired)
 	}
 
+	configured.httpClient = cloneHTTPClient(configured.httpClient)
+
 	return &Client{options: configured}, nil
 }
 
+func cloneHTTPClient(client *http.Client) *http.Client {
+	if client == nil {
+		return nil
+	}
+
+	clone := *client
+
+	return &clone
+}
+
 // WithHTTPClient uses a caller-configured HTTP client for all HTTP operations,
-// including Tuya's HTTP-based RTC signaling requests.
+// including Tuya's HTTP-based RTC signaling requests. Its CookieJar must be
+// nil. NewClient rejects a configured jar and snapshots the client value;
+// each Session receives its own client value. To use account cookies, set a
+// separate Jar on that session's HTTPClient.
 func WithHTTPClient(client *http.Client) Option {
 	return func(options *clientOptions) error {
 		if client == nil {
@@ -131,7 +155,7 @@ func WithHTTPTransport(transport http.RoundTripper) Option {
 	}
 }
 
-// WithClientID overrides the provider client ID.
+// WithClientID supplies the caller's Tuya application client ID.
 func WithClientID(clientID string) Option {
 	return func(options *clientOptions) error {
 		if strings.TrimSpace(clientID) == "" {
@@ -217,8 +241,13 @@ func WithRTCSignaling(signaling RTCSignaling) Option {
 
 func validateEndpoint(name, endpoint string) error {
 	parsed, err := url.Parse(endpoint)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return fmt.Errorf("%s %w", name, errAbsoluteHTTPURL)
+	if err != nil ||
+		(parsed.Scheme != "http" && parsed.Scheme != "https") ||
+		parsed.Host == "" ||
+		parsed.User != nil ||
+		parsed.RawQuery != "" ||
+		parsed.Fragment != "" {
+		return fmt.Errorf("%s %w without credentials, query, or fragment", name, errAbsoluteHTTPURL)
 	}
 
 	return nil
@@ -228,7 +257,7 @@ func validateEndpoint(name, endpoint string) error {
 // lifecycle are isolated from the reusable Client and other sessions.
 func (c *Client) NewSession(tokens Tokens) *Session {
 	session := new(Session)
-	session.HTTPClient = c.options.httpClient
+	session.HTTPClient = cloneHTTPClient(c.options.httpClient)
 	session.CloudAPIURL = c.options.cloudAPIURL
 	session.ClientID = c.options.clientID
 	session.AuthenticationURL = c.options.authenticationURL

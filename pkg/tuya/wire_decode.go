@@ -2,8 +2,16 @@ package tuya
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
+
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
+)
+
+var (
+	errUnknownQueryKey  = errors.New("query parameter is not in generated schema keys")
+	errUnknownHeaderKey = errors.New("header is not in generated schema keys")
 )
 
 func decodeWireResponse[T any](response *EncryptedAPIResponse) (T, error) { //nolint:ireturn // Generic response type comes from the caller.
@@ -71,6 +79,14 @@ func wireQueryValues(value any) (url.Values, error) {
 	query := make(url.Values, len(fields))
 
 	for name, field := range fields {
+		if wire.IsKnownHeader(name) {
+			continue
+		}
+
+		if !wire.IsKnownQueryParam(name) {
+			return nil, clientError(ErrorInvalidOperation, fmt.Errorf("%w: %q", errUnknownQueryKey, name))
+		}
+
 		raw, ok := field.(json.RawMessage)
 		if !ok || string(raw) == "null" {
 			continue
@@ -101,6 +117,10 @@ func wireStringMap(value any) (map[string]string, error) {
 	result := make(map[string]string, len(fields))
 
 	for name, field := range fields {
+		if !wire.IsKnownHeader(name) {
+			return nil, clientError(ErrorInvalidOperation, fmt.Errorf("%w: %q", errUnknownHeaderKey, name))
+		}
+
 		raw, ok := field.(json.RawMessage)
 		if !ok {
 			return nil, clientError(ErrorProtocol, fmt.Errorf("%w %q is not JSON encoded", errWireFieldNotJSONEncoded, name))

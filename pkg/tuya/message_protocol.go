@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // This describes the overall message protocol that is sent over via MQTT to the client.
@@ -13,44 +13,26 @@ import (
 // Protocol constants.
 const (
 	// ProtocolDeviceReport represents device state change reports (protocol 4).
-	ProtocolDeviceReport = 4
+	ProtocolDeviceReport = int(wire.RawDeviceReportProtocol4)
 	// ProtocolOther represents device management events (protocol 20).
-	ProtocolOther = 20
+	ProtocolOther = int(wire.RawDeviceManagementProtocol20)
 )
 
 // Business code constants for device management events.
 const (
-	BizcodeOnline     = "online"
-	BizcodeOffline    = "offline"
-	BizcodeNameUpdate = "nameUpdate"
-	BizcodeDelete     = "delete"
-	BizcodeBindUser   = "bindUser"
+	BizcodeOnline     = string(wire.TuyaBizCodeOnline)
+	BizcodeOffline    = string(wire.TuyaBizCodeOffline)
+	BizcodeNameUpdate = string(wire.TuyaBizCodeNameUpdate)
+	BizcodeDelete     = string(wire.TuyaBizCodeDelete)
+	BizcodeBindUser   = string(wire.TuyaBizCodeBindUser)
 	// BizcodeDpNameUpdate represents a device point name update, such as led_dimmer_1 to led_dimmer_2.
-	BizcodeDpNameUpdate = "dpNameUpdate"
+	BizcodeDpNameUpdate = string(wire.TuyaBizCodeDpNameUpdate)
 )
 
 // Event represents the base interface for all event types.
 type Event interface {
 	GetDeviceID() string
 	GetEventType() string
-}
-
-// DeviceStateChangeEvent represents a device state change event (protocol 4).
-type DeviceStateChangeEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DataID string `json:"dataId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string               `json:"productKey"`
-	Status     []DeviceStatusChange `json:"status"`
-}
-
-// DeviceStatusChange represents a single status change within a device state change event.
-type DeviceStatusChange struct {
-	Code      string `json:"code"`
-	Value     any    `json:"value"`
-	Timestamp int64  `json:"t"`
 }
 
 // GetDeviceID returns the device ID for the state change event.
@@ -60,7 +42,7 @@ func (e *DeviceStateChangeEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceStateChangeEvent) GetEventType() string {
-	return "device_state_change"
+	return SDKEventTypeDeviceStateChange
 }
 
 // HasStatusCode checks if the event contains a specific status code change.
@@ -107,18 +89,6 @@ func (e *DeviceStateChangeEvent) GetBooleanStatusValue(code string) bool {
 	}
 }
 
-// DeviceManagementEvent represents a device management event (protocol 20).
-type DeviceManagementEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	BizCode string `json:"bizCode"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	BizData map[string]any `json:"bizData"`
-}
-
 // GetDeviceID returns the device ID for the management event.
 func (e *DeviceManagementEvent) GetDeviceID() string {
 	return e.DeviceID
@@ -126,16 +96,7 @@ func (e *DeviceManagementEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceManagementEvent) GetEventType() string {
-	return "device_management_" + e.BizCode
-}
-
-// DeviceOnlineEvent represents a device coming online.
-type DeviceOnlineEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	Time       int64  `json:"time"`
+	return SDKEventTypeDeviceManagementPrefix + e.BizCode
 }
 
 // GetDeviceID returns the device ID.
@@ -145,16 +106,7 @@ func (e *DeviceOnlineEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceOnlineEvent) GetEventType() string {
-	return "device_online"
-}
-
-// DeviceOfflineEvent represents a device going offline.
-type DeviceOfflineEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	Time       int64  `json:"time"`
+	return SDKEventTypeDeviceOnline
 }
 
 // GetDeviceID returns the device ID.
@@ -164,16 +116,7 @@ func (e *DeviceOfflineEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceOfflineEvent) GetEventType() string {
-	return "device_offline"
-}
-
-// DeviceNameUpdateEvent represents a device name change.
-type DeviceNameUpdateEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	NewName    string `json:"name"`
+	return SDKEventTypeDeviceOffline
 }
 
 // GetDeviceID returns the device ID.
@@ -183,16 +126,7 @@ func (e *DeviceNameUpdateEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceNameUpdateEvent) GetEventType() string {
-	return "device_name_update"
-}
-
-// DeviceDeleteEvent represents a device being deleted.
-type DeviceDeleteEvent struct {
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	DeviceID string `json:"devId"`
-	//nolint:tagliatelle // The asyncapi schema defines this Tuya event key in camelCase.
-	ProductKey string `json:"productKey"`
-	UID        string `json:"uid"`
+	return SDKEventTypeDeviceNameUpdate
 }
 
 // GetDeviceID returns the device ID.
@@ -202,34 +136,30 @@ func (e *DeviceDeleteEvent) GetDeviceID() string {
 
 // GetEventType returns the event type.
 func (e *DeviceDeleteEvent) GetEventType() string {
-	return "device_delete"
+	return SDKEventTypeDeviceDelete
 }
 
 // ParseEvent parses a raw MQTT message into the appropriate event type.
 func ParseEvent(rawMessage map[string]any) (Event, error) { //nolint:ireturn // Protocol variants share the public Event interface.
 	// Extract protocol number
-	protocolFloat, protocolOK := rawMessage["protocol"].(float64)
+	_, protocolOK := rawMessage[wire.PropertyRawDeviceReportMessageProtocol].(float64)
 	if !protocolOK {
 		return nil, errProtocolFieldInvalid
 	}
 
-	protocol := int(protocolFloat)
-
 	// Preserve the existing public validation errors before converting to the
 	// schema-generated transport and protocol data models.
-	_, protocolOK = rawMessage["data"].(map[string]any)
+	_, protocolOK = rawMessage[wire.PropertyRawDeviceReportMessageData].(map[string]any)
 	if !protocolOK {
 		return nil, errDataFieldInvalid
 	}
 
-	message, err := convertWireValue[wire.RawSharingMessage](rawMessage)
+	message, err := convertWireValue[wire.RawSharingEvent](rawMessage)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MQTT wire message: %w", err)
 	}
 
-	message.Protocol = wire.RawSharingMessageProtocol(protocol)
-
-	return parseRawSharingMessage(message)
+	return parseRawSharingEvent(message)
 }
 
 // ParseDeviceStateChangeEvent parses a device state change event.
@@ -252,25 +182,55 @@ func ParseDeviceManagementEvent(data map[string]any) (Event, error) { //nolint:i
 	return parseRawDeviceManagementEvent(wireData)
 }
 
-func parseRawSharingMessage(message wire.RawSharingMessage) (Event, error) { //nolint:ireturn // One return type covers protocol variants.
-	switch message.Protocol {
-	case wire.RawSharingMessageProtocol(ProtocolDeviceReport):
-		data, err := convertWireValue[wire.RawDeviceReportData](message.Data)
-		if err != nil {
-			return nil, fmt.Errorf("invalid device report payload: %w", err)
-		}
-
-		return parseRawDeviceReport(data)
-	case wire.RawSharingMessageProtocol(ProtocolOther):
-		data, err := convertWireValue[wire.RawDeviceManagementData](message.Data)
-		if err != nil {
-			return nil, fmt.Errorf("invalid management event payload: %w", err)
-		}
-
-		return parseRawDeviceManagementEvent(data)
-	default:
-		return nil, fmt.Errorf("%w: %d", errUnsupportedProtocol, message.Protocol)
+func parseRawSharingEvent(message wire.RawSharingEvent) (Event, error) { //nolint:ireturn // One return type covers protocol variants.
+	encoded, err := json.Marshal(message)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MQTT wire message: %w", err)
 	}
+
+	var fields map[string]json.RawMessage
+
+	err = json.Unmarshal(encoded, &fields)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MQTT wire message fields: %w", err)
+	}
+
+	// The generated discriminator helper reads strings, while MQTT encodes protocol as an integer.
+	var protocol int
+	if rawProtocol, ok := fields[wire.PropertyRawDeviceReportMessageProtocol]; ok {
+		err = json.Unmarshal(rawProtocol, &protocol)
+		if err != nil {
+			return nil, fmt.Errorf("invalid MQTT wire message protocol: %w", err)
+		}
+	}
+
+	switch protocol {
+	case ProtocolDeviceReport:
+		return parseRawDeviceReportVariant(message)
+	case ProtocolOther:
+		return parseRawDeviceManagementVariant(message)
+	default:
+		return nil, fmt.Errorf("%w: %d", errUnsupportedProtocol, protocol)
+	}
+}
+
+func parseRawDeviceReportVariant(message wire.RawSharingEvent) (*DeviceStateChangeEvent, error) {
+	variant, err := message.AsRawDeviceReportMessage()
+	if err != nil {
+		return nil, fmt.Errorf("invalid device report payload: %w", err)
+	}
+
+	return parseRawDeviceReport(variant.Data)
+}
+
+//nolint:ireturn // Management codes produce several public Event implementations.
+func parseRawDeviceManagementVariant(message wire.RawSharingEvent) (Event, error) {
+	variant, err := message.AsRawDeviceManagementMessage()
+	if err != nil {
+		return nil, fmt.Errorf("invalid management event payload: %w", err)
+	}
+
+	return parseRawDeviceManagementEvent(variant.Data)
 }
 
 func parseRawDeviceReport(data wire.RawDeviceReportData) (*DeviceStateChangeEvent, error) {
@@ -365,14 +325,14 @@ type EventListener func(event Event)
 
 // ProcessMQTTMessage processes a raw MQTT message and calls the appropriate listeners.
 func ProcessMQTTMessage(rawMessage string, listeners []EventListener) error {
-	var message wire.RawSharingMessage
+	var message wire.RawSharingEvent
 
 	err := json.Unmarshal([]byte(rawMessage), &message)
 	if err != nil {
 		return fmt.Errorf("failed to parse MQTT message JSON: %w", err)
 	}
 
-	event, err := parseRawSharingMessage(message)
+	event, err := parseRawSharingEvent(message)
 	if err != nil {
 		return fmt.Errorf("failed to parse event: %w", err)
 	}

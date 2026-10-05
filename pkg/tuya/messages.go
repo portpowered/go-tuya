@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	mqtt "github.com/portpowered/go-tuya/pkg/dependencies/mqtttransport"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 const (
@@ -403,7 +403,7 @@ func (state *mqttState) runMQTTLoop(ctx context.Context, queue *SharingMessageQu
 		err := state.connectOnce(ctx, queue)
 		if err != nil {
 			state.recordConnection(err)
-			log.Printf("Failed to connect to MQTT: %v, retrying in %d seconds", err, backoffSeconds)
+			log.Printf("MQTT connection failed; retrying in %d seconds", backoffSeconds)
 
 			if !state.waitBeforeReconnect(ctx, backoffSeconds) {
 				return
@@ -508,7 +508,7 @@ func (state *mqttState) connectMQTT(ctx context.Context, queue *SharingMessageQu
 		}
 	}
 
-	log.Printf("Connected to MQTT broker: %s", config.URL)
+	log.Print("Connected to MQTT broker")
 
 	return nil
 }
@@ -523,15 +523,14 @@ func (state *mqttState) onConnect(client mqtt.Client) {
 
 	for topic := range state.messageListeners {
 		subscribeChannel(client, wire.MQTTChannelOwnerEvents, topic)
-		log.Printf("Subscribed to listener topic: %s", topic)
+		log.Print("Subscribed to account event listener")
 	}
 
 	for deviceID := range state.deviceListeners {
 		deviceTopic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
 		subscribeChannel(client, wire.MQTTChannelDeviceStatus, deviceTopic)
 
-		topic := state.getDeviceTopic(deviceID, false)
-		log.Printf("Subscribed to device listener topic: %s", topic)
+		log.Print("Subscribed to device event listener")
 	}
 
 	state.listenersMux.RUnlock()
@@ -554,7 +553,7 @@ func channelAddress(channel wire.MQTTChannel, runtimeTopic string) string {
 
 // onConnectionLost handles MQTT connection lost.
 func (state *mqttState) onConnectionLost(_ mqtt.Client, err error) {
-	log.Printf("MQTT connection lost: %v", err)
+	log.Print("MQTT connection lost")
 	state.recordConnection(err)
 
 	// Signal reconnection if still running
@@ -575,11 +574,11 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
 
 	// Parse message
-	var sharingMessage wire.RawSharingMessage
+	var sharingMessage wire.RawSharingEvent
 
 	err := json.Unmarshal(payload, &sharingMessage)
 	if err != nil {
-		log.Printf("Failed to parse message JSON: %v", err)
+		log.Print("Failed to parse MQTT message JSON")
 
 		return
 	}
@@ -600,9 +599,9 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 
-	evt, err := parseRawSharingMessage(sharingMessage)
+	evt, err := parseRawSharingEvent(sharingMessage)
 	if err != nil {
-		log.Printf("Failed to parse device state change event JSON: %v", err)
+		log.Print("Failed to parse MQTT event payload")
 
 		return
 	}
@@ -614,19 +613,6 @@ func (state *mqttState) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	for _, listener := range deviceListeners {
 		listener(deviceID, evt)
 	}
-}
-
-// getDeviceTopic constructs device topic from device ID and support_local flag.
-func (state *mqttState) getDeviceTopic(deviceID string, supportLocal bool) string {
-	topic := strings.ReplaceAll(state.mqConfig.DeviceTopic, "{devId}", deviceID)
-	if supportLocal {
-		// When a device supports local, we do the mapping between the data point id and the more comprehensible name.
-		// i.e. dp1 -> led_dimmer_1.
-		// To do this, each device needs to maintain the corresponding specification strategy with it for local transformations.
-		return channelAddress(wire.MQTTChannelDeviceLocal, topic)
-	}
-
-	return channelAddress(wire.MQTTChannelDeviceStatus, topic)
 }
 
 // extractDeviceIDFromTopic extracts device ID from topic string.

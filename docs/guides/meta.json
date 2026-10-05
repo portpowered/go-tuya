@@ -2,13 +2,13 @@
   "title": "Guides",
   "pages": [
     "index",
+    "cli",
+    "upgrading",
     "authentication",
     "device-list",
     "device-control",
     "events",
-    "testing",
-    "provider-evidence",
-    "schema",
-    "tuya"
+    "tuya",
+    "provider-evidence"
   ]
 }

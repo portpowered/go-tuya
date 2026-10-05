@@ -33,15 +33,6 @@ channels:
     messages:
       event:
         $ref: '#/components/messages/SharingEvent'
-  deviceLocal:
-    address: '{deviceTopic}/pen'
-    description: Local-capable device topic from access/config.
-    parameters:
-      deviceTopic:
-        description: Runtime device topic prefix.
-    messages:
-      event:
-        $ref: '#/components/messages/SharingEvent'
 operations:
   receiveOwnerEvents:
     action: receive
@@ -55,15 +46,9 @@ operations:
       - name: Message events
     channel:
       $ref: '#/channels/deviceStatus'
-  receiveDeviceLocal:
-    action: receive
-    tags:
-      - name: Message events
-    channel:
-      $ref: '#/channels/deviceLocal'
 components:
   messages:
     SharingEvent:
       name: SharingEvent
       payload:
-        $ref: './openapi.yaml#/components/schemas/RawSharingMessage'
+        $ref: './openapi.yaml#/components/schemas/RawSharingEvent'

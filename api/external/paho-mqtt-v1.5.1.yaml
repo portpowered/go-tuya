@@ -1,0 +1,44 @@
+contract: mqtt
+evidence: implementation-derived
+dependency:
+  module: github.com/eclipse/paho.mqtt.golang
+  version: v1.5.1
+source:
+  transportWrapper: pkg/dependencies/mqtttransport/paho.go
+  sessionAdapter: pkg/tuya/messages.go
+  connectionInjection: WithMQTTClientFactory and Paho ClientOptions.SetCustomOpenConnectionFn
+  replayTest: pkg/tuya/mqtt_framed_replay_test.go
+broker:
+  addressSource: MessageQueueConfiguration.url from the paired HTTP configuration response
+  credentials: MessageQueueConfiguration.clientId, username, and password
+protocol:
+  name: MQTT
+  level: 4
+  version: 3.1.1
+  keepAliveSeconds: 30
+  clientFrames:
+  - CONNECT
+  - SUBSCRIBE
+  - UNSUBSCRIBE
+  - DISCONNECT
+  serverFrames:
+  - CONNACK
+  - SUBACK
+  - PUBLISH
+  lifecycle:
+    disconnectAcknowledgement: none; the synthetic replay requires socket EOF after DISCONNECT
+    packetIdentifiers: bind nonzero client identifiers to the corresponding SUBACK and UNSUBACK
+  topics:
+  - source: MessageQueueConfiguration.topic.ownerId.sub
+    channel: ownerEvents
+  - source: MessageQueueConfiguration.topic.devId.sub with {devId} filled from a listener request
+    channel: deviceStatus
+  qualityOfService: 0
+replay:
+  classification: synthetic
+  successFixture: tests/replay/fixtures/mqtt/synthetic/paho-framed-session.synthetic.json
+  deniedConnectFixture: tests/replay/fixtures/mqtt/synthetic/paho-framed-denied.synthetic.json
+  successTest: TestPahoMQTTFramedPairedReplay
+  failureTest: TestPahoMQTTFramedDeniedConnectReplay
+  transport: net.Pipe returned by SetCustomOpenConnectionFn
+  lifecycleAssertions: consume each packet in order, reject byte or packet-id changes, and observe EOF after close

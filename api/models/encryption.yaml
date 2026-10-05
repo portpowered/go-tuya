@@ -1,0 +1,132 @@
+components:
+  schemas:
+    EncryptedDataEnvelope:
+      type: object
+      description: Implementation-derived encrypted HTTP request wrapper used for
+        JSON bodies and query data.
+      required:
+      - encdata
+      properties:
+        encdata:
+          type: string
+          description: Base64-encoded nonce and AES-GCM ciphertext.
+      additionalProperties: false
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1wYXlsb2Fk
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    EncryptedRequestQuery:
+      type: object
+      description: Implementation-derived query keys emitted by encrypted requests.
+      required:
+      - encdata
+      properties:
+        encdata:
+          type: string
+          description: Base64-encoded encrypted query payload.
+      additionalProperties: false
+      example:
+        encdata: c3ludGhldGljLWVuY3J5cHRlZC1xdWVyeQ==
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-query-keys: true
+    EncryptedRequestHeaders:
+      type: object
+      description: Implementation-derived authentication and signing headers emitted
+        by EncryptedClient.
+      required:
+      - X-appKey
+      - X-requestId
+      - X-sid
+      - X-time
+      - X-token
+      - X-sign
+      properties:
+        X-appKey:
+          type: string
+        X-requestId:
+          type: string
+        X-sid:
+          type: string
+        X-time:
+          type: string
+        X-token:
+          type: string
+        X-sign:
+          type: string
+      additionalProperties: false
+      example:
+        X-appKey: synthetic-app-key
+        X-requestId: synthetic-request-001
+        X-sid: synthetic-session-001
+        X-time: "1700000000000"
+        X-token: synthetic-access-token
+        X-sign: synthetic-signature
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+      x-go-tuya-header-keys: true
+    EncryptedSignatureHeaderPairTemplate:
+      type: string
+      description: Implementation-derived key and value format used for each signed request header.
+      enum:
+      - '%s=%s'
+      example: '%s=%s'
+      x-example-evidence: synthetic
+      x-enum-varnames:
+      - EncryptedSignatureHeaderPairTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderSeparator:
+      type: string
+      description: Implementation-derived separator between signed request header pairs.
+      enum:
+      - '||'
+      example: '||'
+      x-example-evidence: synthetic
+      x-enum-varnames:
+      - EncryptedSignatureHeaderSeparatorCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderOrder:
+      type: string
+      description: Comma-separated implementation-derived order of header names in the REST signature preimage.
+      enum:
+      - X-appKey,X-requestId,X-sid,X-time,X-token
+      example: X-appKey,X-requestId,X-sid,X-time,X-token
+      x-example-evidence: synthetic
+      x-enum-varnames:
+      - EncryptedSignatureHeaderOrderCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignaturePayloadTemplate:
+      type: string
+      description: Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
+      enum:
+      - '%s%s'
+      example: '%s%s'
+      x-example-evidence: synthetic
+      x-enum-varnames:
+      - EncryptedSignaturePayloadTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedHTTPResponseEnvelope:
+      type: object
+      description: Implementation-derived outer response envelope received before
+        result decryption.
+      properties:
+        code: {}
+        msg: {}
+        success:
+          type: boolean
+        result: {}
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+      additionalProperties: true
+      example:
+        code: 200
+        msg: success
+        success: true
+        result: c3ludGhldGljLWVuY3J5cHRlZC1yZXNwb25zZQ==
+        t: 1700000000000
+        tid: synthetic-trace-encrypted-001
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived

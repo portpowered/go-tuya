@@ -2,6 +2,8 @@ package tuya
 
 import (
 	"testing"
+
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
@@ -21,6 +23,7 @@ const (
 	messageFixtureStatus                                         = "status"
 	messageFixtureSwitch                                         = "switch"
 	messageFixtureSyntheticDeviceID                              = "synthetic-device-id"
+	messageFixtureFutureBizCode                                  = "futureEvent"
 	messageFixtureSyntheticProductKey                            = "synthetic-product-key"
 	messageFixtureTestDevice                                     = "test-device"
 	messageFixtureTheProductKeyDefinedOnTheTuyaDeveloperPlatform = "The product key defined on the Tuya Developer Platform"
@@ -34,7 +37,7 @@ func TestParseEvent_DeviceStateChange(t *testing.T) {
 
 	// Test data based on the provided example
 	rawMessage := map[string]any{
-		messageFixtureProtocol: float64(4), // Changed from 1000 to 4 (ProtocolDeviceReport)
+		messageFixtureProtocol: float64(4),
 		"t":                    float64(1628229842692),
 		messageFixtureData: map[string]any{
 			"dataId":                 "AAXI3c1i6xxx***",
@@ -128,7 +131,7 @@ func TestParseEvent_DeviceStateChange_LEDSwitch(t *testing.T) {
 
 	// Test with led_switch_1 as mentioned in requirements
 	rawMessage := map[string]any{
-		messageFixtureProtocol: float64(4), // Changed from 1000 to 4 (ProtocolDeviceReport)
+		messageFixtureProtocol: float64(4),
 		messageFixtureData: map[string]any{
 			messageFixtureDevID: "test-device-123",
 			messageFixtureStatus: []any{
@@ -301,6 +304,74 @@ func TestParseEvent_DeviceDelete(t *testing.T) {
 	}
 }
 
+func TestParseEvent_DeviceBindUser(t *testing.T) {
+	t.Parallel()
+
+	event, err := ParseEvent(map[string]any{
+		messageFixtureProtocol: float64(20),
+		messageFixtureData: map[string]any{
+			messageFixtureDevID:      messageFixtureSyntheticDeviceID,
+			messageFixtureProductKey: messageFixtureSyntheticProductKey,
+			messageFixtureBizCode:    BizcodeBindUser,
+			messageFixtureBizData: map[string]any{
+				messageFixtureDevID:                        messageFixtureSyntheticDeviceID,
+				messageFixtureTime:                         float64(1700000000000),
+				wire.PropertyRawDeviceManagementBizDataUid: "synthetic-user-002",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ParseEvent() error = %v", err)
+	}
+
+	management, ok := event.(*DeviceManagementEvent)
+	if !ok || management == nil || management.BizCode != BizcodeBindUser ||
+		management.BizData[wire.PropertyRawDeviceManagementBizDataUid] != "synthetic-user-002" {
+		t.Fatalf("management event = %+v", management)
+	}
+}
+
+func TestParseEvent_UnknownManagementCodeRemainsOpen(t *testing.T) {
+	t.Parallel()
+
+	event, err := ParseEvent(map[string]any{
+		messageFixtureProtocol: float64(20),
+		messageFixtureData: map[string]any{
+			messageFixtureDevID:      messageFixtureSyntheticDeviceID,
+			messageFixtureProductKey: messageFixtureSyntheticProductKey,
+			messageFixtureBizCode:    messageFixtureFutureBizCode,
+			messageFixtureBizData: map[string]any{
+				messageFixtureDevID:   messageFixtureSyntheticDeviceID,
+				"providerFutureField": "retained-value",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ParseEvent() error = %v", err)
+	}
+
+	management, ok := event.(*DeviceManagementEvent)
+	if !ok || management == nil || management.BizCode != messageFixtureFutureBizCode ||
+		management.BizData["providerFutureField"] != "retained-value" {
+		t.Fatalf("management event = %+v", management)
+	}
+}
+
+func TestParseEvent_RejectsMalformedKnownVariant(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseEvent(map[string]any{
+		messageFixtureProtocol: float64(4),
+		messageFixtureData: map[string]any{
+			messageFixtureDevID:  messageFixtureSyntheticDeviceID,
+			messageFixtureStatus: "not-an-array",
+		},
+	})
+	if err == nil {
+		t.Fatal("ParseEvent() accepted a malformed protocol 4 payload")
+	}
+}
+
 func TestProcessMQTTMessage(t *testing.T) {
 	t.Parallel()
 
@@ -341,6 +412,35 @@ func TestProcessMQTTMessage(t *testing.T) {
 
 	if stateEvent.DeviceID != messageFixtureTestDevice {
 		t.Errorf("Expected DeviceID=test-device, got %s", stateEvent.DeviceID)
+	}
+}
+
+func TestProcessMQTTMessage_DeviceManagement(t *testing.T) {
+	t.Parallel()
+
+	messageJSON := `{
+		"protocol": 20,
+		"data": {
+			"devId": "synthetic-device-001",
+			"productKey": "synthetic-product-001",
+			"bizCode": "nameUpdate",
+			"bizData": {
+				"devId": "synthetic-device-001",
+				"time": 1700000000000,
+			"name": "synthetic-name-001"
+			}
+		}
+	}`
+
+	var received Event
+
+	err := ProcessMQTTMessage(messageJSON, []EventListener{func(event Event) { received = event }})
+	if err != nil {
+		t.Fatalf("ProcessMQTTMessage() error = %v", err)
+	}
+
+	if got, ok := received.(*DeviceNameUpdateEvent); !ok || got.NewName != "synthetic-name-001" {
+		t.Fatalf("received event = %#v", received)
 	}
 }
 
@@ -499,7 +599,7 @@ func TestParseEvent_MissingFields(t *testing.T) {
 
 	// Test missing data
 	rawMessage = map[string]any{
-		messageFixtureProtocol: float64(1000),
+		messageFixtureProtocol: float64(4),
 	}
 
 	_, err = ParseEvent(rawMessage)
@@ -509,7 +609,7 @@ func TestParseEvent_MissingFields(t *testing.T) {
 
 	// Test missing device ID in state change
 	rawMessage = map[string]any{
-		messageFixtureProtocol: float64(1000),
+		messageFixtureProtocol: float64(4),
 		messageFixtureData: map[string]any{
 			messageFixtureStatus: []any{},
 		},
@@ -610,9 +710,9 @@ func TestProcessMQTTMessage_InvalidJSON(t *testing.T) {
 func ExampleProcessMQTTMessage() {
 	// Example MQTT message for LED switch state change
 	messageJSON := `{
-		"protocol": 1000,
+		"protocol": 4,
 		"data": {
-			messageFixtureDevID: "my-smart-switch",
+			"devId": "my-smart-switch",
 			"status": [{
 				"code": "led_switch_1",
 				"value": true

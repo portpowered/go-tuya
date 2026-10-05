@@ -1,6 +1,0 @@
-package: wire
-generate:
-  models: true
-output: pkg/tuya/internal/wire/models.gen.go
-output-options:
-  skip-prune: true

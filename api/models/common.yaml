@@ -1,0 +1,108 @@
+components:
+  schemas:
+    CloudRegion:
+      type: string
+      description: Built-in cloud region identifiers accepted by the SDK.
+      enum: [CN, US, EU, IN]
+      x-enum-varnames: [CloudRegionChina, CloudRegionUS, CloudRegionEU, CloudRegionIndia]
+      example: US
+      x-example-evidence: synthetic
+    CloudAPIOrigin:
+      type: string
+      description: Implementation-derived built-in Device Sharing cloud origins.
+      enum:
+      - https://openapi.tuyacn.com
+      - https://apigw.tuyaus.com
+      - https://openapi.tuyaeu.com
+      - https://openapi.tuyain.com
+      x-enum-varnames: [CloudAPIOriginChina, CloudAPIOriginUS, CloudAPIOriginEU, CloudAPIOriginIndia]
+      example: https://apigw.tuyaus.com
+      x-example-evidence: synthetic
+      x-go-tuya-evidence: implementation-derived
+    TuyaErrorEnvelope:
+      type: object
+      description: Extensible Tuya error response. Error fields vary by endpoint.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        success:
+          type: boolean
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+      example:
+        code: 12345
+        msg: Synthetic request rejected
+        success: false
+        t: 1700000000000
+        tid: synthetic-trace-error-001
+      x-example-evidence: synthetic
+    BooleanResultEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: boolean
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-001
+        result: true
+      x-example-evidence: synthetic
+    StringResultEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope
+        fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: string
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-002
+        result: synthetic-user-001
+      x-example-evidence: synthetic

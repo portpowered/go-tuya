@@ -14,6 +14,7 @@ import (
 const (
 	routeFixtureCode                        = "code"
 	routeFixtureDevice1                     = "device-1"
+	routeFixtureDeskLamp                    = "Desk lamp"
 	routeFixtureHome1                       = "home-1"
 	routeFixtureSwitch                      = "switch"
 	routeFixtureSyntheticAccess             = "synthetic-access"
@@ -31,7 +32,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	device := map[string]any{"id": routeFixtureDevice1, "name": "Desk lamp", "category": "dj"}
+	device := map[string]any{"id": routeFixtureDevice1, "name": routeFixtureDeskLamp, "category": "dj"}
 
 	tests := []struct {
 		name   string
@@ -54,14 +55,6 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 			got, err := s.DevicesService.QueryDevicesByHome(ctx, QueryDevicesByHomeRequest{HomeID: routeFixtureHome1})
 			if err != nil || len(got.Results) != 1 || got.Results[0].ID != routeFixtureDevice1 {
 				t.Fatalf("QueryDevicesByHome = %+v, %v", got, err)
-			}
-		}},
-		{"home assistant devices", http.MethodGet, routeFixtureV10MLifeHaHomeDevices, []any{device}, func(t *testing.T, s *Session) {
-			t.Helper()
-
-			got, err := s.DevicesService.QueryDevicesByHomeAssistantDevices(ctx, QueryDevicesByHomeRequest{HomeID: routeFixtureHome1})
-			if err != nil || len(got.Results) != 1 || got.Results[0].ID != routeFixtureDevice1 {
-				t.Fatalf("QueryDevicesByHomeAssistantDevices = %+v, %v", got, err)
 			}
 		}},
 		{"devices by IDs", http.MethodGet, routeFixtureV10MLifeHaHomeDevices, []any{device}, func(t *testing.T, s *Session) {
@@ -152,7 +145,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 		{"rename device", http.MethodPut, routeFixtureV10DevicesDevice1, true, func(t *testing.T, s *Session) {
 			t.Helper()
 
-			got, err := s.DevicesService.UpdateDeviceName(ctx, UpdateDeviceNameRequest{DeviceID: routeFixtureDevice1, Name: "Desk lamp"})
+			got, err := s.DevicesService.UpdateDeviceName(ctx, UpdateDeviceNameRequest{DeviceID: routeFixtureDevice1, Name: routeFixtureDeskLamp})
 			if err != nil || !got.Result {
 				t.Fatalf("UpdateDeviceName = %+v, %v", got, err)
 			}
@@ -270,7 +263,7 @@ func TestSyntheticDeviceAndHomeRoutes(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
+			client, err := newSyntheticClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -3,7 +3,7 @@ package tuya
 import (
 	"context"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // HomeService provides methods for managing smart homes.

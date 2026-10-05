@@ -1,0 +1,48 @@
+---
+title: Upgrade to v0.4
+description: Configure application identity, isolate account cookies, and adapt event constants.
+---
+
+# Upgrade to v0.4
+
+## Upgrade from v0.3 to v0.4
+
+`NewClient` now rejects an effective injected `*http.Client` with a non-nil
+`Jar`, returning an inspectable `*tuya.ClientError` whose `Kind` is
+`tuya.ErrorInvalidOperation`. Inject a client with `Jar == nil`; its configured
+`Transport` is preserved. If an account needs cookies, assign that account's
+cookie jar to its own `Session.HTTPClient.Jar`. `NewClient` snapshots the
+injected client, and each `NewSession` gets a separate client value, so later
+caller or sibling-session jar changes do not cross account boundaries.
+
+Pass your application client ID with `tuya.WithClientID(applicationClientID)`
+when calling `NewClient`. Supply `LoginRequest.Schema` explicitly for QR login;
+the library no longer supplies a consumer application's identity or schema.
+The `AuthenticationSchema` constant has been removed; use your application's schema.
+The CLI accepts `TUYA_CLIENT_ID` and `TUYA_AUTH_SCHEMA`, or their corresponding
+flags. Replace `QueryDevicesByHomeAssistantDevices` with `QueryDevicesByHome`;
+the two methods previously sent the same request.
+
+The v0.4 release generates the SDK's public event and capability models from
+schemas. Nine existing constants now have explicit types; their values are
+unchanged:
+
+- `BizcodeBindUser`, `BizcodeDelete`, `BizcodeDpNameUpdate`, `BizcodeNameUpdate`,
+  `BizcodeOffline`, `BizcodeOnline`, and `LoginURI` are `string` constants.
+- `ProtocolDeviceReport` and `ProtocolOther` are `int` constants.
+
+Code using ordinary `string` or `int` values needs no change. When assigning
+these constants to a distinct named type, convert explicitly:
+
+```go
+type EventCode string
+type Protocol int
+
+const online EventCode = EventCode(tuya.BizcodeOnline)
+const report Protocol = Protocol(tuya.ProtocolDeviceReport)
+```
+
+Import `tuya` from
+[`github.com/portpowered/go-tuya/pkg/tuya`](https://pkg.go.dev/github.com/portpowered/go-tuya/pkg/tuya).
+Review [event handling](../events/) and the [standalone CLI](../cli/) before updating
+an application.

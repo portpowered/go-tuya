@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
+	"strings"
 
-	"github.com/portpowered/go-tuya/pkg/tuya/internal/wire"
+	wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
 
 // AuthService is the service used to generate the QR code, and then validate the code to get the access token.
@@ -83,32 +82,33 @@ type RefreshTokenResponse struct {
 
 // GenerateQrCodeForLogin generates a QR code for login authentication.
 func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginRequest) (LoginResponse, error) {
-	schema := req.Schema
+	schema := strings.TrimSpace(req.Schema)
 	if schema == "" {
-		schema = AuthenticationSchema
+		return LoginResponse{}, clientError(ErrorInvalidOperation, errAuthenticationSchemaRequired)
 	}
 
 	query, err := wireQueryValues(wire.GenerateLoginQRCodeParams{
-		Clientid: c.client.ClientID,
-		Usercode: req.AccessCode,
-		Schema:   schema,
+		Clientid:    c.client.ClientID,
+		Usercode:    req.AccessCode,
+		Schema:      schema,
+		ContentType: wire.JSONMediaTypeApplicationJSON,
 	})
 	if err != nil {
 		return LoginResponse{}, clientError(ErrorProtocol, err)
 	}
 
-	endpoint := c.client.AuthenticationURL + wire.RouteGenerateLoginQRCode + "?" + query.Encode()
-
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodGenerateLoginQRCode, endpoint, nil)
+	response, err := doHTTP(
+		ctx,
+		c.client.HTTPClient,
+		c.client.AuthenticationURL,
+		wire.OperationGenerateLoginQRCode(),
+		nil,
+		query,
+		map[string]string{wire.HeaderContentType: string(wire.JSONMediaTypeApplicationJSON)},
+		nil,
+	)
 	if err != nil {
-		return LoginResponse{}, clientError(ErrorInvalidOperation, err)
-	}
-
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	response, err := c.client.HTTPClient.Do(httpRequest)
-	if err != nil {
-		return LoginResponse{}, clientError(ErrorTransport, err)
+		return LoginResponse{}, err
 	}
 
 	defer func() {
@@ -131,15 +131,9 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 		qrCode = dereference(loginResponse.Result.Qrcode)
 	}
 
-	// Possible response:
-	// Failed due to wrong URI: "{\"code\":\"-9999999\",\"msg\":\"app param is invalid\",\"t\":123,\"tid\":\"123\",\"success\":false}"
-	// Success: {"success":true,"tid":"123","t":123,"result":{"qrcode":"123"}}
-	// "https://openapi.tuyaus.com/v1.0/m/life/home-assistant/qrcode/tokens?clientid=123&usercode=12312&schema=haauthorize"
-	// The QRlogin has to be prefixed with: f"tuyaSmart--qrLogin?token=
-	// See: https://github.com/home-assistant/core/blob/dev/homeassistant/components/tuya/config_flow.py#L48
 	return LoginResponse{
 		Code:            qrCode,
-		QrFormattedCode: "tuyaSmart--qrLogin?token=" + qrCode,
+		QrFormattedCode: string(wire.QRCodeTokenPrefixSmartLife) + qrCode,
 	}, nil
 }
 
@@ -152,26 +146,26 @@ func (c *AuthService) GenerateQrCodeForLogin(ctx context.Context, req LoginReque
 // "terminal_id":"1231231","uid":"1231","username":"123123","endpoint":"https://apigw.tuyaus.com"}}
 func (c *AuthService) ValidateLoginCode(ctx context.Context, req ValidateLoginCodeRequest) (ValidateLoginCodeResponse, error) {
 	query, err := wireQueryValues(wire.ValidateLoginCodeParams{
-		Clientid: c.client.ClientID,
-		Usercode: req.UserCode,
+		Clientid:    c.client.ClientID,
+		Usercode:    req.UserCode,
+		ContentType: wire.JSONMediaTypeApplicationJSON,
 	})
 	if err != nil {
 		return ValidateLoginCodeResponse{}, clientError(ErrorProtocol, err)
 	}
 
-	path := fmt.Sprintf(wire.RouteValidateLoginCode, url.PathEscape(req.LoginCode))
-	endpoint := c.client.AuthenticationURL + path + "?" + query.Encode()
-
-	httpRequest, err := http.NewRequestWithContext(ctx, wire.MethodValidateLoginCode, endpoint, nil)
+	response, err := doHTTP(
+		ctx,
+		c.client.HTTPClient,
+		c.client.AuthenticationURL,
+		wire.OperationValidateLoginCode(),
+		[]any{req.LoginCode},
+		query,
+		map[string]string{wire.HeaderContentType: string(wire.JSONMediaTypeApplicationJSON)},
+		nil,
+	)
 	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorInvalidOperation, err)
-	}
-
-	httpRequest.Header.Set("Content-Type", "application/json")
-
-	response, err := c.client.HTTPClient.Do(httpRequest)
-	if err != nil {
-		return ValidateLoginCodeResponse{}, clientError(ErrorTransport, err)
+		return ValidateLoginCodeResponse{}, err
 	}
 
 	defer func() {

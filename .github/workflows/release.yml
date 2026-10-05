@@ -31,11 +31,46 @@ jobs:
           version: v2.14.0
           only-new-issues: false
           args: --timeout=5m
+      - name: Lint CLI module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: cmd/go-tuya
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
+      - name: Lint authentication example module (all linters)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: examples/auth
+          only-new-issues: false
+          args: --config ../../.golangci.yml --timeout=5m ./...
       - name: Verify generated wire artifacts on the tag
         run: |
-          go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 -config pkg/tuya/internal/wire/config.yaml api/openapi.yaml
-          go run ./tools/wireroutes -check
-          git diff --exit-code -- pkg/tuya/internal/wire/models.gen.go pkg/tuya/internal/wire/routes.gen.go pkg/tuya/internal/wire/mqtt.gen.go
+          make generate-wire
+          make wire-routes
+          make schema-examples
+          check_generated_outputs() {
+            local generated_status ignored_generated
+            generated_status="$(git status --porcelain --untracked-files=all -- "$@")"
+            ignored_generated="$(git ls-files --others --ignored --exclude-standard -- "$@")"
+            if [ -n "$generated_status" ] || [ -n "$ignored_generated" ]; then
+              echo "Regeneration changed tracked generated outputs or produced untracked generated files:"
+              if [ -n "$generated_status" ]; then
+                echo "$generated_status"
+              fi
+              if [ -n "$ignored_generated" ]; then
+                echo "Ignored generated files:"
+                echo "$ignored_generated"
+              fi
+              exit 1
+            fi
+          }
+          check_generated_outputs \
+            ':(glob)pkg/**/*.gen.go' \
+            ':(glob)pkg/**/*.config.yaml' \
+            'api/openapi.yaml' \
+            'docs/wire-model-inventory.md'
       - name: Check non-generated coverage on the tag
         run: make coverage
       - name: Check release module configuration
@@ -107,4 +142,4 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           gh release create "$VERSION" --repo "$REPOSITORY" --verify-tag --generate-notes \
-            --notes "Provider behavior: the maintainer reports successful tests of the implemented API flows with their own Tuya account(s), but sanitized exchanges and route-level provenance were not recorded. The private /v1.0/m/... routes are absent from the published provider schema. See [provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)."
+            --notes "v0.4 requires your application client ID and authentication schema, types event constants, and replaces QueryDevicesByHomeAssistantDevices with QueryDevicesByHome. See the [upgrade guide](https://portpowered.github.io/go-tuya/docs/guides/upgrading/). The maintainer tested the API flows with personal accounts; published replay evidence is synthetic."

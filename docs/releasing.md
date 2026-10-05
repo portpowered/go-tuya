@@ -2,25 +2,25 @@
 
 ## Provider evidence review
 
-The maintainer reports that the implemented API flows worked with real Tuya
-accounts. Those tests were not documented with sanitized exchanges or
-route-by-route provenance, so the repository cannot independently reproduce
-or inspect them. The README and [provider evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence)
-record this limit. The OpenAPI inventory includes the routes used by the client
-and labels each operation as provider-documented or implementation-derived.
-Keep that distinction in release notes and customer documentation.
+No sanitized Tuya account captures are checked in. The HTTP and MQTT schemas
+label provider-documented and implementation-derived behavior separately.
+The [provider evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)
+explains those labels for SDK users.
+See [verification and evidence](verification.md) and the generated
+[wire-model inventory](wire-model-inventory.md) when reviewing route coverage.
 
 Follow the pre-release review in the template's
-[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/main/docs/releasing.md),
+[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/05e93ff08899414207e9335717e7d7b0190ebd09/docs/releasing.md),
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
 [`template-checklist.md`](template-checklist.md) as a separate sign-off. The
 first clean-history release was `v0.1.0`; `v0.2.0` introduced `pkg/tuya`.
-Checklist item 3 records the latest badge and Go Reference checks.
+The v0.3.0 migration history below records the compatibility break and package
+baseline used for that release.
 
-## v0.3.0 migration
+## v0.3.0 compatibility history
 
-The next release removes nine unused exported legacy wire structs:
+The v0.3.0 release removed nine unused exported legacy wire structs:
 `DeviceResponseResult`, `DeviceResponseResultElement`, `HomeResponse`,
 `HomeResponseResult`, `HomeResponseResultElement`, `RawMQTTMessage`,
 `MessageQueueConfigResponse`, `MessageQueueConfigTopicInfo`, and
@@ -62,9 +62,46 @@ After publication, verify the package independently with the released tag:
 mkdir module-check
 cd module-check
 go mod init example.com/tuya-module-check
-GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@v0.2.0
+GOPROXY=https://proxy.golang.org go get github.com/portpowered/go-tuya@vX.Y.Z
 ```
 
 Then compile a consumer importing
-`github.com/portpowered/go-tuya/pkg/tuya`. Replace `v0.2.0` with a later
-version when checking a subsequent release.
+`github.com/portpowered/go-tuya/pkg/tuya`. Replace `vX.Y.Z` with the exact
+SDK release being verified.
+
+## Standalone CLI module
+
+`cmd/go-tuya` is a separate Go module at
+`github.com/portpowered/go-tuya/cmd/go-tuya`. Release it independently with a
+nested module tag of the form `cmd/go-tuya/vMAJOR.MINOR.PATCH`; do not create
+that tag until the corresponding public SDK dependency is available from the
+Go module proxy. The CLI uses only the public SDK APIs, so do not keep a local
+`replace` directive in its released `go.mod`.
+
+For the first CLI release, choose a reviewed version and verify the CLI from
+the exact nested-module tag in a clean consumer. The workflow checks the
+module path, confirms the SDK dependency resolves through `proxy.golang.org`,
+builds and tests the nested module, then runs `go install` for that exact CLI
+version and checks `go-tuya --help`. Publish release notes only after those
+steps pass. The SDK and CLI tags are separate releases; publishing one does not
+publish the other.
+
+Before creating a CLI tag, run from the repository root:
+
+```sh
+make check
+```
+
+Then verify the installed consumer command with the exact CLI version:
+
+```sh
+mkdir cli-module-check
+cd cli-module-check
+go mod init example.com/tuya-cli-check
+GOPROXY=https://proxy.golang.org go install github.com/portpowered/go-tuya/cmd/go-tuya@vX.Y.Z
+go-tuya --help
+```
+
+The nested version `vX.Y.Z` is resolved from the repository tag
+`cmd/go-tuya/vX.Y.Z`. Do not push either SDK or CLI tags as part of the code
+change; release owners review and publish them separately.

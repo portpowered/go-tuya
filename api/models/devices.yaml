@@ -1,0 +1,1077 @@
+components:
+  schemas:
+    TuyaDeviceCategory:
+      type: string
+      description: Device categories used by the standard capability mappings in this client.
+      enum:
+      - tgkg
+      - tgq
+      - dj
+      - dd
+      - kg
+      - cz
+      - pc
+      - wsdcg
+      - mcs
+      - dc
+      - fwd
+      - fs
+      - fsd
+      - cl
+      - clkg
+      - ms
+      - jtmspro
+      - sp
+      - ipc
+      x-enum-varnames:
+      - TuyaDeviceCategoryTgkg
+      - TuyaDeviceCategoryTgq
+      - TuyaDeviceCategoryDj
+      - TuyaDeviceCategoryDd
+      - TuyaDeviceCategoryKg
+      - TuyaDeviceCategoryCz
+      - TuyaDeviceCategoryPc
+      - TuyaDeviceCategoryWsdcg
+      - TuyaDeviceCategoryMcs
+      - TuyaDeviceCategoryDc
+      - TuyaDeviceCategoryFwd
+      - TuyaDeviceCategoryFs
+      - TuyaDeviceCategoryFsd
+      - TuyaDeviceCategoryCl
+      - TuyaDeviceCategoryClkg
+      - TuyaDeviceCategoryMs
+      - TuyaDeviceCategoryJtmspro
+      - TuyaDeviceCategorySp
+      - TuyaDeviceCategoryIpc
+      x-go-tuya-evidence: implementation-derived
+      example: dj
+      x-example-evidence: synthetic
+    TuyaDataPointCode:
+      type: string
+      description: Known Tuya data-point codes selected by this client's capability mappings. Device status code fields remain open strings.
+      enum:
+      - switch_led
+      - bright_value
+      - temp_value
+      - colour_data
+      - switch_1
+      - switch_led_1
+      - bright_value_1
+      - bright_value_v2
+      - colour_data_v2
+      - va_temperature
+      - va_humidity
+      - doorcontact_state
+      - switch_fan
+      - fan_speed_percent
+      - control
+      - percent_control
+      - closed_opened
+      - basic_indicator
+      - camera
+      - rtc_session
+      x-enum-varnames:
+      - TuyaDataPointCodeSwitchLed
+      - TuyaDataPointCodeBrightValue
+      - TuyaDataPointCodeTempValue
+      - TuyaDataPointCodeColourData
+      - TuyaDataPointCodeSwitch1
+      - TuyaDataPointCodeSwitchLed1
+      - TuyaDataPointCodeBrightValue1
+      - TuyaDataPointCodeBrightValueV2
+      - TuyaDataPointCodeColourDataV2
+      - TuyaDataPointCodeVaTemperature
+      - TuyaDataPointCodeVaHumidity
+      - TuyaDataPointCodeDoorcontactState
+      - TuyaDataPointCodeSwitchFan
+      - TuyaDataPointCodeFanSpeedPercent
+      - TuyaDataPointCodeControl
+      - TuyaDataPointCodePercentControl
+      - TuyaDataPointCodeClosedOpened
+      - TuyaDataPointCodeBasicIndicator
+      - TuyaDataPointCodeCamera
+      - TuyaDataPointCodeRtcSession
+      x-go-tuya-evidence: implementation-derived
+      example: switch_led
+      x-example-evidence: synthetic
+    DeviceListEnvelope:
+      type: object
+      description: Official Tuya device-list response envelope. Unknown provider metadata is retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
+        success:
+          type: boolean
+        t:
+          type: integer
+          format: int64
+        tid:
+          type: string
+        result:
+          $ref: '#/components/schemas/DeviceListResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-list-001
+        result:
+          total: 1
+          devices:
+          - id: synthetic-device-001
+            uuid: synthetic-device-uuid-001
+            name: Desk lamp
+            owner_id: synthetic-user-001
+            uid: synthetic-user-001
+            product_id: synthetic-product-001
+            product_name: Synthetic lamp
+            category: dj
+            icon: https://example.invalid/icons/synthetic-lamp.png
+            ip: 192.0.2.10
+            online: true
+            sub: false
+            biz_type: 0
+            active_time: 1700000000
+            create_time: 1700000000
+            update_time: 1700000000
+            time_zone: +00:00
+            model: synthetic-model-001
+            status:
+            - code: switch_led
+              value: true
+              type: Boolean
+          last_id: synthetic-page-001
+      x-example-evidence: synthetic
+    DeviceListResult:
+      type: object
+      description: Official Tuya device-list result. The reference documents total, devices, and last_id
+        but does not define requiredness for every response.
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: Total number of entries.
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+        last_id:
+          type: string
+          description: Last query ID for device pagination.
+      additionalProperties: true
+      example:
+        total: 1
+        devices:
+        - id: synthetic-device-001
+          name: Desk lamp
+          category: dj
+          ip: 192.0.2.10
+          online: true
+          status:
+          - code: switch_led
+            value: true
+        last_id: synthetic-page-001
+      x-example-evidence: synthetic
+    DeviceRecord:
+      type: object
+      description: Fields below appear in Tuya's official example response for this operation. The reference
+        does not define requiredness or an exhaustive field set. Additional properties are retained for
+        forward compatibility.
+      properties:
+        id:
+          type: string
+          description: Device identifier in the example response.
+        uuid:
+          type: string
+          description: Device UUID in the example response.
+        name:
+          type: string
+          description: Device name in the example response.
+        owner_id:
+          type: string
+          description: Device owner identifier in the example response.
+        uid:
+          type: string
+          description: User identifier in the example response.
+        product_id:
+          type: string
+          description: Product identifier in the example response.
+        product_name:
+          type: string
+          description: Product name in the example response.
+        category:
+          type: string
+          description: Product category in the example response.
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
+        icon:
+          type: string
+          description: Device icon path in the example response.
+        ip:
+          type: string
+          description: IP address in the example response.
+        local_key:
+          type: string
+          description: Local key field shown in Tuya's example. Treat values as secrets and never log
+            or publish them.
+        online:
+          type: boolean
+          description: Online state in the example response.
+        sub:
+          type: boolean
+          description: Whether the device is a sub-device in the example response.
+        biz_type:
+          type: integer
+          description: Business type value in the example response.
+        active_time:
+          type: integer
+          format: int64
+          description: Activation timestamp value in the example response.
+        create_time:
+          type: integer
+          format: int64
+          description: Creation timestamp value in the example response.
+        update_time:
+          type: integer
+          format: int64
+          description: Update timestamp value in the example response.
+        time_zone:
+          type: string
+          description: Time zone string in the example response.
+        model:
+          type: string
+          description: Product model in the example response.
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatus'
+        subCategory:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+        lat:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+        lon:
+          type: string
+          description: Implementation-derived Device Sharing field consumed by this client; absent from
+            the official device-list example.
+          x-provenance: implementation-derived
+      additionalProperties: true
+      example:
+        id: synthetic-device-001
+        uuid: synthetic-device-uuid-001
+        name: Desk lamp
+        owner_id: synthetic-user-001
+        uid: synthetic-user-001
+        product_id: synthetic-product-001
+        product_name: Synthetic lamp
+        category: dj
+        icon: https://example.invalid/icons/synthetic-lamp.png
+        ip: 192.0.2.10
+        online: true
+        sub: false
+        biz_type: 0
+        active_time: 1700000000
+        create_time: 1700000000
+        update_time: 1700000000
+        time_zone: +00:00
+        model: synthetic-model-001
+        status:
+        - code: switch_led
+          value: true
+          type: Boolean
+        subCategory: synthetic-category-001
+        lat: "37.7749"
+        lon: "-122.4194"
+      x-example-evidence: synthetic
+    DeviceStatus:
+      type: object
+      description: A status entry in Tuya's example response. The example uses a string value; the reference
+        does not constrain the value type, so it remains an unconstrained JSON value.
+      properties:
+        code:
+          type: string
+          description: Status code in the example response.
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        value: {}
+        type:
+          type: string
+          description: Status data-point type where returned.
+      additionalProperties: true
+      example:
+        code: switch_led
+        value: true
+        type: Boolean
+      x-example-evidence: synthetic
+    DeviceLogRecord:
+      type: object
+      description: Log record fields consumed or exposed by the library.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+        event_time:
+          type: integer
+          format: int64
+        event_from:
+          type: string
+        event_id:
+          type: integer
+        status:
+          type: string
+        row:
+          type: string
+      example:
+        code: switch_led
+        value: true
+        event_time: 1700000000000
+        event_from: synthetic-device
+        event_id: 101
+        status: success
+        row: synthetic-log-row-001
+      x-example-evidence: synthetic
+    DeviceLogsResult:
+      type: object
+      description: Log result fields consumed by QueryDeviceLogs. Extra provider fields are retained.
+      additionalProperties: true
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceLogRecord'
+        has_next:
+          type: boolean
+        device_id:
+          type: string
+        current_row_key:
+          type: string
+        next_row_key:
+          type: string
+        count:
+          type: integer
+          format: int64
+      example:
+        logs:
+        - code: switch_led
+          value: true
+          event_time: 1700000000000
+          event_from: synthetic-device
+          event_id: 101
+          status: success
+          row: synthetic-log-row-001
+        has_next: false
+        device_id: synthetic-device-001
+        current_row_key: synthetic-log-row-001
+        next_row_key: synthetic-log-row-001
+        count: 1
+      x-example-evidence: synthetic
+    SubDeviceRecord:
+      type: object
+      description: Sub-device fields represented by the library.
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        online:
+          type: boolean
+        owner_id:
+          type: string
+        category:
+          type: string
+        product_id:
+          type: string
+        active_time:
+          type: integer
+          format: int64
+        update_time:
+          type: integer
+          format: int64
+      example:
+        id: synthetic-subdevice-001
+        name: Desk lamp child
+        online: true
+        owner_id: synthetic-user-001
+        category: dj
+        product_id: synthetic-product-001
+        active_time: 1700000000
+        update_time: 1700000000
+      x-example-evidence: synthetic
+    FactoryInfoRecord:
+      type: object
+      description: Factory information fields represented by the library.
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        uuid:
+          type: string
+        sn:
+          type: string
+        mac:
+          type: string
+      example:
+        id: synthetic-device-001
+        uuid: synthetic-device-uuid-001
+        sn: synthetic-serial-001
+        mac: 02:00:00:00:00:01
+      x-example-evidence: synthetic
+    DeviceUserRecord:
+      type: object
+      description: Device-user fields represented by the library.
+      additionalProperties: true
+      properties:
+        device_id:
+          type: string
+        nick_name:
+          type: string
+        sex:
+          type: integer
+        birthday:
+          type: integer
+          format: int64
+        height:
+          type: integer
+        weight:
+          type: integer
+        contact:
+          type: string
+        user_id:
+          type: string
+      example:
+        device_id: synthetic-device-001
+        nick_name: Synthetic user
+        sex: 0
+        birthday: 946684800
+        height: 170
+        weight: 65
+        contact: user@example.invalid
+        user_id: synthetic-user-001
+      x-example-evidence: synthetic
+    MultiOutletNameRecord:
+      type: object
+      description: Multi-outlet identifier and display name represented by the library.
+      additionalProperties: true
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
+      x-example-evidence: synthetic
+    DeviceStatusMapping:
+      type: object
+      description: Device status mapping fields consumed by the library.
+      additionalProperties: true
+      properties:
+        dpCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        dpId:
+          type: integer
+        statusCode:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        supportLocal:
+          type: boolean
+        valueConvert:
+          type: string
+        valueType:
+          type: string
+      example:
+        dpCode: switch_led
+        dpId: 1
+        statusCode: switch_led
+        supportLocal: true
+        valueConvert: synthetic-conversion
+        valueType: Boolean
+      x-example-evidence: synthetic
+    DeviceStatusResult:
+      type: object
+      description: Device-status result consumed by the library.
+      additionalProperties: true
+      properties:
+        category:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
+        dpStatusRelationDTOS:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatusMapping'
+      example:
+        category: dj
+        dpStatusRelationDTOS:
+        - dpCode: switch_led
+          dpId: 1
+          statusCode: switch_led
+          supportLocal: true
+          valueConvert: synthetic-conversion
+          valueType: Boolean
+      x-example-evidence: synthetic
+    SpecificationFunction:
+      type: object
+      description: Function fields represented by the library; values are provider-defined.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        name:
+          type: string
+        desc:
+          type: string
+        type:
+          type: string
+        values: {}
+      example:
+        code: switch_led
+        name: Switch
+        desc: Synthetic switch function
+        type: Boolean
+        values:
+          type: boolean
+      x-example-evidence: synthetic
+    SpecificationStatus:
+      type: object
+      description: Status fields represented by the library; values are provider-defined.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDataPointCode
+        name:
+          type: string
+        type:
+          type: string
+        values: {}
+      example:
+        code: switch_led
+        name: Switch state
+        type: Boolean
+        values:
+          type: boolean
+      x-example-evidence: synthetic
+    DeviceSpecification:
+      type: object
+      description: Specification result consumed by the library; category-specific fields are open.
+      additionalProperties: true
+      properties:
+        functions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecificationFunction'
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecificationStatus'
+        category:
+          type: string
+          x-go-tuya-known-values-schema: TuyaDeviceCategory
+      example:
+        functions:
+        - code: switch_led
+          name: Switch
+          desc: Synthetic switch function
+          type: Boolean
+          values:
+            type: boolean
+        status:
+        - code: switch_led
+          name: Switch state
+          type: Boolean
+          values:
+            type: boolean
+        category: dj
+      x-example-evidence: synthetic
+    DeviceUserBody:
+      type: object
+      description: Fields sent by AddDeviceUser and UpdateDeviceUser.
+      additionalProperties: true
+      properties:
+        nick_name:
+          type: string
+        sex:
+          type: integer
+        birthday:
+          type: integer
+          format: int64
+        height:
+          type: integer
+        weight:
+          type: integer
+        contact:
+          type: string
+      required:
+      - nick_name
+      - sex
+      example:
+        nick_name: Synthetic user
+        sex: 0
+        birthday: 946684800
+        height: 170
+        weight: 65
+        contact: user@example.invalid
+      x-example-evidence: synthetic
+    SendCommandsBody:
+      type: object
+      description: Command payload sent by SendCommands.
+      additionalProperties: true
+      properties:
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceCommand'
+      required:
+      - commands
+      example:
+        commands:
+        - code: switch_led
+          value: true
+      x-example-evidence: synthetic
+    UpdateNameBody:
+      type: object
+      description: Name payload sent by device and data-point rename operations.
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+      required:
+      - name
+      example:
+        name: Desk lamp
+      x-example-evidence: synthetic
+    UpdateMultiOutletNameBody:
+      type: object
+      description: Payload sent to rename one outlet.
+      additionalProperties: true
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      required:
+      - identifier
+      - name
+      example:
+        identifier: synthetic-outlet-001
+        name: Desk lamp outlet
+      x-example-evidence: synthetic
+    DeviceDetailsEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-detail-001
+        result:
+          id: synthetic-device-001
+          name: Desk lamp
+          category: dj
+          ip: 192.0.2.10
+          online: true
+          status:
+          - code: switch_led
+            value: true
+      x-example-evidence: synthetic
+    DeviceListByUserEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-list-001
+        result:
+        - id: synthetic-device-001
+          name: Desk lamp
+          category: dj
+          ip: 192.0.2.10
+          online: true
+      x-example-evidence: synthetic
+    DeviceLogsEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceLogsResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-logs-001
+        result:
+          logs:
+          - code: switch_led
+            value: true
+            event_time: 1700000000000
+            event_from: synthetic-device
+            event_id: 101
+            status: success
+            row: synthetic-log-row-001
+          has_next: false
+          device_id: synthetic-device-001
+          current_row_key: synthetic-log-row-001
+          next_row_key: synthetic-log-row-001
+          count: 1
+      x-example-evidence: synthetic
+    SubDevicesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubDeviceRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-subdevices-001
+        result:
+        - id: synthetic-subdevice-001
+          name: Desk lamp child
+          online: true
+          owner_id: synthetic-user-001
+          category: dj
+          product_id: synthetic-product-001
+          active_time: 1700000000
+          update_time: 1700000000
+      x-example-evidence: synthetic
+    FactoryInfosEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactoryInfoRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-factory-info-001
+        result:
+        - id: synthetic-device-001
+          uuid: synthetic-device-uuid-001
+          sn: synthetic-serial-001
+          mac: 02:00:00:00:00:01
+      x-example-evidence: synthetic
+    DeviceUserEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceUserRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-user-001
+        result:
+          device_id: synthetic-device-001
+          nick_name: Synthetic user
+          sex: 0
+          birthday: 946684800
+          height: 170
+          weight: 65
+          contact: user@example.invalid
+          user_id: synthetic-user-001
+      x-example-evidence: synthetic
+    DeviceUsersEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceUserRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-users-001
+        result:
+        - device_id: synthetic-device-001
+          nick_name: Synthetic user
+          sex: 0
+          user_id: synthetic-user-001
+      x-example-evidence: synthetic
+    MultiOutletNamesEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/MultiOutletNameRecord'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-outlet-names-001
+        result:
+        - identifier: synthetic-outlet-001
+          name: Desk lamp outlet
+      x-example-evidence: synthetic
+    DeviceStatusEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceStatusResult'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-status-001
+        result:
+          category: dj
+          dpStatusRelationDTOS:
+          - dpCode: switch_led
+            dpId: 1
+            statusCode: switch_led
+            supportLocal: true
+            valueConvert: synthetic-conversion
+            valueType: Boolean
+      x-example-evidence: synthetic
+    DeviceSpecificationEnvelope:
+      type: object
+      description: Tuya response envelope observed by the library. Unspecified envelope fields are retained.
+      additionalProperties: true
+      properties:
+        code:
+          type: integer
+          description: Provider response code when present.
+        msg:
+          type: string
+          description: Provider response message when present.
+        success:
+          type: boolean
+          description: Whether the operation succeeded, when present.
+        t:
+          type: integer
+          description: Provider response timestamp when present.
+          format: int64
+        tid:
+          type: string
+          description: Provider trace identifier when present.
+        result:
+          $ref: '#/components/schemas/DeviceSpecification'
+      example:
+        code: 200
+        msg: success
+        success: true
+        t: 1700000000000
+        tid: synthetic-trace-device-spec-001
+        result:
+          functions:
+          - code: switch_led
+            name: Switch
+            desc: Synthetic switch function
+            type: Boolean
+            values:
+              type: boolean
+          status:
+          - code: switch_led
+            name: Switch state
+            type: Boolean
+            values:
+              type: boolean
+          category: dj
+      x-example-evidence: synthetic
+    DeviceCommand:
+      type: object
+      description: A device command. The value is device-specific.
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        value: {}
+      required:
+      - code
+      - value
+      example:
+        code: switch_led
+        value: true
+      x-example-evidence: synthetic

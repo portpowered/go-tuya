@@ -22,7 +22,7 @@ func main() {
 		log.Fatal("set TUYA_AUTH_TOKEN, TUYA_REFRESH_TOKEN, TUYA_AUTH_TOKEN_EXPIRED, and TUYA_DEVICE_ID")
 	}
 
-	base, err := tuya.NewClient()
+	base, err := tuya.NewClient(tuya.WithClientID(os.Getenv("TUYA_CLIENT_ID")))
 	if err != nil {
 		log.Fatal("could not configure the Tuya client")
 	}
