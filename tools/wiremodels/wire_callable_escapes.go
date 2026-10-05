@@ -16,7 +16,8 @@ func unverifiedWireCallable(
 	if verifiedLocalWireCallable(call.Fun, assignments) ||
 		isWireCopyFunction(file, call.Fun, assignments, make(map[wireSourceVariable]bool)) ||
 		isGeneratedWireConstruction(call.Fun, aliases, path, models) ||
-		verifiedWireCallable(file, call.Fun, assignments) {
+		verifiedWireCallable(file, call.Fun, assignments) ||
+		verifiedWireURLValuesMutation(file, call, assignments) {
 		return false
 	}
 
@@ -56,7 +57,7 @@ func verifiedWireCallable(file *ast.File, expression ast.Expr, assignments wireS
 		return false
 	}
 
-	if selector.Sel.Name == "After" || selector.Sel.Name == "Before" || selector.Sel.Name == "Equal" {
+	if selector.Sel.Name == "After" || selector.Sel.Name == "Before" || selector.Sel.Name == "Equal" || selector.Sel.Name == "UnixNano" {
 		return verifiedTimeValue(file, selector.X)
 	}
 
@@ -163,14 +164,14 @@ func verifiedImportedWireCallable(file *ast.File, selector *ast.SelectorExpr) bo
 	stringsOwner := primitivePackage{ImportPath: stringsImportPath, Name: stringsImportPath, Directory: ""}
 	if primitiveImportAliases(file, stringsOwner)[identifier.Name] {
 		switch selector.Sel.Name {
-		case "TrimPrefix", "TrimSpace", "TrimRight", "ToLower", "NewReader", "Join", "HasPrefix", "Contains":
+		case "TrimPrefix", "TrimSpace", "TrimRight", "ToLower", "NewReader", "Join", "HasPrefix", "Contains", "ReplaceAll":
 			return true
 		}
 	}
 
 	timeOwner := primitivePackage{ImportPath: timeImportPath, Name: timeImportPath, Directory: ""}
 	if primitiveImportAliases(file, timeOwner)[identifier.Name] {
-		return selector.Sel.Name == "Parse" || selector.Sel.Name == "ParseInLocation"
+		return selector.Sel.Name == "Parse" || selector.Sel.Name == "ParseInLocation" || selector.Sel.Name == "Now"
 	}
 
 	formatOwner := primitivePackage{ImportPath: "fmt", Name: "fmt", Directory: ""}
@@ -181,6 +182,11 @@ func verifiedImportedWireCallable(file *ast.File, selector *ast.SelectorExpr) bo
 		}
 	}
 
+	strconvOwner := primitivePackage{ImportPath: "strconv", Name: "strconv", Directory: ""}
+	if primitiveImportAliases(file, strconvOwner)[identifier.Name] {
+		return selector.Sel.Name == "FormatInt" || selector.Sel.Name == "FormatUint"
+	}
+
 	owner := primitivePackage{ImportPath: "encoding/json", Name: "json", Directory: ""}
 	if primitiveImportAliases(file, owner)[identifier.Name] {
 		return selector.Sel.Name == "Marshal" || selector.Sel.Name == "MarshalIndent" || selector.Sel.Name == jsonUnmarshalMethod
@@ -189,6 +195,11 @@ func verifiedImportedWireCallable(file *ast.File, selector *ast.SelectorExpr) bo
 	transportOwner := primitivePackage{ImportPath: "github.com/portpowered/go-tuya/pkg/dependencies/httptransport", Name: "httptransport", Directory: ""}
 	if primitiveImportAliases(file, transportOwner)[identifier.Name] {
 		return selector.Sel.Name == "Do"
+	}
+
+	wireOwner := primitivePackage{ImportPath: wireImportPath, Name: generatedModelPackageName, Directory: generatedModelDirectory}
+	if primitiveImportAliases(file, wireOwner)[identifier.Name] {
+		return selector.Sel.Name == "IsKnownHeader" || selector.Sel.Name == "IsKnownQueryParam"
 	}
 
 	return false
@@ -244,7 +255,7 @@ func verifiedTimeValue(file *ast.File, expression ast.Expr) bool {
 		return false
 	}
 
-	if selector.Sel.Name == "Add" || selector.Sel.Name == "AddDate" {
+	if selector.Sel.Name == wireAddMethod || selector.Sel.Name == "AddDate" {
 		return verifiedTimeValue(file, selector.X)
 	}
 

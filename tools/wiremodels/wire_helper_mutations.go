@@ -27,6 +27,8 @@ func indexWireHelperParameters(
 				}
 			}
 
+			recordWireMethodReceiverArguments(call, assignments)
+
 			return true
 		})
 
@@ -178,6 +180,8 @@ func markWireHelperParameters(
 		}
 
 		for _, name := range field.Names {
+			recordWireHelperArguments(field, name.Name, index, call, assignments)
+
 			if _, callback := field.Type.(*ast.FuncType); callback && index < len(call.Args) {
 				recordWireCallbackArgument(field, name.Name, call.Args[index], assignments)
 			}
@@ -188,6 +192,26 @@ func markWireHelperParameters(
 
 			index++
 		}
+	}
+}
+
+func recordWireHelperArguments(field *ast.Field, name string, index int, call *ast.CallExpr, assignments wireSourceAssignments) {
+	if index >= len(call.Args) {
+		return
+	}
+
+	arguments := call.Args[index : index+1]
+	if _, variadic := field.Type.(*ast.Ellipsis); variadic {
+		arguments = call.Args[index:]
+	}
+
+	key := wireSourceVariable{declaration: field, name: name}
+	for _, argument := range arguments {
+		if slices.Contains(assignments.values[key], argument) {
+			continue
+		}
+
+		assignments.values[key] = append(assignments.values[key], argument)
 	}
 }
 
@@ -270,6 +294,36 @@ func recordWireCallbackArgument(field *ast.Field, name string, value ast.Expr, a
 
 	assignments.values[key] = append(assignments.values[key], value)
 }
+
+//nolint:cyclop // Receiver bindings are recorded only for methods resolved to the exact declared owner.
+func recordWireMethodReceiverArguments(call *ast.CallExpr, assignments wireSourceAssignments) {
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector || wireMethodExpression(selector.X) {
+		return
+	}
+
+	owner := wireReceiverDeclaration(selector.X, assignments, make(map[wireSourceVariable]bool))
+	if owner == nil {
+		return
+	}
+
+	for _, declaration := range assignments.methods[selector.Sel.Name] {
+		if declaration.Recv == nil || len(declaration.Recv.List) == 0 ||
+			wireReceiverDeclaration(declaration.Recv.List[0].Type, assignments, make(map[wireSourceVariable]bool)) != owner {
+			continue
+		}
+
+		for _, field := range declaration.Recv.List {
+			for _, name := range field.Names {
+				key := wireSourceVariable{declaration: field, name: name.Name}
+				if !slices.Contains(assignments.values[key], selector.X) {
+					assignments.values[key] = append(assignments.values[key], selector.X)
+				}
+			}
+		}
+	}
+}
+
 func wireReturnedHelpers(call *ast.CallExpr, assignments wireSourceAssignments, visiting map[wireSourceVariable]bool) []*ast.FuncType {
 	key := wireSourceVariable{declaration: call, name: "returned helper"}
 	if visiting[key] {

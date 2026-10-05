@@ -12,8 +12,18 @@ import (
 
 // Repeated values stay test-local so synthetic fixtures remain independent of production constants.
 const (
-	clientFixtureSyntheticAccess   = "synthetic-access"
-	clientFixtureSyntheticClientID = "synthetic-client-id"
+	clientFixtureSyntheticAccess        = "synthetic-access"
+	clientFixtureSyntheticAccessOne     = "synthetic-access-one"
+	clientFixtureSyntheticAccessTwo     = "synthetic-access-two"
+	clientFixtureSyntheticClientID      = "synthetic-client-id"
+	clientFixtureSyntheticRefreshOne    = "synthetic-refresh-one"
+	clientFixtureSyntheticRefreshTwo    = "synthetic-refresh-two"
+	clientFixtureSyntheticAccountCookie = "account"
+	clientFixtureSyntheticAccountOne    = "first"
+	clientFixtureSyntheticAccountTwo    = "second"
+	clientFixtureSyntheticCallerCookie  = "caller-only"
+	clientFixtureSyntheticCallerValue   = "caller"
+	clientFixtureSyntheticServerCookie  = "server-only"
 )
 
 //nolint:cyclop,funlen // This test checks each constructor option and the resulting account-session wiring together.
@@ -41,17 +51,19 @@ func TestNewClientAppliesOptionsAndCreatesAccountSessions(t *testing.T) {
 		t.Fatalf("newSyntheticClient() error = %v", err)
 	}
 
-	firstTokens := Tokens{AccessToken: "synthetic-access-one", RefreshToken: "synthetic-refresh-one", ExpireTime: 1000}
-	secondTokens := Tokens{AccessToken: "synthetic-access-two", RefreshToken: "synthetic-refresh-two", ExpireTime: 2000}
+	firstTokens := Tokens{AccessToken: clientFixtureSyntheticAccessOne, RefreshToken: clientFixtureSyntheticRefreshOne, ExpireTime: 1000}
+	secondTokens := Tokens{AccessToken: clientFixtureSyntheticAccessTwo, RefreshToken: clientFixtureSyntheticRefreshTwo, ExpireTime: 2000}
 	first := client.NewSession(firstTokens)
 	second := client.NewSession(secondTokens)
 
-	if first.HTTPClient != httpClient {
-		t.Fatal("session did not retain the configured HTTP client")
+	if client.options.httpClient == httpClient || first.HTTPClient == httpClient ||
+		second.HTTPClient == httpClient || first.HTTPClient == second.HTTPClient {
+		t.Fatal("configured and session HTTP clients were not snapshotted independently")
 	}
 
-	if first.HTTPClient.Transport == nil {
-		t.Fatal("configured HTTP client has no transport")
+	if !sameTransport(first.HTTPClient.Transport, transport) || !sameTransport(second.HTTPClient.Transport, transport) ||
+		!sameTransport(client.options.httpClient.Transport, transport) {
+		t.Fatal("HTTP client snapshots did not preserve the configured transport")
 	}
 
 	if first.ClientID != clientFixtureSyntheticClientID {

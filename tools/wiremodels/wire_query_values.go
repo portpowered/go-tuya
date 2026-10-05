@@ -2,16 +2,34 @@ package main
 
 import (
 	"go/ast"
+	"go/token"
 )
 
-const urlValuesSetArgumentCount = 2
+const (
+	urlValuesSetArgumentCount = 2
+	wireAddMethod             = "Add"
+)
 
+//nolint:cyclop // Query receiver provenance follows aliases, aggregate fields, and constructors.
 func wireURLValuesReceiver(
 	expression ast.Expr, file *ast.File, assignments wireSourceAssignments, visiting map[wireSourceVariable]bool,
 ) bool {
 	switch expression := expression.(type) {
 	case *ast.ParenExpr:
 		return wireURLValuesReceiver(expression.X, file, assignments, visiting)
+	case *ast.SelectorExpr:
+		owner := wireReceiverDeclaration(expression.X, assignments, make(map[wireSourceVariable]bool))
+		if owner != nil && assignments.urlValuesFields[wireSourceField{declaration: owner, name: expression.Sel.Name}] {
+			return true
+		}
+
+		for _, value := range wireAggregateFieldExpressions(expression, assignments) {
+			if wireURLValuesReceiver(value, file, assignments, visiting) {
+				return true
+			}
+		}
+
+		return false
 	case *ast.StarExpr:
 		return wireURLValuesReceiver(expression.X, file, assignments, visiting)
 	case *ast.TypeAssertExpr:
@@ -33,9 +51,108 @@ func wireURLValuesCallReceiver(call *ast.CallExpr, file *ast.File, assignments w
 		return true
 	}
 
+	if builtin, isBuiltin := call.Fun.(*ast.Ident); isBuiltin && builtin.Obj == nil && builtin.Name == "make" &&
+		len(call.Args) != 0 && wireURLValuesDeclaredType(call.Args[0], file, make(map[wireSourceVariable]bool)) {
+		return true
+	}
+
 	for _, function := range wireLocalHelpers(call.Fun, assignments, make(map[wireSourceVariable]bool)) {
 		if function != nil && assignments.urlValuesFunctions[function] {
 			return true
+		}
+	}
+
+	return false
+}
+
+//nolint:cyclop // URL mutations are accepted only when a direct schema guard dominates the call in its range.
+func verifiedWireURLValuesMutation(file *ast.File, call *ast.CallExpr, assignments wireSourceAssignments) bool {
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector || (selector.Sel.Name != "Set" && selector.Sel.Name != wireAddMethod) ||
+		len(call.Args) != urlValuesSetArgumentCount ||
+		!wireURLValuesReceiver(selector.X, file, assignments, make(map[wireSourceVariable]bool)) {
+		return false
+	}
+
+	key, isIdentifier := call.Args[0].(*ast.Ident)
+	if !isIdentifier || key.Obj == nil {
+		return false
+	}
+
+	aliases := primitiveImportAliases(file, primitivePackage{ImportPath: wireImportPath, Name: generatedModelPackageName, Directory: generatedModelDirectory})
+	verified := false
+
+	ast.Inspect(file, func(node ast.Node) bool {
+		if verified {
+			return false
+		}
+
+		rangeStatement, isRange := node.(*ast.RangeStmt)
+		if !isRange || call.Pos() < rangeStatement.Body.Pos() || call.End() > rangeStatement.Body.End() ||
+			!wireRangeDeclaresIdentifier(rangeStatement, key) {
+			return true
+		}
+
+		for _, statement := range rangeStatement.Body.List {
+			guard, isGuard := statement.(*ast.IfStmt)
+			if !isGuard || guard.End() >= call.Pos() || !wireRejectsUnknownQueryKey(guard, key, aliases) {
+				continue
+			}
+
+			verified = true
+
+			return false
+		}
+
+		return true
+	})
+
+	return verified
+}
+
+func wireRangeDeclaresIdentifier(statement *ast.RangeStmt, identifier *ast.Ident) bool {
+	for _, expression := range []ast.Expr{statement.Key, statement.Value} {
+		candidate, isIdentifier := expression.(*ast.Ident)
+		if isIdentifier && candidate.Obj == identifier.Obj {
+			return true
+		}
+	}
+
+	return false
+}
+
+//nolint:cyclop // This accepts only a direct known-key guard whose body exits the current iteration.
+func wireRejectsUnknownQueryKey(statement *ast.IfStmt, key *ast.Ident, aliases map[string]bool) bool {
+	negation, isNegation := statement.Cond.(*ast.UnaryExpr)
+	if !isNegation || negation.Op != token.NOT {
+		return false
+	}
+
+	call, isCall := negation.X.(*ast.CallExpr)
+	if !isCall || len(call.Args) != 1 {
+		return false
+	}
+
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector || selector.Sel.Name != "IsKnownQueryParam" {
+		return false
+	}
+
+	packageName, isPackage := selector.X.(*ast.Ident)
+	argument, isArgument := call.Args[0].(*ast.Ident)
+
+	if !isPackage || packageName.Obj != nil || !aliases[packageName.Name] || !isArgument || argument.Obj != key.Obj {
+		return false
+	}
+
+	for _, statement := range statement.Body.List {
+		switch statement := statement.(type) {
+		case *ast.ReturnStmt:
+			return true
+		case *ast.BranchStmt:
+			if statement.Tok == token.CONTINUE {
+				return true
+			}
 		}
 	}
 

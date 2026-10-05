@@ -1,9 +1,19 @@
 ---
 title: Upgrade to v0.4
-description: Configure application identity and adapt typed event constants.
+description: Configure application identity, isolate account cookies, and adapt event constants.
 ---
 
 # Upgrade to v0.4
+
+## Upgrade from v0.3 to v0.4
+
+`NewClient` now rejects an effective injected `*http.Client` with a non-nil
+`Jar`, returning an inspectable `*tuya.ClientError` whose `Kind` is
+`tuya.ErrorInvalidOperation`. Inject a client with `Jar == nil`; its configured
+`Transport` is preserved. If an account needs cookies, assign that account's
+cookie jar to its own `Session.HTTPClient.Jar`. `NewClient` snapshots the
+injected client, and each `NewSession` gets a separate client value, so later
+caller or sibling-session jar changes do not cross account boundaries.
 
 Pass your application client ID with `tuya.WithClientID(applicationClientID)`
 when calling `NewClient`. Supply `LoginRequest.Schema` explicitly for QR login;

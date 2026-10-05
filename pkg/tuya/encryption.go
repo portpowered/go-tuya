@@ -26,9 +26,8 @@ import (
 )
 
 const (
-	aesGCMNonceSize          = 12
-	derivedSecretKeySize     = 16
-	signatureHeaderSeparator = "||"
+	aesGCMNonceSize      = 12
+	derivedSecretKeySize = 16
 )
 
 // EncryptedClient provides access to Tuya Customer API operations with encryption of the payload and response.
@@ -559,38 +558,17 @@ func secretGenerating(rid, sid, hashKey string) string {
 
 // restfulSign generates the signature for the request.
 func restfulSign(hashKey, queryEncdata, bodyEncdata string, headers map[string]string) string {
-	headerKeys := []string{
-		wire.HeaderXAppKey,
-		wire.HeaderXRequestId,
-		wire.HeaderXSid,
-		wire.HeaderXTime,
-		wire.HeaderXToken,
-	}
-	headerSignStr := ""
-
-	var headerSignStrSb464 strings.Builder
+	headerKeys := strings.Split(string(wire.EncryptedSignatureHeaderOrderCanonical), ",")
+	headerPairs := make([]string, 0, len(headerKeys))
 
 	for _, key := range headerKeys {
 		if val, exists := headers[key]; exists && val != "" {
-			headerSignStrSb464.WriteString(key + "=" + val + signatureHeaderSeparator)
+			headerPairs = append(headerPairs, fmt.Sprintf(string(wire.EncryptedSignatureHeaderPairTemplateCanonical), key, val))
 		}
 	}
 
-	headerSignStr += headerSignStrSb464.String()
-
-	// Remove last "||"
-	if len(headerSignStr) > len(signatureHeaderSeparator) {
-		headerSignStr = headerSignStr[:len(headerSignStr)-len(signatureHeaderSeparator)]
-	}
-
-	signStr := headerSignStr
-	if queryEncdata != "" {
-		signStr += queryEncdata
-	}
-
-	if bodyEncdata != "" {
-		signStr += bodyEncdata
-	}
+	signStr := strings.Join(headerPairs, string(wire.EncryptedSignatureHeaderSeparatorCanonical))
+	signStr += fmt.Sprintf(string(wire.EncryptedSignaturePayloadTemplateCanonical), queryEncdata, bodyEncdata)
 
 	// Create HMAC-SHA256 signature
 	h := hmac.New(sha256.New, []byte(hashKey))

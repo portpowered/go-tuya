@@ -15,8 +15,8 @@ import (
  "strings"
  wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
-func build(values []string) {
- _ = wire.QueryParams{Type: strings.Join(values, ",")}
+func Build(values []string) {
+ _ = wire.RTCOfferBody{Sdp: strings.Join(values, ",")}
 }
 `, false)
 }
@@ -29,8 +29,8 @@ import (
  "strings"
  wire "github.com/portpowered/go-tuya/pkg/dependencymodels"
 )
-func build() {
- _ = wire.QueryParams{Type: strings.Join([]string{"unregistered"}, ",")}
+func Build() {
+ _ = wire.RTCOfferBody{Sdp: strings.Join([]string{"unregistered"}, ",")}
 }
 `, true)
 }
@@ -45,8 +45,8 @@ import (
 )
 type joiner struct{}
 func (joiner) Join(_ []string, sep string) string { return sep }
-func build(strings joiner, values []string) {
- _ = wire.QueryParams{Type: strings.Join(values, ",")}
+func Build(strings joiner, values []string) {
+ _ = wire.RTCOfferBody{Sdp: strings.Join(values, ",")}
 }
 `, true)
 }
@@ -61,9 +61,12 @@ func assertWireConstructionProbe(t *testing.T, source string, wantError bool) {
 		t.Fatal(err)
 	}
 
-	assignments := indexWireSourceAssignments(file)
+	assignments := indexWireSourceAssignments(file, "synthetic.go")
 	models := map[string]generatedModel{
-		"QueryParams": {Name: "QueryParams", File: "pkg/dependencymodels/http.gen.go"},
+		wireProvenanceEnumBody: {
+			Name: wireProvenanceEnumBody, File: wireProvenanceGeneratedGroup, Alias: "",
+			Fields: map[string]string{"Sdp": "", "Type": wireProvenanceEnumType}, EnumMembers: nil,
+		},
 	}
 
 	err = rejectRawGeneratedWireConstructionsWithAssignments(file, set, "pkg/tuya/synthetic.go", models, assignments)

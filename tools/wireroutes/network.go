@@ -22,7 +22,7 @@ var errNetworkBoundary = errors.New("untracked outbound network edge")
 func productionGoFiles() ([]string, error) {
 	var files []string
 
-	for _, root := range []string{"pkg", "cmd", "examples"} {
+	for _, root := range productionSourceRoots() {
 		err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
@@ -52,6 +52,10 @@ func productionGoFiles() ([]string, error) {
 	sort.Strings(files)
 
 	return files, nil
+}
+
+func productionSourceRoots() []string {
+	return []string{"pkg", "cmd", "examples"}
 }
 
 func importAlias(file *ast.File, importPath string) string {
@@ -284,17 +288,22 @@ func validateDirectSocketSelectors(file *ast.File, imports map[string]string) er
 		}
 	}
 
+	selectors := networkDialSelectorUses(file)
+	if len(selectors) > 0 {
+		return fmt.Errorf("direct or captured socket methods %s need an injectable dependency boundary: %w", strings.Join(selectors, ", "), errNetworkBoundary)
+	}
+
 	return nil
 }
 
 func socketNetworkMethods(path string) (string, map[string]bool) {
 	switch path {
 	case "net":
-		return "socket", map[string]bool{networkDialMethod: true, "DialTimeout": true, "DialContext": true, "Listen": true, "ListenPacket": true}
+		return "socket", map[string]bool{networkDialMethod: true, "DialTimeout": true, networkDialContextMethod: true, "Listen": true, "ListenPacket": true}
 	case "crypto/tls":
 		return "TLS socket", map[string]bool{networkDialMethod: true, "DialWithDialer": true}
-	case "github.com/gorilla/websocket", "nhooyr.io/websocket", "github.com/coder/websocket", "github.com/gobwas/ws":
-		return "WebSocket", map[string]bool{networkDialMethod: true, "DialContext": true, "NewClient": true}
+	case "golang.org/x/net/websocket", "github.com/gorilla/websocket", "nhooyr.io/websocket", "github.com/coder/websocket", "github.com/gobwas/ws":
+		return "WebSocket", map[string]bool{networkDialMethod: true, networkDialContextMethod: true, "NewClient": true}
 	default:
 		return "", nil
 	}
@@ -445,6 +454,10 @@ func validateHTTPBoundary(file *ast.File, imports map[string]string) error {
 		return err
 	}
 
+	if !validHTTPBodyFactory(file, imports) {
+		return fmt.Errorf("HTTP request body factory must return a stable reader over the supplied bytes: %w", errNetworkBoundary)
+	}
+
 	pathCalls := assignedCalls(requestFunction, "formatOperationPath", "")
 
 	keyCalls := assignedCalls(requestFunction, "validateRequestKeys", "")
@@ -477,23 +490,41 @@ func validateHTTPBoundary(file *ast.File, imports map[string]string) error {
 		return fmt.Errorf("HTTP validation and request construction must execute in route-to-send order: %w", errNetworkBoundary)
 	}
 
+	err = validateHTTPRequestBindings(
+		requestFunction, pathCall, operationGuard, keyCall, urlCall, requestCall, sendCall, imports, httpAlias,
+	)
+	if err != nil {
+		return err
+	}
+
+	return validateHTTPBoundarySend(file, imports, requestFunction, requestCall, sendCall, httpAlias, wireAlias)
+}
+
+func validateHTTPRequestBindings(
+	function *ast.FuncDecl, pathCall indexedCall, operationGuard indexedGuard, keyCall, urlCall, requestCall, sendCall indexedCall,
+	imports map[string]string, httpAlias string,
+) error {
 	if !validHTTPRouteBindings(pathCall, operationGuard, keyCall) {
 		return fmt.Errorf("HTTP operation validation must bind the schema method, final route, and request keys: %w", errNetworkBoundary)
 	}
 
-	if !validHTTPURLBindings(requestFunction, keyCall, urlCall) {
+	if !validatedHTTPInputsAreUnmodified(function, pathCall, operationGuard, urlCall, requestCall, imports) {
+		return fmt.Errorf("HTTP schema-validated method and route must remain unchanged through request construction: %w", errNetworkBoundary)
+	}
+
+	if !validHTTPURLBindings(function, keyCall, urlCall) {
 		return fmt.Errorf("HTTP key validation and URL construction must bind the validated request inputs: %w", errNetworkBoundary)
 	}
 
-	if !validHTTPRequestBindings(requestFunction, requestCall, sendCall, httpAlias) {
+	if !validHTTPRequestBindings(function, requestCall, sendCall, httpAlias) {
 		return fmt.Errorf("HTTP request must use the generated method and validated URL before send: %w", errNetworkBoundary)
 	}
 
-	if !httpRequestIsUnmodified(requestFunction, requestCall, sendCall) {
-		return fmt.Errorf("HTTP request must remain unchanged between construction and injected send: %w", errNetworkBoundary)
+	if !httpRequestIsUnmodified(function, requestCall, sendCall) {
+		return fmt.Errorf("HTTP request and backing body bytes must remain unchanged before injected send: %w", errNetworkBoundary)
 	}
 
-	return validateHTTPBoundarySend(file, imports, requestFunction, requestCall, sendCall, httpAlias, wireAlias)
+	return nil
 }
 
 func validateHTTPBoundarySend(
@@ -551,8 +582,182 @@ func orderedHTTPCallIndices(indices ...int) bool {
 
 func validHTTPRouteBindings(pathCall indexedCall, operationGuard indexedGuard, keyCall indexedCall) bool {
 	return assignedTo(pathCall, "path") && pathFormattingUsesSchemaRoute(pathCall.call) &&
-		containsDirectReturn(operationGuard.statement.Body) && operationGuardUsesFinalRoute(operationGuard.call) &&
+		directReturnOnly(operationGuard.statement.Body) && operationGuardUsesFinalRoute(operationGuard.call) &&
 		assignedTo(keyCall, "err") && keyValidationUsesRequestInputs(keyCall.call)
+}
+
+func validatedHTTPInputsAreUnmodified(
+	function *ast.FuncDecl, pathCall indexedCall, operationGuard indexedGuard, urlCall, requestCall indexedCall,
+	imports map[string]string,
+) bool {
+	if function == nil {
+		return false
+	}
+
+	guardPathUses, guardOperationUses := safeHTTPGuardDiagnosticUses(operationGuard.statement.Body, aliasForPath(imports, "fmt"))
+
+	return validatedHTTPPathIsUnmodified(function, pathCall, operationGuard, urlCall, guardPathUses) &&
+		validatedHTTPMethodIsUnmodified(function, pathCall, operationGuard, requestCall, guardOperationUses)
+}
+
+func validatedHTTPPathIsUnmodified(
+	function *ast.FuncDecl, pathCall indexedCall, operationGuard indexedGuard, urlCall indexedCall, guardUses map[token.Pos]bool,
+) bool {
+	if functionSignatureBindsName(function, "path") || !validatedHTTPPathCallsAreBound(operationGuard, urlCall) {
+		return false
+	}
+
+	assignment, matchedAssignment := pathCall.statement.(*ast.AssignStmt)
+	if !matchedAssignment || assignment.Tok != token.DEFINE || len(assignment.Lhs) != 2 ||
+		!isIdentifier(assignment.Lhs[0], "path") || !isIdentifier(assignment.Lhs[1], "err") {
+		return false
+	}
+
+	allowedPathUses := map[token.Pos]bool{
+		assignment.Lhs[0].Pos():           true,
+		operationGuard.call.Args[1].Pos(): true,
+		urlCall.call.Args[1].Pos():        true,
+	}
+
+	for position := range guardUses {
+		allowedPathUses[position] = true
+	}
+
+	return namedValueUsesUnchanged(function.Body, "path", function.Body.Pos(), urlCall.call.End(), allowedPathUses)
+}
+
+func validatedHTTPPathCallsAreBound(operationGuard indexedGuard, urlCall indexedCall) bool {
+	return len(operationGuard.call.Args) == 2 && len(urlCall.call.Args) == 3 &&
+		isIdentifier(operationGuard.call.Args[1], "path") && isIdentifier(urlCall.call.Args[1], "path") &&
+		isSelectorOn(operationGuard.call.Args[0], "operation", "Method")
+}
+
+func validatedHTTPMethodIsUnmodified(
+	function *ast.FuncDecl, pathCall indexedCall, operationGuard indexedGuard, requestCall indexedCall,
+	guardUses map[token.Pos]bool,
+) bool {
+	if len(pathCall.call.Args) != 2 || len(operationGuard.call.Args) != 2 || len(requestCall.call.Args) < 2 ||
+		!isSelectorOn(requestCall.call.Args[1], "operation", "Method") {
+		return false
+	}
+
+	pathOperation, isSelector := pathCall.call.Args[0].(*ast.SelectorExpr)
+	if !isSelector {
+		return false
+	}
+
+	guardMethod, isSelector := operationGuard.call.Args[0].(*ast.SelectorExpr)
+	if !isSelector {
+		return false
+	}
+
+	requestMethod, isSelector := requestCall.call.Args[1].(*ast.SelectorExpr)
+	if !isSelector {
+		return false
+	}
+
+	allowedOperationUses := map[token.Pos]bool{
+		pathOperation.X.Pos(): true,
+		guardMethod.X.Pos():   true,
+		requestMethod.X.Pos(): true,
+	}
+
+	for position := range guardUses {
+		allowedOperationUses[position] = true
+	}
+
+	return namedValueUsesUnchanged(function.Body, "operation", function.Body.Pos(), function.Body.End(), allowedOperationUses)
+}
+
+func directReturnOnly(block *ast.BlockStmt) bool {
+	if block == nil || len(block.List) != 1 {
+		return false
+	}
+
+	_, isReturn := block.List[0].(*ast.ReturnStmt)
+
+	return isReturn
+}
+
+func safeHTTPGuardDiagnosticUses(block *ast.BlockStmt, fmtAlias string) (map[token.Pos]bool, map[token.Pos]bool) {
+	pathUses := make(map[token.Pos]bool)
+	operationUses := make(map[token.Pos]bool)
+
+	statement := httpGuardReturn(block)
+	if statement == nil {
+		return pathUses, operationUses
+	}
+
+	diagnostic := httpGuardErrorf(statement, fmtAlias)
+	if diagnostic == nil {
+		return pathUses, operationUses
+	}
+
+	for _, argument := range diagnostic.Args {
+		switch value := argument.(type) {
+		case *ast.Ident:
+			if value.Name == "path" {
+				pathUses[value.Pos()] = true
+			}
+		case *ast.SelectorExpr:
+			if value.Sel.Name == "Method" && isIdentifier(value.X, "operation") {
+				operationUses[value.X.Pos()] = true
+			}
+		}
+	}
+
+	return pathUses, operationUses
+}
+
+func httpGuardReturn(block *ast.BlockStmt) *ast.ReturnStmt {
+	if !directReturnOnly(block) {
+		return nil
+	}
+
+	statement, isReturn := block.List[0].(*ast.ReturnStmt)
+	if !isReturn || len(statement.Results) != httpGuardReturnValues {
+		return nil
+	}
+
+	return statement
+}
+
+func httpGuardErrorf(statement *ast.ReturnStmt, fmtAlias string) *ast.CallExpr {
+	if statement == nil || fmtAlias == "" || len(statement.Results) != httpGuardReturnValues {
+		return nil
+	}
+
+	diagnostic, isCall := statement.Results[1].(*ast.CallExpr)
+	if !isCall || !isPackageCall(diagnostic, fmtAlias, "Errorf") {
+		return nil
+	}
+
+	return diagnostic
+}
+
+func namedValueUsesUnchanged(block *ast.BlockStmt, name string, start, end token.Pos, allowed map[token.Pos]bool) bool {
+	if block == nil {
+		return false
+	}
+
+	valid := true
+
+	ast.Inspect(block, func(node ast.Node) bool {
+		identifier, isIdentifier := node.(*ast.Ident)
+		if !isIdentifier || identifier.Name != name || identifier.Pos() <= start || identifier.Pos() >= end {
+			return true
+		}
+
+		if !allowed[identifier.Pos()] {
+			valid = false
+
+			return false
+		}
+
+		return true
+	})
+
+	return valid
 }
 
 func validHTTPURLBindings(function *ast.FuncDecl, keyCall, urlCall indexedCall) bool {
@@ -567,7 +772,124 @@ func validHTTPRequestBindings(function *ast.FuncDecl, requestCall, sendCall inde
 func httpRequestIsUnmodified(function *ast.FuncDecl, requestCall, sendCall indexedCall) bool {
 	allowed := allowedHTTPBoundaryRequestUses(function, requestCall, sendCall)
 
-	return httpBoundaryRequestHasNoOtherUses(function, requestCall, sendCall, allowed)
+	return httpBoundaryRequestHasNoOtherUses(function, requestCall, sendCall, allowed) &&
+		httpRequestBodyBytesAreUnmodified(function, requestCall)
+}
+
+func httpRequestBodyBytesAreUnmodified(function *ast.FuncDecl, requestCall indexedCall) bool {
+	if function == nil || functionBodyBindsName(function, "requestBody") || !hasNamedParameter(function, "body", byteSliceType) {
+		return false
+	}
+
+	body := requestBodyInput(requestCall.call)
+	if body == nil {
+		return false
+	}
+
+	return namedValueUsesUnchanged(function.Body, "body", function.Body.Pos(), function.Body.End(), map[token.Pos]bool{body.Pos(): true})
+}
+
+func requestBodyInput(call *ast.CallExpr) *ast.Ident {
+	if call == nil || len(call.Args) != 4 {
+		return nil
+	}
+
+	if body, isBody := call.Args[3].(*ast.Ident); isBody && body.Name == "body" {
+		return body
+	}
+
+	bodyCall, isCall := call.Args[3].(*ast.CallExpr)
+	if !isCall || !isIdentifier(bodyCall.Fun, "requestBody") || len(bodyCall.Args) != 1 {
+		return nil
+	}
+
+	body, isBody := bodyCall.Args[0].(*ast.Ident)
+	if !isBody || body.Name != "body" {
+		return nil
+	}
+
+	return body
+}
+
+func byteSliceType(expression ast.Expr) bool {
+	array, isArray := expression.(*ast.ArrayType)
+
+	return isArray && array.Len == nil && isIdentifier(array.Elt, "byte")
+}
+
+func validHTTPBodyFactory(file *ast.File, imports map[string]string) bool {
+	factory := uniqueFunction(file, "requestBody")
+	if factory == nil || factory.Recv != nil {
+		return false
+	}
+
+	return bodyFactorySignatureIsKnown(factory, imports) && bodyFactoryBodyIsSafe(factory, imports)
+}
+
+func bodyFactorySignatureIsKnown(factory *ast.FuncDecl, imports map[string]string) bool {
+	bytesAlias := aliasForPath(imports, "bytes")
+
+	ioAlias := aliasForPath(imports, "io")
+
+	if bytesAlias == "" || ioAlias == "" {
+		return false
+	}
+
+	if functionAliasShadowed(factory, bytesAlias) || functionAliasShadowed(factory, ioAlias) {
+		return false
+	}
+
+	return hasNamedParameter(factory, "body", byteSliceType) &&
+		hasSingleNamedResult(factory, selectorTypeMatcher(ioAlias, "Reader")) && len(factory.Body.List) == 2
+}
+
+func bodyFactoryBodyIsSafe(factory *ast.FuncDecl, imports map[string]string) bool {
+	bytesAlias := aliasForPath(imports, "bytes")
+
+	return bodyFactoryHandlesNil(factory.Body.List[0]) && bodyFactoryReturnsReader(factory.Body.List[1], bytesAlias)
+}
+
+func hasSingleNamedResult(function *ast.FuncDecl, match func(ast.Expr) bool) bool {
+	if function == nil || function.Type.Results == nil || len(function.Type.Results.List) != 1 {
+		return false
+	}
+
+	result := function.Type.Results.List[0]
+
+	return len(result.Names) == 0 && match(result.Type)
+}
+
+func bodyFactoryHandlesNil(statement ast.Stmt) bool {
+	guard, isGuard := statement.(*ast.IfStmt)
+	if !isGuard || guard.Else != nil || !identifierEqualsNil(guard.Cond, "body") || len(guard.Body.List) != 1 {
+		return false
+	}
+
+	returned, isReturn := guard.Body.List[0].(*ast.ReturnStmt)
+
+	return isReturn && len(returned.Results) == 1 && isIdentifier(returned.Results[0], "nil")
+}
+
+func identifierEqualsNil(expression ast.Expr, name string) bool {
+	binary, isBinary := expression.(*ast.BinaryExpr)
+	if !isBinary || binary.Op != token.EQL {
+		return false
+	}
+
+	return (isIdentifier(binary.X, name) && isIdentifier(binary.Y, "nil")) ||
+		(isIdentifier(binary.Y, name) && isIdentifier(binary.X, "nil"))
+}
+
+func bodyFactoryReturnsReader(statement ast.Stmt, bytesAlias string) bool {
+	returned, isReturn := statement.(*ast.ReturnStmt)
+	if !isReturn || len(returned.Results) != 1 {
+		return false
+	}
+
+	call, isCall := returned.Results[0].(*ast.CallExpr)
+
+	return isCall && isPackageCall(call, bytesAlias, "NewReader") &&
+		len(call.Args) == 1 && isIdentifier(call.Args[0], "body")
 }
 
 func allowedHTTPBoundaryRequestUses(function *ast.FuncDecl, requestCall, sendCall indexedCall) map[token.Pos]bool {
@@ -712,6 +1034,16 @@ func hasNamedParameter(function *ast.FuncDecl, name string, match func(ast.Expr)
 	return false
 }
 
+func functionSignatureBindsName(function *ast.FuncDecl, name string) bool {
+	if function == nil {
+		return true
+	}
+
+	return fieldsContainName(function.Recv, name) ||
+		fieldsContainName(function.Type.Params, name) ||
+		fieldsContainName(function.Type.Results, name)
+}
+
 func isHTTPClientTypeAlias(alias string) func(ast.Expr) bool {
 	return func(expression ast.Expr) bool {
 		return isHTTPClientType(expression, alias)
@@ -846,7 +1178,7 @@ func requestURLUsesInputs(call *ast.CallExpr) bool {
 
 func requestConstructionUsesInputs(call *ast.CallExpr, httpAlias string) bool {
 	if len(call.Args) != 4 || !isSelectorOn(call.Args[1], "operation", "Method") ||
-		!isMethodCallOn(call.Args[2], "target", "String") {
+		!isMethodCallOn(call.Args[2], "target", "String") || requestBodyInput(call) == nil {
 		return false
 	}
 
@@ -1103,12 +1435,48 @@ func aliasForPath(imports map[string]string, path string) string {
 }
 
 func isExternalNetworkPackage(path string) bool {
-	switch path {
-	case pahoImport, "github.com/gorilla/websocket", "nhooyr.io/websocket", "github.com/coder/websocket", "github.com/gobwas/ws":
-		return true
-	default:
+	if path == "github.com/portpowered/go-tuya" || strings.HasPrefix(path, "github.com/portpowered/go-tuya/") {
 		return false
 	}
+
+	switch path {
+	case pahoImport, "github.com/gobwas/ws":
+		return true
+	}
+
+	path = strings.ToLower(path)
+	for _, protocol := range []string{"websocket", "web-socket", "mqtt", "amqp", "grpc", "socket"} {
+		if strings.Contains(path, protocol) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func networkDialSelectorUses(file *ast.File) []string {
+	methods := map[string]bool{
+		networkDialMethod: true, networkDialContextMethod: true, "DialTimeout": true, "DialWithDialer": true,
+		"DialTLS": true, "DialTLSContext": true, "Listen": true, "ListenPacket": true,
+		"ListenTCP": true, "ListenUDP": true, "ListenMulticastUDP": true, "ListenUnix": true,
+	}
+
+	var found []string
+
+	for _, declaration := range file.Decls {
+		ast.Inspect(declaration, func(node ast.Node) bool {
+			selector, matchedType := node.(*ast.SelectorExpr)
+			if matchedType && methods[selector.Sel.Name] {
+				found = append(found, selector.Sel.Name)
+			}
+
+			return true
+		})
+	}
+
+	sort.Strings(found)
+
+	return found
 }
 
 func isHTTPPackageCall(name string) bool {
@@ -1197,6 +1565,10 @@ type externalMQTTFixture struct {
 
 const (
 	networkDialMethod = "Dial"
+
+	networkDialContextMethod = "DialContext"
+
+	httpGuardReturnValues = 2
 
 	mqttClientDirection = "client"
 

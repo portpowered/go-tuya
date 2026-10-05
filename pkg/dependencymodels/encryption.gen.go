@@ -8,6 +8,66 @@ import (
 	"fmt"
 )
 
+// Defines values for EncryptedSignatureHeaderOrder.
+const (
+	EncryptedSignatureHeaderOrderCanonical EncryptedSignatureHeaderOrder = "X-appKey,X-requestId,X-sid,X-time,X-token"
+)
+
+// Valid indicates whether the value is a known member of the EncryptedSignatureHeaderOrder enum.
+func (e EncryptedSignatureHeaderOrder) Valid() bool {
+	switch e {
+	case EncryptedSignatureHeaderOrderCanonical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EncryptedSignatureHeaderPairTemplate.
+const (
+	EncryptedSignatureHeaderPairTemplateCanonical EncryptedSignatureHeaderPairTemplate = "%s=%s"
+)
+
+// Valid indicates whether the value is a known member of the EncryptedSignatureHeaderPairTemplate enum.
+func (e EncryptedSignatureHeaderPairTemplate) Valid() bool {
+	switch e {
+	case EncryptedSignatureHeaderPairTemplateCanonical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EncryptedSignatureHeaderSeparator.
+const (
+	EncryptedSignatureHeaderSeparatorCanonical EncryptedSignatureHeaderSeparator = "||"
+)
+
+// Valid indicates whether the value is a known member of the EncryptedSignatureHeaderSeparator enum.
+func (e EncryptedSignatureHeaderSeparator) Valid() bool {
+	switch e {
+	case EncryptedSignatureHeaderSeparatorCanonical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EncryptedSignaturePayloadTemplate.
+const (
+	EncryptedSignaturePayloadTemplateCanonical EncryptedSignaturePayloadTemplate = "%s%s"
+)
+
+// Valid indicates whether the value is a known member of the EncryptedSignaturePayloadTemplate enum.
+func (e EncryptedSignaturePayloadTemplate) Valid() bool {
+	switch e {
+	case EncryptedSignaturePayloadTemplateCanonical:
+		return true
+	default:
+		return false
+	}
+}
+
 // EncryptedDataEnvelope Implementation-derived encrypted HTTP request wrapper used for JSON bodies and query data.
 type EncryptedDataEnvelope struct {
 	// Encdata Base64-encoded nonce and AES-GCM ciphertext.
@@ -40,6 +100,18 @@ type EncryptedRequestQuery struct {
 	// Encdata Base64-encoded encrypted query payload.
 	Encdata string `json:"encdata"`
 }
+
+// EncryptedSignatureHeaderOrder Comma-separated implementation-derived order of header names in the REST signature preimage.
+type EncryptedSignatureHeaderOrder string
+
+// EncryptedSignatureHeaderPairTemplate Implementation-derived key and value format used for each signed request header.
+type EncryptedSignatureHeaderPairTemplate string
+
+// EncryptedSignatureHeaderSeparator Implementation-derived separator between signed request header pairs.
+type EncryptedSignatureHeaderSeparator string
+
+// EncryptedSignaturePayloadTemplate Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
+type EncryptedSignaturePayloadTemplate string
 
 // Getter for additional properties for EncryptedHTTPResponseEnvelope. Returns the specified
 // element and whether it was found

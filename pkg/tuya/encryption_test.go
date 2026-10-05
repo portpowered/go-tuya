@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/md5" // #nosec G501 -- the test reproduces Tuya's protocol-mandated request-key derivation.
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -220,6 +222,50 @@ func TestEncryptedClientRejectsInvalidRequestURL(t *testing.T) {
 	_, err := session.EncryptedClient.Get(context.Background(), "/v1.0/devices", nil, testOperationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "origin") {
 		t.Fatalf("request error = %v, want URL construction error", err)
+	}
+}
+
+func TestRestfulSignUsesSchemaGeneratedCanonicalization(t *testing.T) {
+	t.Parallel()
+
+	if got := string(wire.EncryptedSignatureHeaderPairTemplateCanonical); got != "%s=%s" {
+		t.Fatalf("generated header-pair template = %q, want schema-owned key/value format", got)
+	}
+
+	if got := string(wire.EncryptedSignatureHeaderSeparatorCanonical); got != "||" {
+		t.Fatalf("generated header separator = %q, want schema-owned separator", got)
+	}
+
+	if got := string(wire.EncryptedSignatureHeaderOrderCanonical); got != "X-appKey,X-requestId,X-sid,X-time,X-token" {
+		t.Fatalf("generated signature header order = %q, want schema-owned order", got)
+	}
+
+	if got := string(wire.EncryptedSignaturePayloadTemplateCanonical); got != "%s%s" {
+		t.Fatalf("generated payload template = %q, want schema-owned query/body concatenation", got)
+	}
+
+	const hashKey = "synthetic-hash-key"
+
+	headerOrder := strings.Split(string(wire.EncryptedSignatureHeaderOrderCanonical), ",")
+	headers := map[string]string{
+		headerOrder[0]: "synthetic-client",
+		headerOrder[1]: "synthetic-request",
+		headerOrder[2]: "",
+		headerOrder[3]: "1700000000000",
+		headerOrder[4]: "synthetic-token",
+	}
+
+	const preimage = "X-appKey=synthetic-client||X-requestId=synthetic-request||X-time=1700000000000||X-token=synthetic-tokenquery-ciphertextbody-ciphertext"
+
+	mac := hmac.New(sha256.New, []byte(hashKey))
+	if _, err := mac.Write([]byte(preimage)); err != nil {
+		t.Fatalf("write synthetic signature preimage: %v", err)
+	}
+
+	want := hex.EncodeToString(mac.Sum(nil))
+
+	if got := restfulSign(hashKey, "query-ciphertext", "body-ciphertext", headers); got != want {
+		t.Fatalf("signature = %s, want canonical preimage HMAC %s", got, want)
 	}
 }
 

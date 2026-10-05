@@ -2,6 +2,15 @@ package main
 
 import "go/ast"
 
+func wireAggregateFieldExpressions(selector *ast.SelectorExpr, assignments wireSourceAssignments) []ast.Expr {
+	owner := wireReceiverDeclaration(selector.X, assignments, make(map[wireSourceVariable]bool))
+	if owner == nil {
+		return nil
+	}
+
+	return assignments.aggregateFields[wireSourceField{declaration: owner, name: selector.Sel.Name}]
+}
+
 func generatedWireAggregate(
 	object *ast.CompositeLit, aliases map[string]bool, path string, models map[string]generatedModel,
 	visiting map[wireSourceVariable]bool, assignments wireSourceAssignments,
@@ -62,6 +71,10 @@ func generatedWireCallResult(
 	call *ast.CallExpr, aliases map[string]bool, path string, models map[string]generatedModel,
 	visiting map[wireSourceVariable]bool, assignments wireSourceAssignments,
 ) bool {
+	if generatedWireMapResult(call, aliases, path, models, assignments, visiting) {
+		return true
+	}
+
 	for _, function := range wireLocalHelpers(call.Fun, assignments, make(map[wireSourceVariable]bool)) {
 		if function != nil && !wireReturnsPublicInterface(function, assignments) &&
 			generatedWireReturnedValue(function, assignments.functionBodies[function], aliases, path, models, visiting,

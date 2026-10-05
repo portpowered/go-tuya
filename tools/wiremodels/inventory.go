@@ -445,7 +445,7 @@ func writePrimitiveBindings(
 
 		for member, value := range row.members {
 			formatted := strconv.Quote(value)
-			if row.valueType != "string" {
+			if row.valueType != schemaStringType {
 				formatted = value
 			}
 

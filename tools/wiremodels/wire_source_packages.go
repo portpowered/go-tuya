@@ -79,15 +79,21 @@ func resolveWirePackageNames(files []wireSourceFile) {
 	}
 }
 
+//nolint:funlen // Keep package indexing and all provenance gates in one ordered diagnostic pass.
 func checkWireSourcePackage(files []wireSourceFile, set *token.FileSet, models map[string]generatedModel) error {
 	resolveWirePackageNames(files)
 
 	assignments := wireSourceAssignments{
 		values:              make(map[wireSourceVariable][]ast.Expr),
 		generatedParameters: make(map[wireSourceVariable]bool),
+		externalParameters:  make(map[wireSourceVariable]bool),
 		globalVariables:     make(map[wireSourceVariable]bool),
 		publicInterfaces:    make(map[string]bool),
 		urlValuesVariables:  make(map[wireSourceVariable]bool),
+		urlValuesFields:     make(map[wireSourceField]bool),
+		aggregateFields:     make(map[wireSourceField][]ast.Expr),
+		sourceFiles:         make(map[ast.Node]*ast.File),
+		sourcePaths:         make(map[ast.Node]string),
 		urlValuesFunctions:  make(map[*ast.FuncType]bool),
 		callableFields:      make(map[string][]ast.Expr),
 		functionBodies:      make(map[*ast.FuncType]*ast.BlockStmt),
@@ -95,12 +101,16 @@ func checkWireSourcePackage(files []wireSourceFile, set *token.FileSet, models m
 	}
 
 	for _, source := range files {
-		local := indexWireSourceAssignments(source.file)
+		local := indexWireSourceAssignments(source.file, source.path)
 		maps.Copy(assignments.globalVariables, local.globalVariables)
+		maps.Copy(assignments.externalParameters, local.externalParameters)
 
 		maps.Copy(assignments.publicInterfaces, local.publicInterfaces)
 
 		maps.Copy(assignments.urlValuesVariables, local.urlValuesVariables)
+		maps.Copy(assignments.urlValuesFields, local.urlValuesFields)
+		maps.Copy(assignments.sourceFiles, local.sourceFiles)
+		maps.Copy(assignments.sourcePaths, local.sourcePaths)
 
 		maps.Copy(assignments.urlValuesFunctions, local.urlValuesFunctions)
 
@@ -116,6 +126,10 @@ func checkWireSourcePackage(files []wireSourceFile, set *token.FileSet, models m
 
 		for variable, values := range local.values {
 			assignments.values[variable] = append(assignments.values[variable], values...)
+		}
+
+		for field, values := range local.aggregateFields {
+			assignments.aggregateFields[field] = append(assignments.aggregateFields[field], values...)
 		}
 	}
 

@@ -73,10 +73,14 @@ Each component is owned by one API responsibility in `api/models/<group>.yaml`. 
 | `devices` | `DeviceUserEnvelope` | `api/models/devices.yaml` → `pkg/dependencymodels/devices.gen.go` | code, msg, result, success, t, tid | getDeviceUser | `pkg/tuya/devices.go:652` (`DeviceUserEnvelope`) |
 | `devices` | `DeviceUserRecord` | `api/models/devices.yaml` → `pkg/dependencymodels/devices.gen.go` | birthday, contact, device_id, height, nick_name, sex, user_id, weight | DeviceUserEnvelope, DeviceUsersEnvelope | `pkg/tuya/devices.go:682` (`DeviceUserRecord`) |
 | `devices` | `DeviceUsersEnvelope` | `api/models/devices.yaml` → `pkg/dependencymodels/devices.gen.go` | code, msg, result, success, t, tid | listDeviceUsers | `pkg/tuya/devices.go:677` (`DeviceUsersEnvelope`) |
-| `encryption` | `EncryptedDataEnvelope` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | encdata | — | `pkg/tuya/encryption.go:248` (`EncryptedDataEnvelope`) |
-| `encryption` | `EncryptedHTTPResponseEnvelope` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | code, msg, result, success, t, tid | — | `pkg/tuya/encryption.go:334` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:335` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:339` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:345` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:361` (`EncryptedHTTPResponseEnvelope`) |
-| `encryption` | `EncryptedRequestHeaders` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | X-appKey, X-requestId, X-sid, X-sign, X-time, X-token | — | `pkg/tuya/encryption.go:260` (`EncryptedRequestHeaders`) |
-| `encryption` | `EncryptedRequestQuery` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | encdata | — | `pkg/tuya/encryption.go:166` (`EncryptedRequestQuery`) |
+| `encryption` | `EncryptedDataEnvelope` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | encdata | — | `pkg/tuya/encryption.go:247` (`EncryptedDataEnvelope`) |
+| `encryption` | `EncryptedHTTPResponseEnvelope` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | code, msg, result, success, t, tid | — | `pkg/tuya/encryption.go:333` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:334` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:338` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:344` (`EncryptedHTTPResponseEnvelope`), `pkg/tuya/encryption.go:360` (`EncryptedHTTPResponseEnvelope`) |
+| `encryption` | `EncryptedRequestHeaders` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | X-appKey, X-requestId, X-sid, X-sign, X-time, X-token | — | `pkg/tuya/encryption.go:259` (`EncryptedRequestHeaders`) |
+| `encryption` | `EncryptedRequestQuery` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | encdata | — | `pkg/tuya/encryption.go:165` (`EncryptedRequestQuery`) |
+| `encryption` | `EncryptedSignatureHeaderOrder` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | enum: EncryptedSignatureHeaderOrderCanonical | — | `pkg/tuya/encryption.go:561` (`EncryptedSignatureHeaderOrderCanonical`) |
+| `encryption` | `EncryptedSignatureHeaderPairTemplate` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | enum: EncryptedSignatureHeaderPairTemplateCanonical | — | `pkg/tuya/encryption.go:566` (`EncryptedSignatureHeaderPairTemplateCanonical`) |
+| `encryption` | `EncryptedSignatureHeaderSeparator` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | enum: EncryptedSignatureHeaderSeparatorCanonical | — | `pkg/tuya/encryption.go:570` (`EncryptedSignatureHeaderSeparatorCanonical`) |
+| `encryption` | `EncryptedSignaturePayloadTemplate` | `api/models/encryption.yaml` → `pkg/dependencymodels/encryption.gen.go` | enum: EncryptedSignaturePayloadTemplateCanonical | — | `pkg/tuya/encryption.go:571` (`EncryptedSignaturePayloadTemplateCanonical`) |
 | `devices` | `FactoryInfoRecord` | `api/models/devices.yaml` → `pkg/dependencymodels/devices.gen.go` | id, mac, sn, uuid | FactoryInfosEnvelope | `pkg/tuya/devices.go:547` (`FactoryInfoRecord`) |
 | `devices` | `FactoryInfosEnvelope` | `api/models/devices.yaml` → `pkg/dependencymodels/devices.gen.go` | code, msg, result, success, t, tid | getFactoryInfos | `pkg/tuya/devices.go:542` (`FactoryInfosEnvelope`) |
 | `homes` | `HomeDevicesEnvelope` | `api/models/homes.yaml` → `pkg/dependencymodels/homes.gen.go` | code, msg, result, success, t, tid | queryHomeDevices | `pkg/tuya/devices.go:156` (`HomeDevicesEnvelope`), `pkg/tuya/devices.go:28` (`HomeDevicesEnvelope`) |
@@ -140,6 +144,10 @@ Open string properties stay open for future values; `x-go-tuya-known-values-sche
 | `AuthenticationOrigin` | `AuthenticationOrigin` — `AuthenticationOriginDefault` = "https://apigw.iotbing.com" | — | `pkg/tuya/constants.go:11` (`AuthenticationOriginDefault`) |
 | `CloudAPIOrigin` | `CloudAPIOrigin` — `CloudAPIOriginChina` = "https://openapi.tuyacn.com", `CloudAPIOriginEU` = "https://openapi.tuyaeu.com", `CloudAPIOriginIndia` = "https://openapi.tuyain.com", `CloudAPIOriginUS` = "https://apigw.tuyaus.com" | — | `pkg/tuya/constants.go:29` (`CloudAPIOriginChina`), `pkg/tuya/constants.go:32` (`CloudAPIOriginIndia`) |
 | `CloudRegion` | `CloudRegion` — `CloudRegionChina` = "CN", `CloudRegionEU` = "EU", `CloudRegionIndia` = "IN", `CloudRegionUS` = "US" | — | `pkg/tuya/constants.go:19` (`CloudRegionChina`), `pkg/tuya/constants.go:21` (`CloudRegionUS`), `pkg/tuya/constants.go:23` (`CloudRegionEU`), `pkg/tuya/constants.go:25` (`CloudRegionIndia`) |
+| `EncryptedSignatureHeaderOrder` | `EncryptedSignatureHeaderOrder` — `EncryptedSignatureHeaderOrderCanonical` = "X-appKey,X-requestId,X-sid,X-time,X-token" | — | `pkg/tuya/encryption.go:561` (`EncryptedSignatureHeaderOrderCanonical`) |
+| `EncryptedSignatureHeaderPairTemplate` | `EncryptedSignatureHeaderPairTemplate` — `EncryptedSignatureHeaderPairTemplateCanonical` = "%s=%s" | — | `pkg/tuya/encryption.go:566` (`EncryptedSignatureHeaderPairTemplateCanonical`) |
+| `EncryptedSignatureHeaderSeparator` | `EncryptedSignatureHeaderSeparator` — `EncryptedSignatureHeaderSeparatorCanonical` = "\|\|" | — | `pkg/tuya/encryption.go:570` (`EncryptedSignatureHeaderSeparatorCanonical`) |
+| `EncryptedSignaturePayloadTemplate` | `EncryptedSignaturePayloadTemplate` — `EncryptedSignaturePayloadTemplateCanonical` = "%s%s" | — | `pkg/tuya/encryption.go:571` (`EncryptedSignaturePayloadTemplateCanonical`) |
 | `JSONMediaType` | `JSONMediaType` — `JSONMediaTypeApplicationJSON` = "application/json" | — | `pkg/tuya/auth.go:107` (`JSONMediaTypeApplicationJSON`), `pkg/tuya/auth.go:151` (`JSONMediaTypeApplicationJSON`), `pkg/tuya/auth.go:164` (`JSONMediaTypeApplicationJSON`), `pkg/tuya/auth.go:94` (`JSONMediaTypeApplicationJSON`) |
 | `QRCodeTokenPrefix` | `QRCodeTokenPrefix` — `QRCodeTokenPrefixSmartLife` = "tuyaSmart--qrLogin?token=" | — | `pkg/tuya/auth.go:136` (`QRCodeTokenPrefixSmartLife`) |
 | `RTCOfferBody.type` | `RTCOfferBodyType` — `Offer` = "offer" | — | `pkg/tuya/client_rtc.go:44` (`Offer`) |
@@ -174,12 +182,12 @@ Generated query and header keys are schema-derived from operation parameters and
 | QueryParam | `type` | `wire.QueryParamType` | — |
 | QueryParam | `usercode` | `wire.QueryParamUsercode` | — |
 | Header | `Content-Type` | `wire.HeaderContentType` | `pkg/tuya/auth.go:107` (`HeaderContentType`), `pkg/tuya/auth.go:164` (`HeaderContentType`) |
-| Header | `X-appKey` | `wire.HeaderXAppKey` | `pkg/tuya/encryption.go:563` (`HeaderXAppKey`) |
-| Header | `X-requestId` | `wire.HeaderXRequestId` | `pkg/tuya/encryption.go:564` (`HeaderXRequestId`) |
-| Header | `X-sid` | `wire.HeaderXSid` | `pkg/tuya/encryption.go:565` (`HeaderXSid`) |
+| Header | `X-appKey` | `wire.HeaderXAppKey` | — |
+| Header | `X-requestId` | `wire.HeaderXRequestId` | — |
+| Header | `X-sid` | `wire.HeaderXSid` | — |
 | Header | `X-sign` | `wire.HeaderXSign` | — |
-| Header | `X-time` | `wire.HeaderXTime` | `pkg/tuya/encryption.go:566` (`HeaderXTime`) |
-| Header | `X-token` | `wire.HeaderXToken` | `pkg/tuya/encryption.go:567` (`HeaderXToken`) |
+| Header | `X-time` | `wire.HeaderXTime` | — |
+| Header | `X-token` | `wire.HeaderXToken` | — |
 | Property | `code` | `wire.PropertyBooleanResultEnvelopeCode` | — |
 | Property | `msg` | `wire.PropertyBooleanResultEnvelopeMsg` | — |
 | Property | `result` | `wire.PropertyBooleanResultEnvelopeResult` | — |
@@ -623,9 +631,9 @@ These source structs are inventoried separately from generated provider wire mod
 | `RemoveMessageListenerResponse` — `pkg/tuya/api.go:1028` | message, success | `pkg/tuya/api.go:58` (`RemoveMessageListenerResponse`), `pkg/tuya/messages.go:303` (`RemoveMessageListenerResponse`), `pkg/tuya/messages.go:311` (`RemoveMessageListenerResponse`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
 | `RefreshTokenRequest` — `pkg/tuya/auth.go:62` | refresh_token | `cmd/go-tuya/internal/cli/auth.go:516` (`RefreshTokenRequest`), `examples/token_refresh/token_refresh.go:35` (`RefreshTokenRequest`), `pkg/tuya/auth.go:23` (`RefreshTokenRequest`), `pkg/tuya/auth.go:69` (`RefreshTokenRequest`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
 | `RefreshTokenResponse` — `pkg/tuya/auth.go:74` | access_token, expire_time, refresh_token, t, uid | `cmd/go-tuya/internal/cli/auth.go:510` (`RefreshTokenResponse`), `cmd/go-tuya/internal/cli/auth.go:535` (`RefreshTokenResponse`), `pkg/tuya/auth.go:23` (`RefreshTokenResponse`), `pkg/tuya/auth.go:34` (`RefreshTokenResponse`), `pkg/tuya/auth.go:39` (`RefreshTokenResponse`), `pkg/tuya/auth.go:46` (`RefreshTokenResponse`), `pkg/tuya/auth.go:58` (`RefreshTokenResponse`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
-| `EncryptedAPIResponse` — `pkg/tuya/encryption.go:603` | body, code, headers, msg, status_code, success, t | `pkg/tuya/devices.go:133` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:284` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:310` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:362` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:363` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:41` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:51` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:56` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:61` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:73` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:88` (`EncryptedAPIResponse`), `pkg/tuya/wire_decode.go:17` (`EncryptedAPIResponse`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
+| `EncryptedAPIResponse` — `pkg/tuya/encryption.go:581` | body, code, headers, msg, status_code, success, t | `pkg/tuya/devices.go:133` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:283` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:309` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:361` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:362` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:40` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:50` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:55` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:60` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:72` (`EncryptedAPIResponse`), `pkg/tuya/encryption.go:87` (`EncryptedAPIResponse`), `pkg/tuya/wire_decode.go:17` (`EncryptedAPIResponse`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
 | `MessageQueueConfig` — `pkg/tuya/messages.go:81` | clientId, deviceTopic, expireTime, ownerTopic, password, url, username | `cmd/go-tuya/internal/cli/events.go:156` (`MessageQueueConfig`), `cmd/go-tuya/internal/cli/events.go:163` (`MessageQueueConfig`), `cmd/go-tuya/internal/cli/events.go:180` (`MessageQueueConfig`), `pkg/tuya/api.go:55` (`MessageQueueConfig`), `pkg/tuya/messages.go:123` (`MessageQueueConfig`), `pkg/tuya/messages.go:31` (`MessageQueueConfig`), `pkg/tuya/messages.go:36` (`MessageQueueConfig`), `pkg/tuya/messages.go:44` (`MessageQueueConfig`), `pkg/tuya/messages.go:49` (`MessageQueueConfig`), `pkg/tuya/messages.go:57` (`MessageQueueConfig`), `pkg/tuya/messages.go:95` (`MessageQueueConfig`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
-| `UnloadRequest` — `pkg/tuya/users.go:15` | terminal_id | `pkg/tuya/client.go:298` (`UnloadRequest`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
+| `UnloadRequest` — `pkg/tuya/users.go:15` | terminal_id | `pkg/tuya/client.go:321` (`UnloadRequest`) | SDK-facing JSON model; not passed directly to a provider JSON encoder/decoder |
 
 ## JSON boundary and custom-codec inventory
 
@@ -641,10 +649,10 @@ These source structs are inventoried separately from generated provider wire mod
 | `json.NewDecoder` | `cmd/go-tuya/internal/cli/tokens.go:194` |
 | `json.NewDecoder` | `pkg/tuya/auth.go:120` |
 | `json.NewDecoder` | `pkg/tuya/auth.go:177` |
-| `json.Marshal` | `pkg/tuya/encryption.go:248` |
-| `json.Unmarshal` | `pkg/tuya/encryption.go:337` |
-| `json.Unmarshal` | `pkg/tuya/encryption.go:407` |
-| `json.Marshal` | `pkg/tuya/encryption.go:446` |
+| `json.Marshal` | `pkg/tuya/encryption.go:247` |
+| `json.Unmarshal` | `pkg/tuya/encryption.go:336` |
+| `json.Unmarshal` | `pkg/tuya/encryption.go:406` |
+| `json.Marshal` | `pkg/tuya/encryption.go:445` |
 | `json.Unmarshal` | `pkg/tuya/message_protocol.go:304` |
 | `json.Unmarshal` | `pkg/tuya/messages.go:579` |
 | `json.Marshal` | `pkg/tuya/wire_decode.go:23` |

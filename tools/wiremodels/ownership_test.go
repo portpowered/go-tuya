@@ -98,7 +98,7 @@ func TestKnownValueBindingsKeepWireFieldsOpenAndResolveEnums(t *testing.T) {
 					propertyFixtureType: "object",
 					"properties": map[string]any{
 						"code": map[string]any{
-							"type":                          "string",
+							"type":                          schemaStringType,
 							"x-go-tuya-known-values-schema": "KnownCode",
 						},
 					},

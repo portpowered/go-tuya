@@ -60,7 +60,10 @@ func TestInventoryRejectsGeneratedEnumValueDrift(t *testing.T) {
 	t.Parallel()
 
 	schemas := map[string]any{
-		"Status": map[string]any{"type": "string", schemaFixtureEnumKey: []any{"ready", "sleeping"}, "x-enum-varnames": []any{"StatusReady", "StatusSleeping"}},
+		"Status": map[string]any{
+			"type": schemaStringType, schemaFixtureEnumKey: []any{"ready", "sleeping"},
+			"x-enum-varnames": []any{"StatusReady", "StatusSleeping"},
+		},
 	}
 
 	generated := map[string]map[string]string{"Status": {"StatusReady": "ready", "StatusSleeping": "sleeping"}}

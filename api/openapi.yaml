@@ -558,6 +558,38 @@ components:
       type: object
       x-go-tuya-evidence: implementation-derived
       x-go-tuya-query-keys: true
+    EncryptedSignatureHeaderOrder:
+      description: Comma-separated implementation-derived order of header names in the REST signature preimage.
+      enum:
+        - X-appKey,X-requestId,X-sid,X-time,X-token
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderOrderCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderPairTemplate:
+      description: Implementation-derived key and value format used for each signed request header.
+      enum:
+        - '%s=%s'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderPairTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderSeparator:
+      description: Implementation-derived separator between signed request header pairs.
+      enum:
+        - '||'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignatureHeaderSeparatorCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignaturePayloadTemplate:
+      description: Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
+      enum:
+        - '%s%s'
+      type: string
+      x-enum-varnames:
+        - EncryptedSignaturePayloadTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
     FactoryInfoRecord:
       additionalProperties: true
       description: Factory information fields represented by the library.

@@ -12,6 +12,10 @@ func inspectWireReceiverKeys(
 		inspectWireValueLiterals(expression.Index, make(map[wireSourceVariable]bool), report, assignments)
 		inspectWireReceiverKeys(expression.X, visiting, report, assignments)
 	case *ast.SelectorExpr:
+		for _, value := range wireAggregateFieldExpressions(expression, assignments) {
+			inspectWireReceiverKeys(value, visiting, report, assignments)
+		}
+
 		inspectWireReceiverKeys(expression.X, visiting, report, assignments)
 	case *ast.ParenExpr:
 		inspectWireReceiverKeys(expression.X, visiting, report, assignments)

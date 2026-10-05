@@ -51,6 +51,38 @@ components:
       additionalProperties: false
       x-go-tuya-evidence: implementation-derived
       x-go-tuya-header-keys: true
+    EncryptedSignatureHeaderPairTemplate:
+      type: string
+      description: Implementation-derived key and value format used for each signed request header.
+      enum:
+      - '%s=%s'
+      x-enum-varnames:
+      - EncryptedSignatureHeaderPairTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderSeparator:
+      type: string
+      description: Implementation-derived separator between signed request header pairs.
+      enum:
+      - '||'
+      x-enum-varnames:
+      - EncryptedSignatureHeaderSeparatorCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignatureHeaderOrder:
+      type: string
+      description: Comma-separated implementation-derived order of header names in the REST signature preimage.
+      enum:
+      - X-appKey,X-requestId,X-sid,X-time,X-token
+      x-enum-varnames:
+      - EncryptedSignatureHeaderOrderCanonical
+      x-go-tuya-evidence: implementation-derived
+    EncryptedSignaturePayloadTemplate:
+      type: string
+      description: Implementation-derived query and body ciphertext concatenation format appended to the header preimage.
+      enum:
+      - '%s%s'
+      x-enum-varnames:
+      - EncryptedSignaturePayloadTemplateCanonical
+      x-go-tuya-evidence: implementation-derived
     EncryptedHTTPResponseEnvelope:
       type: object
       description: Implementation-derived outer response envelope received before

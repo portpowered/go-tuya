@@ -108,6 +108,7 @@ and errors before logging them.
 - [Devices and commands](https://portpowered.github.io/go-tuya/docs/guides/device-control)
 - [Events](https://portpowered.github.io/go-tuya/docs/guides/events)
 - [Standalone CLI](https://portpowered.github.io/go-tuya/docs/guides/cli)
+- [Provider evidence](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)
 - [Generated API reference](https://portpowered.github.io/go-tuya/)
 
 The standalone CLI is maintained as a separate module under `cmd/go-tuya`.

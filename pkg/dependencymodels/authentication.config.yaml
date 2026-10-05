@@ -29,6 +29,10 @@ output-options:
     - EncryptedHTTPResponseEnvelope
     - EncryptedRequestHeaders
     - EncryptedRequestQuery
+    - EncryptedSignatureHeaderOrder
+    - EncryptedSignatureHeaderPairTemplate
+    - EncryptedSignatureHeaderSeparator
+    - EncryptedSignaturePayloadTemplate
     - FactoryInfoRecord
     - FactoryInfosEnvelope
     - HomeDevicesEnvelope

@@ -4,11 +4,13 @@
 
 No sanitized Tuya account captures are checked in. The HTTP and MQTT schemas
 label provider-documented and implementation-derived behavior separately.
+The [provider evidence guide](https://portpowered.github.io/go-tuya/docs/guides/provider-evidence/)
+explains those labels for SDK users.
 See [verification and evidence](verification.md) and the generated
 [wire-model inventory](wire-model-inventory.md) when reviewing route coverage.
 
 Follow the pre-release review in the template's
-[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/987b9c34a6b927472c21604617b6842a4238746b/docs/releasing.md),
+[`docs/releasing.md`](https://github.com/portpowered/go-third-party-template/blob/05e93ff08899414207e9335717e7d7b0190ebd09/docs/releasing.md),
 especially its requirement to replace or remove unverified example endpoints,
 resources, and wire responses. Review the pending entries in
 [`template-checklist.md`](template-checklist.md) as a separate sign-off. The

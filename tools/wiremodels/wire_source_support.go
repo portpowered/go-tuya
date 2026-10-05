@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,8 +26,11 @@ const (
 )
 
 type generatedModel struct {
-	Name string
-	File string
+	Name        string
+	File        string
+	Alias       string
+	Fields      map[string]string
+	EnumMembers map[string]string
 }
 
 type primitivePackage struct {
@@ -54,13 +59,124 @@ func primitiveImportAliases(file *ast.File, owner primitivePackage) map[string]b
 	return aliases
 }
 
-func generatedWireModelIndex(generatedFiles map[string]string) map[string]generatedModel {
+func generatedWireModelIndex(generatedFiles map[string]string) (map[string]generatedModel, error) {
 	models := make(map[string]generatedModel, len(generatedFiles))
+
 	for name, path := range generatedFiles {
-		models[name] = generatedModel{Name: name, File: filepath.ToSlash(path)}
+		models[name] = generatedModel{Name: name, File: filepath.ToSlash(path), Alias: "", Fields: nil, EnumMembers: nil}
 	}
 
-	return models
+	parsed := make(map[string]bool)
+
+	for _, path := range generatedFiles {
+		path = filepath.ToSlash(path)
+		if parsed[path] {
+			continue
+		}
+
+		parsed[path] = true
+
+		file, err := parser.ParseFile(token.NewFileSet(), filepath.FromSlash(path), nil, 0)
+		if err != nil {
+			return nil, fmt.Errorf("parse generated model metadata %s: %w", path, err)
+		}
+
+		indexGeneratedWireTypeMetadata(file, models)
+	}
+
+	return models, nil
+}
+
+//nolint:cyclop,gocognit // Generated enum values and model fields are indexed in one pass per source file.
+func indexGeneratedWireTypeMetadata(file *ast.File, models map[string]generatedModel) {
+	for _, declaration := range file.Decls {
+		group, isGroup := declaration.(*ast.GenDecl)
+		if !isGroup {
+			continue
+		}
+
+		for _, spec := range group.Specs {
+			switch item := spec.(type) {
+			case *ast.TypeSpec:
+				model, exists := models[item.Name.Name]
+				if !exists {
+					continue
+				}
+
+				if structure, isStruct := item.Type.(*ast.StructType); isStruct && structure.Fields != nil {
+					model.Fields = make(map[string]string)
+
+					for _, field := range structure.Fields.List {
+						for _, name := range field.Names {
+							if typeName := wireEnumTypeExpressionName(field.Type); typeName != "" {
+								model.Fields[name.Name] = typeName
+							}
+						}
+					}
+				} else if item.Assign.IsValid() {
+					model.Alias = wireTypeExpressionName(item.Type)
+				}
+
+				models[item.Name.Name] = model
+			case *ast.ValueSpec:
+				identifier, isEnum := item.Type.(*ast.Ident)
+				if !isEnum {
+					continue
+				}
+
+				model, exists := models[identifier.Name]
+				if !exists {
+					continue
+				}
+
+				if model.EnumMembers == nil {
+					model.EnumMembers = make(map[string]string)
+				}
+
+				for index, name := range item.Names {
+					if index < len(item.Values) {
+						model.EnumMembers[name.Name] = literalValue(item.Values[index])
+					}
+				}
+
+				models[identifier.Name] = model
+			}
+		}
+	}
+}
+
+func wireTypeExpressionName(expression ast.Expr) string {
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		return expression.Name
+	case *ast.SelectorExpr:
+		return expression.Sel.Name
+	case *ast.StarExpr:
+		return wireTypeExpressionName(expression.X)
+	case *ast.ArrayType:
+		return wireTypeExpressionName(expression.Elt)
+	case *ast.MapType:
+		return wireTypeExpressionName(expression.Value)
+	case *ast.ParenExpr:
+		return wireTypeExpressionName(expression.X)
+	}
+
+	return ""
+}
+
+func wireEnumTypeExpressionName(expression ast.Expr) string {
+	switch expression := expression.(type) {
+	case *ast.Ident:
+		return expression.Name
+	case *ast.SelectorExpr:
+		return expression.Sel.Name
+	case *ast.StarExpr:
+		return wireEnumTypeExpressionName(expression.X)
+	case *ast.ParenExpr:
+		return wireEnumTypeExpressionName(expression.X)
+	}
+
+	return ""
 }
 
 func checkGeneratedWireConstructions(generatedFiles map[string]string) error {
@@ -77,7 +193,11 @@ func checkGeneratedWireConstructions(generatedFiles map[string]string) error {
 		generated[path] = true
 	}
 
-	models := generatedWireModelIndex(generatedFiles)
+	models, err := generatedWireModelIndex(generatedFiles)
+	if err != nil {
+		return err
+	}
+
 	for _, root := range []string{"pkg", "cmd", "examples"} {
 		err := checkGeneratedWireConstructionRoot(root, generated, models)
 		if err != nil {

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-//nolint:cyclop // This source gate combines construction, escape, and mutation findings for each file.
+//nolint:cyclop,funlen // The single traversal keeps generated constructor sinks under one diagnostic context.
 func rejectRawGeneratedWireConstructionsWithAssignments(
 	file *ast.File, set *token.FileSet, path string, models map[string]generatedModel, assignments wireSourceAssignments,
 ) error {
@@ -43,6 +43,7 @@ func rejectRawGeneratedWireConstructionsWithAssignments(
 		}
 
 		if assignment, isAssignment := node.(*ast.AssignStmt); isAssignment {
+			inspectWireEnumFieldAssignments(assignment, set, aliases, path, models, assignments, &problems)
 			inspectWireMutationAssignment(assignment, file, aliases, path, models, assignments, reportWireAssignment)
 		}
 
@@ -62,6 +63,7 @@ func rejectRawGeneratedWireConstructionsWithAssignments(
 		}
 
 		inspectWireValueLiterals(literal, make(map[wireSourceVariable]bool), reportWireValue, assignments)
+		inspectWireGeneratedFieldCalls(literal, file, set, assignments, &problems)
 
 		return false
 	})
@@ -71,6 +73,54 @@ func rejectRawGeneratedWireConstructionsWithAssignments(
 	}
 
 	return nil
+}
+
+func inspectWireEnumFieldAssignments(
+	assignment *ast.AssignStmt, set *token.FileSet, aliases map[string]bool, path string,
+	models map[string]generatedModel, assignments wireSourceAssignments, problems *[]string,
+) {
+	for index, left := range assignment.Lhs {
+		if index >= len(assignment.Rhs) {
+			continue
+		}
+
+		enumName := wireEnumAssignmentProblem(left, assignment.Rhs[index], aliases, path, models, assignments)
+		if enumName != "" {
+			*problems = append(*problems, fmt.Sprintf("%s: assignment to generated enum field %s uses an unregistered or unresolved value",
+				set.Position(left.Pos()), enumName))
+		}
+	}
+}
+
+func inspectWireGeneratedFieldCalls(
+	literal *ast.CompositeLit, file *ast.File, set *token.FileSet,
+	assignments wireSourceAssignments, problems *[]string,
+) {
+	ast.Inspect(literal, func(node ast.Node) bool {
+		if _, nested := node.(*ast.FuncLit); nested {
+			return false
+		}
+
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall {
+			identifier, isIdentifier := node.(*ast.Ident)
+			if isIdentifier && wireUnboundHelperParameter(identifier, assignments) {
+				*problems = append(*problems, fmt.Sprintf("%s: generated wire field depends on an unbound helper parameter", set.Position(identifier.Pos())))
+			}
+
+			return true
+		}
+
+		if generatedWireRecursiveHelperCall(call, assignments) {
+			*problems = append(*problems, fmt.Sprintf("%s: recursive generated wire field helper has an unresolved result", set.Position(call.Pos())))
+		}
+
+		if importedUnverifiedWireHelper(file, call, assignments) {
+			*problems = append(*problems, fmt.Sprintf("%s: generated wire field depends on an unresolved imported helper", set.Position(call.Pos())))
+		}
+
+		return true
+	})
 }
 
 // Delimiters passed to the exact standard-library strings.Join function are
@@ -350,6 +400,25 @@ func generatedWireReceiver(
 ) bool {
 	switch expression := expression.(type) {
 	case *ast.SelectorExpr:
+		key := wireSourceVariable{declaration: expression, name: "aggregate selector"}
+		if visiting[key] {
+			return false
+		}
+
+		visiting[key] = true
+		defer delete(visiting, key)
+
+		values := wireAggregateFieldExpressions(expression, assignments)
+		for _, value := range values {
+			if generatedWireReceiver(value, aliases, path, models, visiting, assignments) {
+				return true
+			}
+		}
+
+		if len(values) != 0 || wireReceiverFieldDeclared(expression, assignments) {
+			return false
+		}
+
 		return generatedWireReceiver(expression.X, aliases, path, models, visiting, assignments)
 	case *ast.UnaryExpr:
 		return generatedWireReceiver(expression.X, aliases, path, models, visiting, assignments)
