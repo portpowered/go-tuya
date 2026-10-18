@@ -167,6 +167,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -389,6 +392,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -434,6 +440,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -606,6 +615,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -695,6 +707,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -738,6 +753,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -871,6 +889,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",
@@ -928,6 +949,9 @@
         ],
         "X-token": [
           "synthetic-access-token"
+        ],
+        "Content-Type": [
+          "application/json"
         ]
       },
       "body": "<encrypted-json>",

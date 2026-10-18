@@ -39,6 +39,7 @@ for operation,method,path,query,body,result in pairs:
              "body":"<encrypted-json>" if body is not None else ""}
     if query is not None: request["plain_query"]=query
     if body is not None: request["plain_body"]=body
+    if body is not None: request["headers"]["Content-Type"]=["application/json"]
     entry={"operation_id":operation,"request":request,
                    "response":{"status":200,"headers":{"Content-Type":["application/json"]},
                                "body":{"success":True,"t":1700000000000,"result":result}}}

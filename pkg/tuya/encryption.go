@@ -287,6 +287,10 @@ func (c *EncryptedClient) newEncryptedRequest(
 		request.Header.Set(key, value)
 	}
 
+	if payload.finalBody != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
+
 	return request, nil
 }
 
