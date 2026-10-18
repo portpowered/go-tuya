@@ -78,6 +78,10 @@ func TestEncryptedClient_MakeRequestPayload(t *testing.T) {
 			t.Fatalf("unexpected path: %s", request.URL.Path)
 		}
 
+		if got := request.Header.Get("Content-Type"); got != "application/json" {
+			t.Fatalf("encrypted command Content-Type = %q, want application/json", got)
+		}
+
 		if got := request.Header.Get("X-Appkey"); got != appKey {
 			t.Fatalf("missing or incorrect X-appKey header, got: %s", got)
 		}
