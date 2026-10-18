@@ -49,3 +49,11 @@ _, err := session.DevicesService.SendCommands(ctx, tuya.SendCommandsRequest{
 Review the target and command before running the
 [command example](https://github.com/portpowered/go-tuya/tree/main/examples/command).
 The library does not implement local-network device control.
+
+When a command fails, inspect `*tuya.APIError` with `errors.As`. Its bounded
+`ProviderCode`, `HTTPStatus`, `ProviderTraceID` and `ProviderRequestID` support
+private request correlation without retaining vendor messages or bodies. The
+trace ID comes from the provider's `tid`; the request ID is the outgoing
+`X-requestId`. These identifiers are intentionally absent from `Error()` and
+should only be retained in access-controlled operational diagnostics. Synthetic
+replay tests establish correlation and redaction, not live command success.

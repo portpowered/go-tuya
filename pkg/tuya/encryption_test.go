@@ -275,7 +275,11 @@ func TestConcurrentAPIFailuresKeepSafeDiagnostics(t *testing.T) {
 		for _, candidate := range cases {
 			if candidate.name == request.Header.Get("X-Token") {
 				responseWriter.WriteHeader(candidate.status)
-				_, _ = io.WriteString(responseWriter, `{"success":false,"code":`+candidate.code+`,"msg":"credential-sentinel","access_token":"credential-sentinel"}`)
+				//nolint:gosec // Synthetic token sentinel deliberately proves failure-body redaction.
+				_ = json.NewEncoder(responseWriter).Encode(map[string]any{
+					authFixtureSuccess: false, "code": json.RawMessage(candidate.code), "tid": request.Header.Get("X-Requestid"),
+					"msg": "credential-sentinel", "access_token": "credential-sentinel",
+				})
 
 				return
 			}
@@ -298,6 +302,12 @@ func TestConcurrentAPIFailuresKeepSafeDiagnostics(t *testing.T) {
 			_, err := session.DevicesService.QueryDevicesByIDs(context.Background(), QueryDevicesByIDsRequest{DeviceIDs: []string{routeFixtureDevice1}})
 
 			assertSafeAPIFailure(t, err, candidate.kind, candidate.category, candidate.status, candidate.wantCode)
+
+			var diagnostic *APIError
+			if !errors.As(err, &diagnostic) || diagnostic.ProviderRequestID() == "" ||
+				diagnostic.ProviderTraceID() != diagnostic.ProviderRequestID() || strings.Contains(err.Error(), diagnostic.ProviderTraceID()) {
+				t.Fatal("provider/request identifiers were lost, crossed, or exposed in the public error string")
+			}
 		})
 	}
 }
@@ -470,4 +480,21 @@ type testOperationRequest struct {
 
 func (r testOperationRequest) GetRequest() Request {
 	return r.Request
+}
+
+func TestProviderTraceIdentifiersRejectUnboundedOrStructuredValues(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{"", "https://private.invalid/", "private\nvalue", strings.Repeat("a", 65)} {
+		if got := boundedTraceID(value); got != "" {
+			t.Fatal("unsafe trace identifier was retained")
+		}
+	}
+
+	for _, body := range []string{`{"code":2001,"tid":{"token":"private"}}`, `{"code":2001,"tid":42}`} {
+		diagnostic := newAPIError("provider", 200, []byte(body))
+		if diagnostic.ProviderTraceID() != "" || diagnostic.ProviderCode() != "2001" {
+			t.Fatal("invalid trace identifier hid the bounded provider code")
+		}
+	}
 }

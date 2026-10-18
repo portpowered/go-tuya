@@ -3,15 +3,20 @@ package tuya
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
+
+const maxTraceIDLength = 64
 
 // APIError exposes safe diagnostics without vendor messages, bodies, or URLs.
 // It does not retain an underlying transport cause, which can contain credentials.
 type APIError struct {
-	category string
-	status   int
-	code     string
+	category  string
+	status    int
+	code      string
+	traceID   string
+	requestID string
 }
 
 func (e *APIError) Error() string {
@@ -27,6 +32,12 @@ func (e *APIError) HTTPStatus() int { return e.status }
 // ProviderCode returns a bounded decimal provider code, or an empty string.
 func (e *APIError) ProviderCode() string { return e.code }
 
+// ProviderTraceID returns the bounded provider trace identifier, when supplied.
+func (e *APIError) ProviderTraceID() string { return e.traceID }
+
+// ProviderRequestID returns the generated outgoing request identifier.
+func (e *APIError) ProviderRequestID() string { return e.requestID }
+
 func transportFailure(ctx context.Context) error {
 	err := ctx.Err()
 	if err != nil {
@@ -38,12 +49,13 @@ func transportFailure(ctx context.Context) error {
 
 func newAPIError(category string, status int, body []byte) *APIError {
 	var envelope struct {
-		Code json.RawMessage `json:"code"`
+		Code    json.RawMessage `json:"code"`
+		TraceID json.RawMessage `json:"tid"`
 	}
 
 	err := json.Unmarshal(body, &envelope)
 	if err != nil {
-		return &APIError{category: category, status: status, code: ""}
+		return &APIError{category: category, status: status, code: "", traceID: "", requestID: ""}
 	}
 
 	code := string(envelope.Code)
@@ -53,7 +65,41 @@ func newAPIError(category string, status int, body []byte) *APIError {
 		}
 	}
 
-	return &APIError{category: category, status: status, code: boundedProviderCode(code)}
+	var traceID string
+
+	_ = json.Unmarshal(envelope.TraceID, &traceID)
+
+	return &APIError{category: category, status: status, code: boundedProviderCode(code), traceID: boundedTraceID(traceID), requestID: ""}
+}
+
+// Only opaque identifier characters are retained; vendor messages and URLs
+// never become diagnostics. This value is deliberately absent from Error().
+func boundedTraceID(value string) string {
+	if len(value) == 0 || len(value) > maxTraceIDLength {
+		return ""
+	}
+
+	for _, character := range value {
+		if !traceIDCharacter(character) {
+			return ""
+		}
+	}
+
+	return value
+}
+
+func traceIDCharacter(character rune) bool {
+	return (character >= '0' && character <= '9') || (character >= 'a' && character <= 'z') ||
+		(character >= 'A' && character <= 'Z') || character == '-' || character == '_'
+}
+
+func correlateFailure(err error, requestID string) error {
+	var diagnostic *APIError
+	if errors.As(err, &diagnostic) {
+		diagnostic.requestID = requestID
+	}
+
+	return err
 }
 
 func boundedProviderCode(code string) string {

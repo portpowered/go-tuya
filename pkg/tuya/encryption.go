@@ -142,7 +142,9 @@ func (c *EncryptedClient) makeRequest(
 		}
 	}()
 
-	return decodeEncryptedResponse(ctx, response, secret)
+	result, err := decodeEncryptedResponse(ctx, response, secret)
+
+	return result, correlateFailure(err, rid)
 }
 
 type encryptedRequestPayload struct {
