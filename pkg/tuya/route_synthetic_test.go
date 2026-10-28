@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 )
 
@@ -405,4 +406,86 @@ func assertDeviceDetailsQuery(t *testing.T, request *http.Request) {
 	if len(query) != 1 || query["devIds"] != "device-1,device-2" {
 		t.Errorf("device-details query = %#v, want only devIds with both identifiers", query)
 	}
+}
+
+// Synthetic HTTP acknowledgements exercise the real signed command path once.
+func TestSendCommandsRequiresExplicitBooleanAcknowledgement(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name, body string
+		kind       ErrorKind
+		code       string
+		accepted   bool
+	}{
+		{"accepted", `{"success":true,"result":true}`, "", "", true},
+		{"not-accepted", `{"success":true,"result":false}`, "", "", false},
+		{"missing", `{"success":true,"msg":"credential-sentinel"}`, ErrorProtocol, "", false},
+		{"null", `{"success":true,"result":null}`, ErrorProtocol, "", false},
+		{"number", `{"success":true,"result":1}`, ErrorProtocol, "", false},
+		{"object", `{"success":true,"result":{}}`, ErrorProtocol, "", false},
+		{"array", `{"success":true,"result":[]}`, ErrorProtocol, "", false},
+		{"malformed", `not-json-credential-sentinel`, ErrorProtocol, "", false},
+		{"truncated", `{"success":true,"result":`, ErrorProtocol, "", false},
+		{"permission", `{"success":false,"code":"1106","result":null}`, ErrorProvider, "1106", false},
+		{"offline", `{"success":false,"code":"2001"}`, ErrorProvider, "2001", false},
+		{"unauthorized", `{"success":false,"code":"1010"}`, ErrorUnauthorized, "1010", false},
+	}
+	for _, candidate := range cases {
+		t.Run(candidate.name, func(t *testing.T) {
+			t.Parallel()
+
+			var requests atomic.Int32
+
+			server := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+				requests.Add(1)
+
+				if request.Method != http.MethodPost || request.URL.Path != "/v1.1/m/thing/device-1/commands" ||
+					request.Header.Get("X-Token") != routeFixtureSyntheticAccess || request.Header.Get("X-Sign") == "" {
+					t.Error("command changed its signed method, target or account scope")
+				}
+
+				_, err := responseWriter.Write([]byte(candidate.body))
+				if err != nil {
+					t.Errorf("write synthetic acknowledgement: %v", err)
+				}
+			}))
+			t.Cleanup(server.Close)
+
+			client, err := NewClient(WithCloudAPIURL(server.URL), WithHTTPClient(server.Client()))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			session := client.NewSession(Tokens{AccessToken: routeFixtureSyntheticAccess, RefreshToken: syntheticRefreshFixture})
+
+			result, err := session.DevicesService.SendCommands(context.Background(), SendCommandsRequest{
+				DeviceID: routeFixtureDevice1, Commands: []Command{{Code: routeFixtureSwitch, Value: false}},
+			})
+			assertCommandAcknowledgement(t, result, err, candidate.kind, candidate.code, candidate.accepted)
+
+			if requests.Load() != 1 {
+				t.Fatalf("command exchanges = %d, want exactly one without retries", requests.Load())
+			}
+		})
+	}
+}
+
+func assertCommandAcknowledgement(t *testing.T, result SendCommandsResponse, err error, kind ErrorKind, code string, accepted bool) {
+	t.Helper()
+
+	if kind == "" {
+		if err != nil || result.Result != accepted {
+			t.Fatalf("explicit acknowledgement = %+v, %v", result, err)
+		}
+
+		return
+	}
+
+	category := string(ErrorProvider)
+	if kind == ErrorProtocol {
+		category = string(ErrorProtocol)
+	}
+
+	assertSafeAPIFailure(t, err, kind, category, http.StatusOK, code)
 }
