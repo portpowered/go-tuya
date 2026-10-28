@@ -50,6 +50,15 @@ Review the target and command before running the
 [command example](https://github.com/portpowered/go-tuya/tree/main/examples/command).
 The library does not implement local-network device control.
 
+`SendCommands` requires an explicit Boolean `result` in a successful response.
+`true` reports provider acceptance; `false` reports that the command was not
+accepted. A missing or null result, or a decoded result of another type, returns
+a typed protocol error with HTTP status 200 instead of being treated as `false`. A malformed response
+does not establish whether the device acted. Provider `success: false` errors
+retain their existing classification and code. The library does not retry the
+command; use a fresh observation before deciding what to do after an uncertain
+outcome.
+
 When a command fails, inspect `*tuya.APIError` with `errors.As`. Its bounded
 `ProviderCode`, `HTTPStatus`, `ProviderTraceID` and `ProviderRequestID` support
 private request correlation without retaining vendor messages or bodies. The

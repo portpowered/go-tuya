@@ -231,8 +231,8 @@ func (c *DevicesService) SendCommands(ctx context.Context, req SendCommandsReque
 	}
 
 	wireResponse, err := decodeWireResponse[wire.BooleanResultEnvelope](resp)
-	if err != nil {
-		return SendCommandsResponse{}, fmt.Errorf("error unmarshalling response: %w", err)
+	if err != nil || wireResponse.Result == nil {
+		return SendCommandsResponse{}, clientError(ErrorProtocol, newAPIError("protocol", resp.StatusCode, nil))
 	}
 
 	return SendCommandsResponse{
